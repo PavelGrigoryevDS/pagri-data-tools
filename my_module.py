@@ -955,8 +955,8 @@ def check_duplicated(df):
     return (df.apply(lambda x: x.str.lower().str.strip().str.replace(r'\s+', ' ', regex=True) if x.dtype == 'object' else x)
             .value_counts(dropna=False)
             .to_frame()
-            .sort_values(0, ascending=False)
-            .rename(columns={0: 'Count'}))
+            .sort_values('count', ascending=False)
+            # .rename(columns={0: 'Count'}))
 
 
 def find_columns_with_duplicates(df) -> pd.Series:
