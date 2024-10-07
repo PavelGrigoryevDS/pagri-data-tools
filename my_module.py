@@ -726,7 +726,7 @@ def make_widget_value_counts_obj(column):
             pct_str = '<1%'
         else:
             pct_str = f'({x[column_name_pct]:.0%})'
-        return f'{x[column_name]:.0f} {pct_str}'
+        return f'{x[column_name]} {pct_str}'
     top_5 = pd.concat([val_cnt, val_cnt_norm], axis=1).reset_index().apply(
         make_value_counts_row, axis=1).to_frame()
     widget_value_counts_obj = widgets.Output()
