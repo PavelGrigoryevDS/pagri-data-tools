@@ -1252,7 +1252,7 @@ def get_non_matching_rows(df, col1, col2):
     Returns:
     pd.DataFrame: Строки DataFrame, для которых значения в col1 имеют разные значения в col2
     """
-    non_unique_values = df.groupby(col1)[col2].nunique()[lambda x: x > 1].index
+    non_unique_values = df.groupby(col1, observed=False)[col2].nunique()[lambda x: x > 1].index
     non_matching_rows = df[df[col1].isin(non_unique_values)]
     if non_matching_rows.empty:
         print('Нет строк для которых значения в col1 имеют разные значения в col2')
