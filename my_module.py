@@ -23,7 +23,7 @@ import statsmodels.stats.api as stm
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from termcolor import colored
 import scipy.stats as stats
-import pingouin as pglen(list(num_columns)
+import pingouin as pglen
 import warnings
 import nbformat
 from nbformat import v4
