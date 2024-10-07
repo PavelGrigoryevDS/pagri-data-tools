@@ -563,8 +563,8 @@ def make_widget_hist(column):
 def make_widget_hist_plotly(column):
     fig = px.histogram(column, nbins=20, histnorm='percent',
                        template="simple_white", height=250, width=370)
-    fig.update_traces(marker_color='rgba(128, 60, 170, 0.8)', text=f'*',
-                      textfont=dict(color='rgba(128, 60, 170, 1)'))
+    fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)', text=f'*',
+                      textfont=dict(color='rgba(128, 60, 170, 0.9)'))
     fig.update_layout(
         margin=dict(l=0, r=10, b=0, t=10), showlegend=False, hoverlabel=dict(
             bgcolor="white",
@@ -598,7 +598,7 @@ def make_widget_violin(column):
 
 def make_widget_violine_plotly(column):
     fig = px.violin(column, template="simple_white", height=250, width=300)
-    fig.update_traces(marker_color='rgba(128, 60, 170, 0.8)')
+    fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)')
     fig.update_layout(
         margin=dict(l=20, r=20, b=0, t=10), showlegend=False, hoverlabel=dict(
             bgcolor="white",
