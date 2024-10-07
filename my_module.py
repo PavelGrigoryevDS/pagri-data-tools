@@ -188,8 +188,8 @@ def make_widget_all_frame(df):
                                     'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                # .hide_columns()
-                .hide_index()
+                # .hide(axis="columns")
+                .hide(axis="index")
                 )
     # widget_DataFrame.layout.margin = '0px 0px 0px 0px'
     return widget_all_frame
@@ -214,8 +214,8 @@ def make_widget_range_date(column):
                                     'props': [('font-size', '16px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_summary
 
@@ -281,8 +281,8 @@ def make_widget_summary_date(column):
                                     'props': [('font-size', '16px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_summary
 
@@ -341,8 +341,8 @@ def make_widget_check_missing_date(column):
                                     'props': [('font-size', '16px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 # .format('{:.0f}', subset=0)
                 )
     return widget_summary
@@ -431,8 +431,8 @@ def make_widget_summary(column):
                                     'props': [('font-size', '16px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_summary
 
@@ -456,8 +456,8 @@ def make_widget_pct(column):
                                     'props': [('font-size', '15px')]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_pct
 
@@ -485,8 +485,8 @@ def make_widget_std(column):
                                     'props': [('font-size', '15px')]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_std
 
@@ -514,8 +514,8 @@ def make_widget_value_counts(column):
                                     'props': [('font-size', '16px'), ("text-align", "left")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     # widget_value_counts.
     return widget_value_counts
@@ -708,8 +708,8 @@ def make_widget_summary_obj(column):
                                     'props': [('font-size', '16px'), ("text-align", "left"), ("font-weight", "bold")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     return widget_summary_obj
 
@@ -737,8 +737,8 @@ def make_widget_value_counts_obj(column):
                                     'props': [('font-size', '16px'), ("text-align", "left")]
                                     }])
                 .set_properties(**{'text-align': 'left'})
-                .hide_columns()
-                .hide_index()
+                .hide(axis="columns")
+                .hide(axis="index")
                 )
     # widget_value_counts.
     return widget_value_counts_obj
@@ -980,7 +980,7 @@ def find_columns_with_duplicates(df) -> pd.Series:
             .set_caption('Duplicates')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
     return dfs_duplicated
 
 
@@ -1018,7 +1018,7 @@ def check_duplicated_combinations_gen(df, n=2):
     dupl_df_c3 = pd.DataFrame(dupl_c3_list)
     # разобьем таблицу на 3 части, чтобы удобнее читать
     yield (pd.concat([part_df.reset_index(drop=True) for part_df in np.array_split(dupl_df_c3, 3)], axis=1)
-           .style.format({1: '{:.0f}'}, na_rep='').hide_index().hide_columns())
+           .style.format({1: '{:.0f}'}, na_rep='').hide(axis="index").hide(axis="columns"))
     if n < 4:
         return
     for col_n in range(4, df.columns.size + 1):
@@ -1032,7 +1032,7 @@ def check_duplicated_combinations_gen(df, n=2):
         dupl_df_cn = pd.DataFrame(dupl_cn_list)
         # разобьем таблицу на 3 части, чтобы удобнее читать
         yield (pd.concat([part_df.reset_index(drop=True) for part_df in np.array_split(dupl_df_cn, 2)], axis=1)
-               .style.format({1: '{:.0f}'}, na_rep='').hide_index().hide_columns())
+               .style.format({1: '{:.0f}'}, na_rep='').hide(axis="index").hide(axis="columns"))
         if n < col_n+1:
             return
 
@@ -1058,7 +1058,7 @@ def find_columns_with_missing_values(df) -> pd.Series:
             .set_caption('Missings')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
     return dfs_na
 
 
@@ -1283,7 +1283,7 @@ def detect_outliers_Zscore(df: pd.DataFrame, z_level: float = 3.5) -> pd.Series:
             .set_caption('Outliers')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_index())
+            .hide(axis="index"))
     return outliers
 
 
@@ -1311,7 +1311,7 @@ def detect_outliers_quantile(df: pd.DataFrame, lower_quantile: float = 0.05, upp
             .set_caption('Outliers')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
     return outliers
 
 
@@ -1385,7 +1385,7 @@ def get_outlier_quantile_proportion_by_category(df: pd.DataFrame, column_with_ou
                 .set_caption(f'Outliers in "{column_with_outliers}" by category "{category_column}"')
                 .set_table_styles([{'selector': 'caption',
                                     'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                .hide_index())
+                .hide(axis="index"))
         yield
     else:
         categroy_columns = [
@@ -1412,7 +1412,7 @@ def get_outlier_quantile_proportion_by_category(df: pd.DataFrame, column_with_ou
                     .set_caption(f'Outliers in "{column_with_outliers}" by category "{category_column}"')
                     .set_table_styles([{'selector': 'caption',
                                         'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                    .hide_index())
+                    .hide(axis="index"))
             yield
 
 
@@ -1480,7 +1480,7 @@ def get_outlier_proportion_by_category_modified_z_score(df: pd.DataFrame, column
             .set_caption(f'Outliers in "{column_with_outliers}" by category "{category_column}"')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_index())
+            .hide(axis="index"))
 
 
 def find_columns_with_negative_values(df) -> pd.Series:
@@ -1506,7 +1506,7 @@ def find_columns_with_negative_values(df) -> pd.Series:
             .set_caption('Negative')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
     return dfs_na
 
 
@@ -1548,7 +1548,7 @@ def get_negative_proportion_by_category(df: pd.DataFrame, column_with_negative: 
                 .set_caption(f'negatives in "{column_with_negative}" by category "{category_column}"')
                 .set_table_styles([{'selector': 'caption',
                                     'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                .hide_index())
+                .hide(axis="index"))
         yield
     else:
         categroy_columns = [
@@ -1575,7 +1575,7 @@ def get_negative_proportion_by_category(df: pd.DataFrame, column_with_negative: 
                     .set_caption(f'negatives in "{column_with_negative}" by category "{category_column}"')
                     .set_table_styles([{'selector': 'caption',
                                         'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                    .hide_index())
+                    .hide(axis="index"))
             yield
 
 
@@ -1623,7 +1623,7 @@ def find_columns_with_zeros_values(df) -> pd.Series:
             .set_caption('Zeros')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
     return dfs_na
 
 
@@ -1665,7 +1665,7 @@ def get_zeros_proportion_by_category(df: pd.DataFrame, column_with_zeros: str, c
                 .set_caption(f'zeros in "{column_with_zeros}" by category "{category_column}"')
                 .set_table_styles([{'selector': 'caption',
                                     'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                .hide_index())
+                .hide(axis="index"))
         yield
     else:
         categroy_columns = [
@@ -1692,7 +1692,7 @@ def get_zeros_proportion_by_category(df: pd.DataFrame, column_with_zeros: str, c
                     .set_caption(f'zeros in "{column_with_zeros}" by category "{category_column}"')
                     .set_table_styles([{'selector': 'caption',
                                         'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                    .hide_index())
+                    .hide(axis="index"))
             yield
 
 
@@ -5794,7 +5794,7 @@ def check_duplicated_value_in_df(df):
             .set_caption('Duplicates')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-            .hide_columns())
+            .hide(axis="columns"))
 
 
 def check_negative_value_in_df(df):
@@ -5885,7 +5885,7 @@ def analys_column_by_category(df: pd.DataFrame, df_for_analys: pd.DataFrame, col
                 .set_table_styles([{'selector': 'caption',
                                     'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
                 .format('{:.1%}', subset=['count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct'])
-                .hide_index())
+                .hide(axis="index"))
         yield
 
 
@@ -6003,8 +6003,8 @@ def quantiles_columns(column, quantiles=[0.05, 0.25, 0.5, 0.75, 0.95]):
                                 'props': [('font-size', '15px')]
                                 }])
             .set_properties(**{'text-align': 'left'})
-            .hide_columns()
-            .hide_index()
+            .hide(axis="columns")
+            .hide(axis="index")
             )
 
 
@@ -6034,7 +6034,7 @@ def top_n_values_gen(df: pd.DataFrame, value_column: str, n: int = 10, threshold
                     .set_table_styles([{'selector': 'caption',
                                         'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
                     .format('{:.2f}', subset=value_column)
-                    .hide_index())
+                    .hide(axis="index"))
             yield
 
 
