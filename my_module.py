@@ -23,7 +23,7 @@ import statsmodels.stats.api as stm
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from termcolor import colored
 import scipy.stats as stats
-import pingouin as pg
+import pingouin as pglen(list(num_columns)
 import warnings
 import nbformat
 from nbformat import v4
@@ -910,7 +910,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
             lambda x: pd.api.types.is_datetime64_any_dtype(df[x]), df.columns)
         layout = widgets.Layout(
             grid_template_columns='auto auto')
-        for column in tqdm(date_columns, desc="Making date widgets", total=len(list(date_columns))):
+        for column in date_columns:
             widgets_ = [func(df[column]) for func in func_date]
             yield widgets.GridBox(widgets_, layout=layout)
 
@@ -923,7 +923,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
         else:
             layout = widgets.Layout(
                 grid_template_columns='repeat(4, 0.2fr)')
-        for column in tqdm(num_columns, desc="Making numeric widgets", total=len(list(num_columns))):
+        for column in num_columns:
             widgets_ = [func(df[column]) for func in funcs_num]
             yield widgets.GridBox(widgets_, layout=layout)
 
@@ -936,7 +936,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
         else:
             layout = widgets.Layout(
                 grid_template_columns='repeat(2, 0.3fr)')
-        for column in tqdm(obj_columns, desc="Making object widgets", total=len(list(obj_columns))):
+        for column in obj_columns:
             widgets_ = [func(df[column]) for func in func_obj]
             yield widgets.GridBox(widgets_, layout=layout)
 
