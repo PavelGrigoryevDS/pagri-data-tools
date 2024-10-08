@@ -7,6 +7,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from ipywidgets import widgets, Layout
 from IPython.display import display, display_html, display_markdown
+from plotly.subplots import make_subplots
 from tqdm.auto import tqdm
 import re
 import itertools
@@ -6451,7 +6452,7 @@ def bar(config: dict, titles_for_axis: dict = None):
     return fig
 
 
-def pairplot(df: pd.DataFrame, titles_for_axis: dict = None):
+def pairplot_seaborn(df: pd.DataFrame, titles_for_axis: dict = None):
     """
     Create a pairplot of a given DataFrame with customized appearance.
 
@@ -7528,7 +7529,7 @@ def add_hypotheses_links_and_toc(notebook_path: str, mode: str = 'draft', link_t
     print(f"Corrected notebook saved to {output_filename}")
 
 
-def pairplot_without_duplicates(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None):
+def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
