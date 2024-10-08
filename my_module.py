@@ -1,3 +1,5 @@
+# import importlib
+# importlib.reload(my_module)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -957,7 +959,8 @@ def check_duplicated(df):
             .to_frame()
             .sort_values('count', ascending=False)
             # .rename(columns={0: 'Count'})
-    )
+            )
+
 
 def find_columns_with_duplicates(df) -> pd.Series:
     '''
@@ -1252,7 +1255,8 @@ def get_non_matching_rows(df, col1, col2):
     Returns:
     pd.DataFrame: Строки DataFrame, для которых значения в col1 имеют разные значения в col2
     """
-    non_unique_values = df.groupby(col1, observed=False)[col2].nunique()[lambda x: x > 1].index
+    non_unique_values = df.groupby(col1, observed=False)[
+        col2].nunique()[lambda x: x > 1].index
     non_matching_rows = df[df[col1].isin(non_unique_values)]
     if non_matching_rows.empty:
         print('Нет строк для которых значения в col1 имеют разные значения в col2')
@@ -2063,17 +2067,148 @@ def heatmap(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, ya
         fig.update_layout(width=width)
     if height is not None:
         fig.update_layout(height=height)
-
+    fig.update_layout(
+        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
+        # Для подписей и меток
+        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
+        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # xaxis_linewidth=2,
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # yaxis_linewidth=2
+        margin=dict(l=50, r=50, b=50, t=70),
+        hoverlabel=dict(bgcolor="white")
+    )
     return fig
 
 
-def plot_feature_importances_classifier(df: pd.DataFrame, target: str):
+def heatmap_corr(df, title='Тепловая карта корреляционных связей между числовыми столбцами', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+    """
+    Creates a heatmap from a Pandas DataFrame using Plotly.
+
+    Parameters:
+    - `df`: The Pandas DataFrame to create the heatmap from.
+    - `title`: The title of the heatmap (default is an empty string).
+    - `xtick_text`: The custom tick labels for the x-axis (default is None).
+    - `ytick_text`: The custom tick labels for the y-axis (default is None).
+    - `xaxis_label`: The label for the x-axis (default is None).
+    - `yaxis_label`: The label for the y-axis (default is None).
+    - `width`: The width of the heatmap (default is None).
+    - `height`: The height of the heatmap (default is None).
+    - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
+    - `font_size`: The font size for the text in the annotations (default is 14).
+
+    Returns:
+    - A Plotly figure object representing the heatmap.
+
+    Notes:
+    - If `xtick_text` or `ytick_text` is provided, it must have the same length as the number of columns or rows in the DataFrame, respectively.
+    - The heatmap is created with a custom colorscale and hover labels.
+    - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
+    """
+    num_columns = filter(
+        lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
+    df_corr = df[num_columns].corr()
+    # Create figure
+    fig = go.Figure(data=go.Heatmap(
+        z=df_corr.values,
+        x=df_corr.columns,
+        y=df_corr.index,
+        xgap=3,
+        ygap=3,
+        colorscale=[[0, 'rgba(204, 153, 255, 0.1)'], [1, 'rgb(127, 60, 141)']],
+        hoverongaps=False,
+        hoverinfo="x+y+z",
+        hoverlabel=dict(
+            bgcolor="white",
+            # Increase font size to font_size
+            font=dict(color="black", size=font_size)
+        )
+    ))
+
+    # Create annotations
+    center_color_bar = (df_corr.max().max() + df_corr.min().min()) * 0.7
+    annotations = [
+        dict(
+            text=f"{df_corr.values[row, col]:.{decimal_places}f}",
+            x=col,
+            y=row,
+            showarrow=False,
+            font=dict(
+                color="black" if df_corr.values[row, col] <
+                center_color_bar else "white",
+                size=font_size
+            )
+        )
+        for row, col in np.ndindex(df_corr.values.shape)
+    ]
+
+    # Update layout
+    fig.update_layout(
+        title=title,
+        annotations=annotations,
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=False)
+    )
+
+    # Update axis labels if custom labels are provided
+    if xtick_text is not None:
+        if len(xtick_text) != len(df_corr.columns):
+            raise ValueError(
+                "xtick_text must have the same length as the number of columns in the DataFrame")
+        fig.update_layout(xaxis=dict(tickvals=range(
+            len(xtick_text)), ticktext=xtick_text))
+
+    if ytick_text is not None:
+        if len(ytick_text) != len(df_corr.index):
+            raise ValueError(
+                "ytick_text must have the same length as the number of rows in the DataFrame")
+        fig.update_layout(yaxis=dict(tickvals=range(
+            len(ytick_text)), ticktext=ytick_text))
+
+    # Update axis labels if custom labels are provided
+    if xaxis_label is not None:
+        fig.update_layout(xaxis=dict(title=xaxis_label))
+
+    if yaxis_label is not None:
+        fig.update_layout(yaxis=dict(title=yaxis_label))
+
+    # Update figure size if custom size is provided
+    if width is not None:
+        fig.update_layout(width=width)
+    if height is not None:
+        fig.update_layout(height=height)
+    hovertemplate = 'Название столбца (ось X) = %{x}<br>Название столбца (ось Y) = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
+    fig.update_traces(hovertemplate=hovertemplate)
+    fig.update_layout(
+        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
+        # Для подписей и меток
+        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
+        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # xaxis_linewidth=2,
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # yaxis_linewidth=2
+        margin=dict(l=50, r=50, b=50, t=70),
+        hoverlabel=dict(bgcolor="white")
+    )
+    return fig
+
+
+def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_for_axis: dict = None):
     """
     Plot the feature importances of a random forest classifier using Plotly Express.
 
     Parameters:
     df (pandas.DataFrame): The input DataFrame containing the features and target variable.
     target (str): The name of the target variable column in the DataFrame.
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
     fig (plotly.graph_objs.Figure): The feature importance plot.
@@ -2081,6 +2216,13 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str):
     Notes:
     This function trains a random forest classifier on the input DataFrame, extracts the feature importances,
     and plots them using Plotly Express. 
+    Examples:
+        titles_for_axis = dict(
+            debt = 'долга'
+            , children = 'Кол-во детей'
+            , age = 'Возраст'
+            , total_income = 'Доход')
+)
     """
 
     # Select numeric columns and the target variable
@@ -2092,6 +2234,9 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str):
     target = df_tmp[target]
     # Get the feature names
     features = df_features.columns
+    if titles_for_axis:
+        features = [titles_for_axis[feature] for feature in features]
+        target_str = titles_for_axis[target_str]
     # Normalize the data using Standard Scaler
     scaler = StandardScaler()
     df_scaled = scaler.fit_transform(df_features)
@@ -2111,13 +2256,28 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str):
 
     # Create the bar chart
     fig = px.bar(feature_importances, x='Importance', y='Feature',
-                 title=f'Feature Importances for {target_str}')
+                 title=f'График важности признаков для предсказания {target_str}')
     fig.update_layout(
-        yaxis=dict(categoryorder='total ascending'),
+        yaxis=dict(categoryorder='total ascending', title=dict(
+            font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), text='Названия признаков')),
+        xaxis=dict(title=dict(font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+                   text='Оценка важности'), showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"),
         width=700,  # Set the width of the graph
         height=500,  # Set the height of the graph
-        hoverlabel=dict(bgcolor='white'),
-        template='simple_white'  # Set the template to simple_white
+        template='simple_white',  # Set the template to simple_white
+        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
+        # Для подписей и меток
+        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
+        # xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        # yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # xaxis_linewidth=2,
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        # yaxis_linewidth=2
+        margin=dict(l=50, r=50, b=50, t=100),
+        hoverlabel=dict(bgcolor="white"),
     )
     # Set the bar color to mediumpurple
     fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)')
@@ -5818,7 +5978,7 @@ def check_zeros_value_in_df(df):
     num_columns = [
         col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
     df_num_columns = df[num_columns]
-    zeros = (df_num_columns < 0).sum()
+    zeros = (df_num_columns == 0).sum()
     display(zeros[zeros != 0].apply(
         lambda x: f'{x} ({(x / size):.1%})').to_frame(name='zeros'))
 
@@ -5867,10 +6027,10 @@ def analys_column_by_category(df: pd.DataFrame, df_for_analys: pd.DataFrame, col
         col for col in df.columns if pd.api.types.is_categorical_dtype(df[col])]
     for category_column in category_columns:
         analys_df = df_for_analys.groupby(
-            category_column).size().reset_index(name='count')
+            category_column, observed=False).size().reset_index(name='count')
         summ_counts = analys_df['count'].sum()
         all_df = df.groupby(
-            category_column).size().reset_index(name='total')
+            category_column, observed=False).size().reset_index(name='total')
         result_df = pd.merge(analys_df, all_df, on=category_column)
         result_df['count_in_total_pct'] = (
             result_df['count'] / result_df['total'])
@@ -5918,37 +6078,37 @@ def check_group_count(df, category_columns, value_column):
     Это функция нужна для  проверки того, что количество элементов в группах соответствует ожидаемому  
     для заполнения пропусков через группы.
     '''
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: 1 if x.isna().sum() else -1).dropna()
     # -1 это группы без пропусков
     group_with_miss = (temp != -1).sum() / temp.size
     print(f'{group_with_miss:.2%} groups have missing values')
     # Посмотрим какой процент групп с пропусками имеют больше 30 элементов
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: x.count() > 30 if x.isna().sum() else -1).dropna()
     temp = temp[temp != -1]
     group_with_more_30_elements = (temp == True).sum() / temp.size
     print(f'{group_with_more_30_elements:.2%}  groups with missings have more than 30 elements')
     # Посмотрим какой процент групп с пропусками имеют больше 10 элементов
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: x.count() > 10 if x.isna().sum() else -1).dropna()
     temp = temp[temp != -1]
     group_with_more_10_elements = (temp == True).sum() / temp.size
     print(f'{group_with_more_10_elements:.2%}  groups with missings have more than 10 elements')
     # Посмотрим какой процент групп с пропусками имеют больше 5 элементов
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: x.count() > 5 if x.isna().sum() else -1).dropna()
     temp = temp[temp != -1]
     group_with_more_5_elements = (temp == True).sum() / temp.size
     print(f'{group_with_more_5_elements:.2%}  groups with missings have more than 5 elements')
     # Посмотрим какой процент групп содержат только NA
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: x.count() if x.isna().sum() else -1).dropna()
     temp = temp[temp != -1]
     group_with_ontly_missings = (temp == 0).sum() / temp.size
     print(f'{group_with_ontly_missings:.2%}  groups have only missings')
     # Посмотрим сколько всего значений в группах, где только прпоуски
-    temp = df.groupby(category_columns)[value_column].agg(
+    temp = df.groupby(category_columns, observed=False)[value_column].agg(
         lambda x: -1 if x.count() else x.isna().sum()).dropna()
     temp = temp[temp != -1]
     missing_cnt = temp.sum()
@@ -5981,11 +6141,11 @@ def fill_na_with_function_by_categories(df, category_columns, value_column, func
         if func not in available_funcs:
             raise ValueError(f"Unknown function: {func}")
         # If func is a string, use the corresponding pandas method
-        return df.groupby(category_columns)[value_column].transform(
+        return df.groupby(category_columns, observed=False)[value_column].transform(
             lambda x: x.fillna(x.apply(func)) if x.count() >= minimal_group_size else x)
     else:
         # If func is a callable, apply it to each group of values
-        return df.groupby(category_columns)[value_column].transform(
+        return df.groupby(category_columns, observed=False)[value_column].transform(
             lambda x: x.fillna(func(x)) if x.count() >= minimal_group_size else x)
 
 
@@ -6328,8 +6488,8 @@ def pairplot(df: pd.DataFrame, titles_for_axis: dict = None):
                 xlabel = titles_for_axis[xlabel]
             if ylabel:
                 ylabel = titles_for_axis[ylabel]
-        ax.set_xlabel(xlabel, alpha=0.6)
-        ax.set_ylabel(ylabel, alpha=0.6)
+        ax.set_xlabel(xlabel, alpha=0.6, fontfamily='serif')
+        ax.set_ylabel(ylabel, alpha=0.6, fontfamily='serif')
         xticklabels = ax.get_xticklabels()
         for label in xticklabels:
             # if label.get_text():
@@ -6345,7 +6505,7 @@ def pairplot(df: pd.DataFrame, titles_for_axis: dict = None):
         ax.spines['right'].set_alpha(0.3)
         ax.spines['bottom'].set_alpha(0.3)
     g.fig.suptitle('Зависимости между числовыми переменными', fontsize=15,
-                   x=0.07, y=1.05, fontfamily='open-sans', alpha=0.7, ha='left')
+                   x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
 
 def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1):
@@ -7366,3 +7526,96 @@ def add_hypotheses_links_and_toc(notebook_path: str, mode: str = 'draft', link_t
     with open(output_filename, 'w', encoding='utf-8') as out_f:
         nbformat.write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {output_filename}")
+
+
+def pairplot_without_duplicates(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None):
+    """
+    Create a pairplot of numerical variables in a dataframe using Plotly.
+
+    Parameters:
+    df (pandas.DataFrame): Input dataframe
+    width (int, optional): Width of the plot. Defaults to 800.
+    height (int, optional): Height of the plot. Defaults to 800.
+    titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
+    horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
+    vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
+    rows (int, optional): Number of rows in the subplot grid. Defaults to None.
+    cols (int, optional): Number of columns in the subplot grid. Defaults to None.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The resulting pairplot figure
+    """
+    if df.empty:
+        raise ValueError("Input dataframe is empty")
+    num_columns = list(
+        filter(lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns))
+    if len(num_columns) < 2:
+        raise ValueError(
+            "Input dataframe must contain at least 2 numerical columns")
+    combinations = list(itertools.combinations(df[num_columns].columns, 2))
+    len_comb = len(combinations)
+
+    # Определить размер сетки
+    if rows is None or cols is None:
+        size = int(np.ceil(np.sqrt(len_comb)))
+        rows = size
+        cols = size
+    else:
+        if rows * cols < len_comb:
+            raise ValueError(
+                "The number of rows and columns is not enough to accommodate all combinations")
+        rows = rows
+        cols = cols
+
+    fig = make_subplots(
+        rows=rows, cols=cols, horizontal_spacing=horizontal_spacing, vertical_spacing=vertical_spacing)
+
+    for i, (col1, col2) in enumerate(combinations):
+        row, col = divmod(i, cols)
+        if titles_for_axis:
+            xaxes_title = titles_for_axis[col1]
+            yaxes_title = titles_for_axis[col2]
+        else:
+            xaxes_title = col1
+            yaxes_title = col2
+        fig_scatter = px.scatter(df, x=col1, y=col2)
+        fig_scatter.update_traces(marker=dict(
+            line=dict(color='white', width=0.5)))
+        fig_scatter.update_traces(
+            hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}')
+        fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
+        fig.update_xaxes(
+            title_text=xaxes_title,
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+            linecolor="rgba(0, 0, 0, 0.5)",
+            row=row+1, col=col+1
+        )
+        fig.update_yaxes(
+            title_text=yaxes_title,
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+            linecolor="rgba(0, 0, 0, 0.5)",
+            row=row+1, col=col+1
+        )
+
+    # # Update the layout
+    fig.update_layout(
+        height=height,
+        width=width,
+        title_font_size=16,
+        margin=dict(l=50, r=50, t=90, b=50),
+        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
+        title={'text': f'Зависимости между числовыми переменными'},
+        # Для подписей и меток
+        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
+        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        hoverlabel=dict(bgcolor="white")
+    )
+
+    return fig
