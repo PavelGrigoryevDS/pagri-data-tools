@@ -23,7 +23,7 @@ import statsmodels.stats.api as stm
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from termcolor import colored
 import scipy.stats as stats
-import pingouin as pglen
+import pingouin as pg
 import warnings
 import nbformat
 from nbformat import v4
@@ -956,8 +956,8 @@ def check_duplicated(df):
             .value_counts(dropna=False)
             .to_frame()
             .sort_values('count', ascending=False)
-            # .rename(columns={0: 'Count'}))
-
+            # .rename(columns={0: 'Count'})
+    )
 
 def find_columns_with_duplicates(df) -> pd.Series:
     '''
