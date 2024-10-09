@@ -2696,7 +2696,7 @@ def parallel_categories_dash(df):
     return app
 
 
-def sankey(df, columns, values_column=None, func='sum', mode='fig'):
+def sankey(df, columns, values_column=None, func='sum', mode='fig', titles_for_axis: dict = None):
     """
     Создает Sankey-диаграмму
 
@@ -2729,10 +2729,10 @@ def sankey(df, columns, values_column=None, func='sum', mode='fig'):
             current_columns = columns[i:i+2]
             if values_column:
                 df_grouped = df_in[current_columns+[values_column]].groupby(
-                    current_columns)[[values_column]].agg(value=(values_column, func)).reset_index()
+                    current_columns, observed=True)[[values_column]].agg(value=(values_column, func)).reset_index()
             else:
                 df_grouped = df_in[current_columns].groupby(
-                    current_columns).size().reset_index().rename(columns={0: 'value'})
+                    current_columns, observed=True).size().reset_index().rename(columns={0: 'value'})
             temp_df = pd.concat([temp_df, df_grouped
                                  .rename(columns={columns[i]: 'source_name', columns[i+1]: 'target_name'})], axis=0)
         sankey_df = temp_df.reset_index(drop=True)
@@ -2764,6 +2764,7 @@ def sankey(df, columns, values_column=None, func='sum', mode='fig'):
             'rgba(64, 134, 87, 1)',
             'rgba(134, 96, 147, 1)',
             'rgba(132, 169, 233, 1)']
+        colors = ['rgba(128, 60, 170, 1)', 'rgba(4, 156, 179, 1)', 'rgba(112, 155, 221, 1)', 'rgba(99, 113, 156, 1)', 'rgba(92, 107, 192, 1)', 'rgba(182, 144, 196, 1)', 'rgba(17, 100, 120, 1)', 'rgba(194, 143, 113, 1)', 'rgba(182, 144, 196, 1)', 'rgba(3, 169, 244, 1)', 'rgba(139, 148, 103, 1)', 'rgba(167, 113, 242, 1)', 'rgba(102, 204, 204, 1)', 'rgba(168, 70, 90, 1)', 'rgba(50, 152, 103, 1)', 'rgba(143, 122, 122, 1)', 'rgba(156, 130, 217, 1)']
         node_colors = []
         colors = itertools.cycle(colors)
         for node in nodes_with_indexes.keys():
@@ -2822,15 +2823,32 @@ def sankey(df, columns, values_column=None, func='sum', mode='fig'):
                 color=link_color
             )
         )])
+        # Количество уровней
+        num_levels = len(columns)
+        step = 1 / (num_levels-1)
+        # Аннотации для названий уровней
+        level_x = 0
+        for column in columns:
+            if titles_for_axis:
+                column = titles_for_axis[column][0]
+            fig.add_annotation(x=level_x, y=1.05, xref="paper", yref="paper",
+                            text=column, showarrow=False, font=dict(size=16, family="Open Sans", color="rgba(0, 0, 0, 0.6)"), xanchor='center')
+            level_x += step
+
 
         layout = dict(
-            title=f"Sankey Diagram for {', '.join(columns+[values_column])}" if values_column else
-            f"Sankey Diagram for {', '.join(columns)}",
+            # title=f"Sankey Diagram for {', '.join(columns+[values_column])}" if values_column else
+            # f"Sankey Diagram for {', '.join(columns)}",
+            title = 'Санки диаграмма категорий',
             height=772,
-            font=dict(
-                size=10),)
+            title_font_size=16,
+            # margin=dict(l=50, r=50, t=90, b=50),
+            title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)", family="Open Sans"),
+            # Для подписей и меток
+            # font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
+            )
 
-        fig.update_layout(layout)
+        fig.update_layout(layout)        
         return fig
     if mode == 'data':
         sankey_dict = {}
