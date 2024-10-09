@@ -6458,10 +6458,13 @@ def bar(config: dict, titles_for_axis: dict = None):
         # , title={'text': f'<b>{title}</b>'}
         # , margin=dict(l=50, r=50, b=50, t=70)
         margin=dict(t=80),
-        width=config['width'], height=config['height'], title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)", hoverlabel=dict(bgcolor="white"), xaxis=dict(
+        width=config['width'], height=config['height'], title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, font=dict(size=16, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=16, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=16, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)", hoverlabel=dict(bgcolor="white"), xaxis=dict(
             visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
             visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+        ),
+        legend=dict(
+            title_font_color="rgba(0, 0, 0, 0.4)", font_color="rgba(0, 0, 0, 0.5)"
         )
     )
     if pd.api.types.is_numeric_dtype(config['df'][config['x']]):
