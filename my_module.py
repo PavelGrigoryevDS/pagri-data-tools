@@ -6570,10 +6570,10 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         yaxis_title=yaxis_title
     )
     fig.update_traces(
-        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}', showlegend=False)
+        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>', showlegend=False)
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
-        width=width, height=height, title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"), xaxis_title=xaxis_title, yaxis_title=yaxis_title, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)"        # , margin=dict(l=50, r=50, b=50, t=70)
+        width=width, height=height, title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), xaxis_title=xaxis_title, yaxis_title=yaxis_title, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)"        # , margin=dict(l=50, r=50, b=50, t=70)
         , hoverlabel=dict(bgcolor="white"), xaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
