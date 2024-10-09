@@ -18,7 +18,6 @@ from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.io as pio
-import plotly.graph_objects as go
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
@@ -2086,13 +2085,14 @@ def heatmap(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, ya
     return fig
 
 
-def heatmap_corr(df, title='Тепловая карта корреляционных связей между числовыми столбцами', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+def heatmap_corr(df, title='Тепловая карта корреляционных связей между числовыми столбцами', titles_for_axis: dict = None, xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
     Parameters:
     - `df`: The Pandas DataFrame to create the heatmap from.
     - `title`: The title of the heatmap (default is an empty string).
+    - `titles_for_axis` (dict):  A dictionary containing titles for the axes.
     - `xtick_text`: The custom tick labels for the x-axis (default is None).
     - `ytick_text`: The custom tick labels for the y-axis (default is None).
     - `xaxis_label`: The label for the x-axis (default is None).
@@ -2113,6 +2113,10 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
     num_columns = filter(
         lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
     df_corr = df[num_columns].corr()
+    if titles_for_axis:
+        df_corr.columns = [titles_for_axis[column]
+                           for column in df_corr.columns]
+        df_corr.index = [titles_for_axis[index] for index in df_corr.index]
     # Create figure
     fig = go.Figure(data=go.Heatmap(
         z=df_corr.values,
@@ -6689,13 +6693,19 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
         )
         # bar
         bar_fig_all = px.bar(
-            crosstab_for_figs_all['data'], barmode='group', text_auto=".0f")
+            crosstab_for_figs_all['data'], barmode='group')
+        for trace in bar_fig_all.data:
+            trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
         bar_traces_len_all = len(bar_fig_all.data)
         bar_fig_normolized_by_col = px.bar(
-            crosstab_for_figs_normolized_by_col['data'], barmode='group', text_auto=".0f")
+            crosstab_for_figs_normolized_by_col['data'], barmode='group')
+        for trace in bar_fig_normolized_by_col.data:
+            trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
         bar_traces_len_normolized_by_col = len(bar_fig_normolized_by_col.data)
         bar_fig_normolized_by_row = px.bar(
-            crosstab_for_figs_normolized_by_row['data'], barmode='group', text_auto=".0f")
+            crosstab_for_figs_normolized_by_row['data'], barmode='group')
+        for trace in bar_fig_normolized_by_row.data:
+            trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
         bar_traces_len_normolized_by_row = len(bar_fig_normolized_by_row.data)
         # heatmap
         heatmap_fig_all = px.imshow(
@@ -6737,40 +6747,40 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
                 + [True] * bar_traces_len_all
                 + [False] * bar_traces_len_normolized_by_col
                 + [False] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{xaxis_title_for_figs_all}'+' = %{x}<br>'+f'{legend_title_all}'+'= %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'
-            }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_all, 'yaxis.title': yaxis_title_for_figs_all, 'legend.title.text': legend_title_all
+            }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_all, 'yaxis.showgrid': True, 'yaxis.title': yaxis_title_for_figs_all, 'legend.title.text': legend_title_all
                 }]), dict(label="Heatmap", method="update", args=[{
                     "visible": [True, False, False]
                     + [False] * bar_traces_len_all
                     + [False] * bar_traces_len_normolized_by_col
                     + [False] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{xaxis_title_heatmap}'+' = %{x}<br>'+f'{yaxis_title_heatmap}'+'= %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'
-                }, {'title.text': title_heatmap, 'xaxis.title': xaxis_title_heatmap, 'yaxis.title': yaxis_title_heatmap
+                }, {'title.text': title_heatmap, 'xaxis.title': xaxis_title_heatmap, 'yaxis.title': yaxis_title_heatmap, 'yaxis.showgrid': False
                     }]), dict(label=f"Сравнение ({xaxis_title_for_figs_normolized_by_col.lower()})", method="update", args=[{
                         "visible": [False, False, False]
                         + [False] *
                         bar_traces_len_all
                         + [True] * bar_traces_len_normolized_by_col
                         + [False] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{xaxis_title_for_figs_normolized_by_col}'+' = %{x}<br>'+f'{legend_title_normolized_by_col}'+'= %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'
-                    }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_normolized_by_col, 'yaxis.title': yaxis_title_for_figs_normolized_by_col, 'legend.title.text': legend_title_normolized_by_col
+                    }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_normolized_by_col, 'yaxis.showgrid': True, 'yaxis.title': yaxis_title_for_figs_normolized_by_col, 'legend.title.text': legend_title_normolized_by_col
                         }]), dict(label="Heatmap", method="update", args=[{
                             "visible": [False, True, False]
                             + [False] * bar_traces_len_all
                             + [False] *
                             bar_traces_len_normolized_by_col
                             + [False] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{xaxis_title_heatmap}'+' = %{x}<br>'+f'{yaxis_title_heatmap}'+'= %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'
-                        }, {'title.text': title_heatmap, 'xaxis.title': xaxis_title_heatmap, 'yaxis.title': yaxis_title_heatmap
+                        }, {'title.text': title_heatmap, 'xaxis.title': xaxis_title_heatmap, 'yaxis.title': yaxis_title_heatmap, 'yaxis.showgrid': False
                             }]), dict(label=f"Сравнение ({xaxis_title_for_figs_normolized_by_row.lower()})", method="update", args=[{
                                 "visible": [False, False, False]
                                 + [False] * bar_traces_len_all
                                 + [False] * bar_traces_len_normolized_by_col
                                 + [True] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{xaxis_title_for_figs_normolized_by_row}'+' = %{x}<br>'+f'{legend_title_normolized_by_row}'+'= %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'
-                            }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_normolized_by_row, 'yaxis.title': yaxis_title_for_figs_normolized_by_row, 'legend.title.text': legend_title_normolized_by_row
+                            }, {'title.text': title_bar, 'xaxis.title': xaxis_title_for_figs_normolized_by_row, 'yaxis.showgrid': True, 'yaxis.title': yaxis_title_for_figs_normolized_by_row, 'legend.title.text': legend_title_normolized_by_row
                                 }]), dict(label="Heatmap", method="update", args=[{
                                     "visible": [False, False, True]
                                     + [False] *
                                     bar_traces_len_all
                                     + [False] * bar_traces_len_normolized_by_col
                                     + [False] * bar_traces_len_normolized_by_row, 'xaxis': {'visible': False}, 'yaxis': {'visible': False}, 'hovertemplate': f'{yaxis_title_heatmap}'+' = %{x}<br>'+f'{xaxis_title_heatmap}'+'= %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'
-                                }, {'title.text': title_heatmap, 'xaxis.title': yaxis_title_heatmap, 'yaxis.title': xaxis_title_heatmap
+                                }, {'title.text': title_heatmap, 'xaxis.title': yaxis_title_heatmap, 'yaxis.title': xaxis_title_heatmap, 'yaxis.showgrid': False
                                     }])
         ]
         # for button in buttons:
@@ -7590,14 +7600,20 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
             title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
-            row=row+1, col=col+1
+            row=row+1, col=col+1,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(0, 0, 0, 0.1)"
         )
         fig.update_yaxes(
             title_text=yaxes_title,
             title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
-            row=row+1, col=col+1
+            row=row+1, col=col+1,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(0, 0, 0, 0.07)"
         )
 
     # # Update the layout
@@ -7616,7 +7632,7 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.5)",
         yaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        hoverlabel=dict(bgcolor="white")
+        hoverlabel=dict(bgcolor="white"),
     )
 
     return fig
