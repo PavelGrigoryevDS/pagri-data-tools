@@ -2764,7 +2764,8 @@ def sankey(df, columns, values_column=None, func='sum', mode='fig', titles_for_a
             'rgba(64, 134, 87, 1)',
             'rgba(134, 96, 147, 1)',
             'rgba(132, 169, 233, 1)']
-        colors = ['rgba(128, 60, 170, 1)', 'rgba(4, 156, 179, 1)', 'rgba(112, 155, 221, 1)', 'rgba(99, 113, 156, 1)', 'rgba(92, 107, 192, 1)', 'rgba(182, 144, 196, 1)', 'rgba(17, 100, 120, 1)', 'rgba(194, 143, 113, 1)', 'rgba(182, 144, 196, 1)', 'rgba(3, 169, 244, 1)', 'rgba(139, 148, 103, 1)', 'rgba(167, 113, 242, 1)', 'rgba(102, 204, 204, 1)', 'rgba(168, 70, 90, 1)', 'rgba(50, 152, 103, 1)', 'rgba(143, 122, 122, 1)', 'rgba(156, 130, 217, 1)']
+        colors = ['rgba(128, 60, 170, 1)', 'rgba(4, 156, 179, 1)', 'rgba(112, 155, 221, 1)', 'rgba(99, 113, 156, 1)', 'rgba(92, 107, 192, 1)', 'rgba(182, 144, 196, 1)', 'rgba(17, 100, 120, 1)', 'rgba(194, 143, 113, 1)',
+                  'rgba(182, 144, 196, 1)', 'rgba(3, 169, 244, 1)', 'rgba(139, 148, 103, 1)', 'rgba(167, 113, 242, 1)', 'rgba(102, 204, 204, 1)', 'rgba(168, 70, 90, 1)', 'rgba(50, 152, 103, 1)', 'rgba(143, 122, 122, 1)', 'rgba(156, 130, 217, 1)']
         node_colors = []
         colors = itertools.cycle(colors)
         for node in nodes_with_indexes.keys():
@@ -2832,23 +2833,23 @@ def sankey(df, columns, values_column=None, func='sum', mode='fig', titles_for_a
             if titles_for_axis:
                 column = titles_for_axis[column][0]
             fig.add_annotation(x=level_x, y=1.05, xref="paper", yref="paper",
-                            text=column, showarrow=False, font=dict(size=16, family="Open Sans", color="rgba(0, 0, 0, 0.6)"), xanchor='center')
+                               text=column, showarrow=False, font=dict(size=16, family="Open Sans", color="rgba(0, 0, 0, 0.6)"), xanchor='center')
             level_x += step
-
 
         layout = dict(
             # title=f"Sankey Diagram for {', '.join(columns+[values_column])}" if values_column else
             # f"Sankey Diagram for {', '.join(columns)}",
-            title = 'Санки диаграмма категорий',
+            title='Санки диаграмма категорий',
             height=772,
             title_font_size=16,
             # margin=dict(l=50, r=50, t=90, b=50),
-            title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)", family="Open Sans"),
+            title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)",
+                            family="Open Sans"),
             # Для подписей и меток
             # font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-            )
+        )
 
-        fig.update_layout(layout)        
+        fig.update_layout(layout)
         return fig
     if mode == 'data':
         sankey_dict = {}
@@ -6384,10 +6385,10 @@ def bar(config: dict, titles_for_axis: dict = None):
         else:
             ascending = True
         func_df = (df[[*cat_columns, num_column]]
-                   .groupby(cat_columns)
+                   .groupby(cat_columns, observed=True)
                    .agg(num=(num_column, func), count=(num_column, 'count'))
                    .reset_index())
-        func_df['temp'] = func_df.groupby(cat_columns[0])[
+        func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
             'num'].transform('sum')
         func_df['count'] = func_df['count'].apply(
             lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
@@ -6456,7 +6457,8 @@ def bar(config: dict, titles_for_axis: dict = None):
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
         # , margin=dict(l=50, r=50, b=50, t=70)
-        width=config['width'], height=config['height'], title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"), title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)", hoverlabel=dict(bgcolor="white"), xaxis=dict(
+        margin=dict(t=80),
+        width=config['width'], height=config['height'], title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)", hoverlabel=dict(bgcolor="white"), xaxis=dict(
             visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
             visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
