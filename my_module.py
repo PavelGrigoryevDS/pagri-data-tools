@@ -5745,9 +5745,9 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
         fig.data[0].marker.color = colors
         fig.data[0].text = text
         fig.add_vline(x=ci_lower, line_width=2, line_color="#049CB3",
-                      annotation_text=f"{ci_lower:.2f}", annotation_position='top', line_dash="dash")
+                      annotation_text=f"{ci_lower:.2f}", annotation_position='top', line_dash="dash", annotation_font_color='#049CB3')
         fig.add_vline(x=ci_upper, line_width=2, line_color="#049CB3",
-                      annotation_text=f"{ci_upper:.2f}", annotation_position='top', line_dash="dash")
+                      annotation_text=f"{ci_upper:.2f}", annotation_position='top', line_dash="dash", annotation_font_color='#049CB3')
         fig.update_annotations(font_size=16)
         fig.update_traces(
             hovertemplate='Количество = %{y}<br>Разница = %{text}', textposition='none')
@@ -5757,8 +5757,8 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
             bargap=0,
             xaxis_title="Разница",
             yaxis_title="Количество",
-            title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
-            title={'text': f'<b>{fig.layout.title.text}</b>'},
+            title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"),
+            title={'text': f'{fig.layout.title.text}'},
             # Для подписей и меток
             font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
             xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
@@ -5826,7 +5826,7 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
         else:
             print(colored(
                 "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
-        plot_data(boot_data).show()
+        return plot_data(boot_data)
     else:
         res = []
         if return_boot_data:
