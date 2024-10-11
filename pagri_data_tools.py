@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.io as pio
-import dash
+import dash 
 from dash import dcc, html
 from dash.dependencies import Input, Output
 import statsmodels.stats.api as stm
