@@ -1,36 +1,36 @@
 # import importlib
-# importlib.reload(my_module)
+# importlib.reload(pagri_data_tools)
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
+# import seaborn as sns
+# import matplotlib.pyplot as plt
 from ipywidgets import widgets, Layout
 from IPython.display import display, display_html, display_markdown
 from plotly.subplots import make_subplots
 from tqdm.auto import tqdm
 import re
 import itertools
-from pymystem3 import Mystem
+# from pymystem3 import Mystem
 import plotly.graph_objects as go
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.preprocessing import StandardScaler
-import statsmodels.api as sm
-from statsmodels.stats.outliers_influence import variance_inflation_factor
+# from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+# from sklearn.preprocessing import StandardScaler
+# import statsmodels.api as sm
+# from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.io as pio
 import dash 
 from dash import dcc, html
 from dash.dependencies import Input, Output
-import statsmodels.stats.api as stm
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
-from termcolor import colored
-import scipy.stats as stats
-import pingouin as pg
+# import statsmodels.stats.api as stm
+# from statsmodels.stats.multicomp import pairwise_tukeyhsd
+# from termcolor import colored
+# import scipy.stats as stats
+# import pingouin as pg
 import warnings
 import nbformat
 from nbformat import v4
 import json
-from pyaspeller import YandexSpeller
+# from pyaspeller import YandexSpeller
 # from nltk.tokenize import word_tokenize
 
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -184,15 +184,25 @@ def make_widget_all_frame(df):
     widget_all_frame = widgets.Output()
     with widget_all_frame:
         # display_html('<h4>DataFrame</h4>', raw=True, height=3)
-        display(all_rows.style
-                .set_caption('DataFrame')
-                .set_table_styles([{'selector': 'caption',
-                                    'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
-                                    }])
-                .set_properties(**{'text-align': 'left'})
-                # .hide(axis="columns")
-                .hide(axis="index")
-                )
+        if pd.__version__ == '1.3.5':
+            display(all_rows.style
+                    .set_caption('DataFrame')
+                    .set_table_styles([{'selector': 'caption',
+                                        'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
+                                        }])
+                    .set_properties(**{'text-align': 'left'})
+                    .hide_index()
+                    )            
+        else:
+            display(all_rows.style
+                    .set_caption('DataFrame')
+                    .set_table_styles([{'selector': 'caption',
+                                        'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
+                                        }])
+                    .set_properties(**{'text-align': 'left'})
+                    # .hide(axis="columns")
+                    .hide(axis="index")
+                    )
     # widget_DataFrame.layout.margin = '0px 0px 0px 0px'
     return widget_all_frame
 
@@ -1057,7 +1067,14 @@ def find_columns_with_missing_values(df) -> pd.Series:
         if is_na.any():
             dfs_na[col] = df[is_na]
             cnt_missing[col] = dfs_na[col].shape[0]
-    display(cnt_missing.apply(lambda x: f'{x} ({(x / size):.2%})').to_frame().style
+    if pd.__version__ == '1.3.5':
+        display(cnt_missing.apply(lambda x: f'{x} ({(x / size):.2%})').to_frame().style
+            .set_caption('Missings')
+            .set_table_styles([{'selector': 'caption',
+                                'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
+            .hide_columns())      
+    else:        
+        display(cnt_missing.apply(lambda x: f'{x} ({(x / size):.2%})').to_frame().style
             .set_caption('Missings')
             .set_table_styles([{'selector': 'caption',
                                 'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
@@ -6035,7 +6052,7 @@ def normalize_string_series(column: pd.Series) -> pd.Series:
     return column.str.lower().str.strip().str.replace(r'\s+', ' ', regex=True)
 
 
-def analys_column_by_category(df: pd.DataFrame, df_for_analys: pd.DataFrame, column_for_analys: str) -> None:
+def analys_column_by_category(df: pd.DataFrame, df_for_analys: pd.DataFrame, column_for_analys: str, is_dash: bool = False) -> None:
     """
     Show statisctic column by categories in DataFrame
 
@@ -6064,36 +6081,60 @@ def analys_column_by_category(df: pd.DataFrame, df_for_analys: pd.DataFrame, col
             result_df['total'] / size_all)
         result_df['diff_sum_pct'] = result_df['count_in_sum_count_pct'] - \
             result_df['total_in_sum_total_pct']
-        display(result_df[[category_column, 'total', 'count', 'count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct']].style
-                .set_caption(f'Value in "{column_for_analys}" by category "{category_column}"')
-                .set_table_styles([{'selector': 'caption',
-                                    'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
-                .format('{:.1%}', subset=['count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct'])
-                .hide(axis="index"))
-        yield
+        if is_dash:
+            result_df = result_df[[category_column, 'total', 'count', 'count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct']]
+            for col in result_df.columns:
+                if pd.api.types.is_float_dtype(result_df[col]):
+                    result_df[col] = result_df[col].apply(lambda x: f'{x:.1%}')
+            yield result_df
+            
+        else:
+            display(result_df[[category_column, 'total', 'count', 'count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct']].style
+                    .set_caption(f'Value in "{column_for_analys}" by category "{category_column}"')
+                    .set_table_styles([{'selector': 'caption',
+                                        'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}])
+                    .format('{:.1%}', subset=['count_in_total_pct', 'count_in_sum_count_pct', 'total_in_sum_total_pct', 'diff_sum_pct'])
+                    .hide(axis="index"))
+            yield
 
 
-def analys_by_category_gen(df, series_for_analys):
+def analys_by_category_gen(df, series_for_analys, is_dash = False):
     '''
     Генератор.
     Для каждой колонки в series_for_analys функция выводит выборку датафрейма.  
     И затем выводит информацию по каждой категории в таблице.
+    
+    is_dash (bool):  режим работы в Dash или нет
+
     '''
     for col in series_for_analys.index:
         if not series_for_analys[col][col].value_counts().empty:
-            print(f'Value counts outliers')
-            display(series_for_analys[col][col].value_counts().to_frame('outliers').head(10).style.set_caption(f'{col}')
-                    .set_table_styles([{'selector': 'caption',
-                                        'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
-                                        }]))
+            if is_dash:
+                yield series_for_analys[col][col].value_counts().to_frame('outliers').head(10)
+            else:
+                print(f'Value counts outliers')
+                display(series_for_analys[col][col].value_counts().to_frame('outliers').head(10).style.set_caption(f'{col}')
+                        .set_table_styles([{'selector': 'caption',
+                                            'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]
+                                            }]))
+                yield series_for_analys[col].sample(10)
+        if is_dash:
+            yield series_for_analys[col].sample(10)
+        else:
+            display(series_for_analys[col].sample(10).style.set_caption(f'Sample outliers in {col}').set_table_styles([{'selector': 'caption',
+                                                                                                                    'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}]))
             yield
-        display(series_for_analys[col].sample(10).style.set_caption(f'Sample outliers in {col}').set_table_styles([{'selector': 'caption',
-                                                                                                                  'props': [('font-size', '18px'), ("text-align", "left"), ("font-weight", "bold")]}]))
-        yield
-        gen = analys_column_by_category(
-            df, series_for_analys[col], col)
+        if is_dash:
+            gen = analys_column_by_category(
+                df, series_for_analys[col], col, is_dash=True)
+        else:
+            gen = analys_column_by_category(
+                df, series_for_analys[col], col)
         for _ in gen:
-            yield
+            if is_dash:
+                yield _
+            else:
+                yield
 
 
 def check_group_count(df, category_columns, value_column):
