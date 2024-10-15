@@ -1884,7 +1884,7 @@ def bar(config: dict, titles_for_axis: dict = None):
             visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
         ),
         legend=dict(
-            title_font_color="rgba(0, 0, 0, 0.4)", font_color="rgba(0, 0, 0, 0.5)"
+            title_font_color="rgba(0, 0, 0, 0.5)", font_color="rgba(0, 0, 0, 0.5)"
         )
     )
     if pd.api.types.is_numeric_dtype(config['df'][config['x']]):
