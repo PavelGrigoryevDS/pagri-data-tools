@@ -476,7 +476,7 @@ def treemap(df, columns, values=None):
     fig.update_layout(margin=dict(t=50, l=25, r=25, b=25))
     fig.update_traces(hoverlabel=dict(bgcolor="white"))
     return fig
-
+ 
 
 def treemap_dash(df):
     """
