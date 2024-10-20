@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
-
+ 
 
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
