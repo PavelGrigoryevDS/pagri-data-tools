@@ -8,7 +8,7 @@ import plotly.io as pio
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
  
-
+pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4']
@@ -63,17 +63,20 @@ px.defaults.color_discrete_sequence = colorway_for_bar
 def plotly_default_settings(fig):
     # Segoe UI Light
     fig.update_layout(
-        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
-        title={'text': f'<b>{fig.layout.title.text}</b>'},
         # Для подписей и меток
-        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         # xaxis_linewidth=2,
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
         hoverlabel=dict(bgcolor="white"),
@@ -186,16 +189,18 @@ def heatmap(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, ya
     if height is not None:
         fig.update_layout(height=height)
     fig.update_layout(
-        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
-        # Для подписей и меток
-        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        # xaxis_linewidth=2,
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
         hoverlabel=dict(bgcolor="white")
@@ -307,16 +312,18 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
     hovertemplate = 'Название столбца (ось X) = %{x}<br>Название столбца (ось Y) = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
     fig.update_traces(hovertemplate=hovertemplate)
     fig.update_layout(
-        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
-        # Для подписей и меток
-        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        # xaxis_linewidth=2,
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
         hoverlabel=dict(bgcolor="white")
@@ -1878,7 +1885,21 @@ def bar(config: dict, titles_for_axis: dict = None):
         # , title={'text': f'<b>{title}</b>'}
         # , margin=dict(l=50, r=50, b=50, t=70)
         margin=dict(t=80),
-        width=config['width'], height=config['height'], title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, font=dict(size=16, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=16, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=16, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)", hoverlabel=dict(bgcolor="white"), xaxis=dict(
+        width=config['width'], height=config['height'],
+        title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, 
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white"), xaxis=dict(
             visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
             visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
@@ -1993,7 +2014,19 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>', showlegend=False)
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
-        width=width, height=height, title_font=dict(size=24, color="rgba(0, 0, 0, 0.5)"), xaxis_title=xaxis_title, yaxis_title=yaxis_title, font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"), xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"), legend_title_font_color='rgba(0, 0, 0, 0.5)', legend_font_color='rgba(0, 0, 0, 0.5)', xaxis_linecolor="rgba(0, 0, 0, 0.5)", yaxis_linecolor="rgba(0, 0, 0, 0.5)"        # , margin=dict(l=50, r=50, b=50, t=70)
+        width=width, height=height,
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         , hoverlabel=dict(bgcolor="white"), xaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
@@ -2326,18 +2359,21 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
     fig.update_layout(
         height=height,
         width=width,
-        title_font_size=16,
         margin=dict(l=50, r=50, t=90, b=50),
-        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
         title={'text': f'Зависимости между числовыми переменными'},
         # Для подписей и меток
-        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"),
     )
 
