@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
- 
+
 pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -2027,9 +2027,11 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
         legend_font_color='rgba(0, 0, 0, 0.7)',
-        , hoverlabel=dict(bgcolor="white"), xaxis=dict(
+        hoverlabel=dict(bgcolor="white")
+        , xaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
-        ), yaxis=dict(
+        )
+        , yaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
         )
     )
