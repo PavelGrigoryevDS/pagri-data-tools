@@ -145,7 +145,8 @@ def heatmap(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, ya
             y=row,
             showarrow=False,
             font=dict(
-                color="black" if df.values[row, col] <
+                family='Segoe UI',
+                color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
                 center_color_bar else "white",
                 size=font_size
             )
@@ -2381,3 +2382,393 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
 
     return fig
             
+def heatmap_categories(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a bar chart for categorical columns using the Plotly Express library.
+
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - column_for_x (str): The name of the column in the DataFrame to be used for creating the axis.
+        - column_for_x_label (str): The label for the axis.
+        - column_for_y (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
+        - column_for_y_label (str): The label for the categories.
+        - title (str): The title of the chart.
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - normalized_mode (str): The mode for normalizing the bars (default is 'all').
+        - orientation (str): The orientation of the chart (default is 'v').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+        titles_for_axis = dict(
+            education = ['Уровень образования', 'уровня образования', 'уровню образования']
+            , family_status = ['Семейное положение', 'семейного положения', 'семейному положению']
+            , gender = ['Пол', 'пола', 'полу']
+            , income_type = ['Тип занятости', 'типа занятости', 'типу занятости']
+            , debt = ['Задолженность', 'задолженности', 'задолженности']
+            , purpose = ['Цель получения кредита', 'цели получения кредита', 'цели получения кредита']
+            , dob_cat = ['Возрастная категория, лет', 'возрастной категории', 'возрастной категории']
+            , total_income_cat = ['Категория дохода', 'категории дохода', 'категории дохода']
+        )
+    config = dict(
+        df = df
+        , column_for_x = 'education'  
+        , column_for_x_label = 'Образование'
+        , column_for_y = 'gender'
+        , column_for_y_label = 'Пол'
+        , title = 'Доход в зависимости от пола и уровня образования'
+        , normalized_mode = 'all'
+        , barmode = 'group'
+        , width = None
+        , height = None
+        , orientation = 'v'
+        , text = False
+        , textsize = 14
+    )
+    bar(config)
+    """
+    # Проверка входных данных
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'column_for_x' not in config or not isinstance(config['column_for_x'], str):
+        raise ValueError("column_for_x must be a string")
+    if 'column_for_y' not in config or not isinstance(config['column_for_y'], str):
+        raise ValueError("column_for_y must be a string")
+    if 'barmode' in config and not isinstance(config['barmode'], str):
+        raise ValueError("barmode must be a string")
+    if 'barmode' not in config:
+        config['barmode'] = 'group'
+    if 'normalized_mode' not in config:
+        config['normalized_mode'] = 'all'        
+    if 'width' not in config:
+        config['width'] = None
+    if 'height' not in config:
+        config['height'] = None
+    if 'textsize' not in config:
+        config['textsize'] = 14
+    if 'xaxis_show' not in config:
+        config['xaxis_show'] = True
+    if 'yaxis_show' not in config:
+        config['yaxis_show'] = True
+    if 'showgrid_x' not in config:
+        config['showgrid_x'] = True
+    if 'showgrid_y' not in config:
+        config['showgrid_y'] = True
+    # if 'orientation' in config and config['orientation'] == 'h':
+    #     config['x'], config['y'] = config['y'], config['x']
+
+    if titles_for_axis:
+        config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
+        config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
+        column_for_x_label_for_title = titles_for_axis[config['column_for_x']][1]
+        column_for_y_label_for_title= titles_for_axis[config['column_for_y']][1]
+        temp_title = f'Распределение долей для {column_for_x_label_for_title} и {column_for_y_label_for_title}'
+        if config['normalized_mode'] == 'col':
+            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_y']][2]}'
+        elif config['normalized_mode'] == 'row':
+            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_x']][2]}'
+        else:
+            config['title'] = temp_title
+    else:
+        if 'column_for_x_label' not in config:
+            config['column_for_x_label'] = None
+        if 'column_for_y_label' not in config:
+            config['column_for_y_label'] = None
+        if 'title' not in config:
+            config['title'] = None 
+    def make_df_for_fig(crosstab_for_figs, mode):
+        if mode == 'all':
+            # normolized by all size df
+            sum_for_normolized = crosstab_for_figs.sum().sum()
+        if mode == 'col':
+            # normolized by sum of coll
+            sum_for_normolized = crosstab_for_figs.sum()
+        if mode == 'row':
+            # normolized by sum of row
+            crosstab_for_figs = crosstab_for_figs.T
+            sum_for_normolized = crosstab_for_figs.sum()           
+        crosstab_for_figs_all = crosstab_for_figs * 100 / sum_for_normolized
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all, crosstab_for_figs], axis=1, keys=['data', 'customdata'])
+        crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all.sum(axis=1)
+        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+            'sum_row', ascending=False).drop('sum_row', axis=1, level=0)
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all['data'], crosstab_for_figs_all['customdata']], axis=0, keys=['data', 'customdata'])
+        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+            crosstab_for_figs_all.index[0], axis=1, ascending=False)
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all.loc['data'], crosstab_for_figs_all.loc['customdata']], axis=1, keys=['data', 'customdata'])
+        return crosstab_for_figs_all
+    def fig_update_layout(fig):
+        fig.update_layout(          
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+            xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+            legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_font_color='rgba(0, 0, 0, 0.7)',
+            margin=dict(l=50, r=50, b=50, t=70),       
+        ) 
+        return fig     
+    column_for_x = config['column_for_x']
+    column_for_y = config['column_for_y']
+    column_for_x_label = config['column_for_x_label']
+    column_for_y_label = config['column_for_y_label']
+    normalized_mode = config['normalized_mode']
+    orientation = config['orientation']
+    title = config['title']
+    df = config['df']
+    crosstab = pd.crosstab(df[column_for_x], df[column_for_y])
+    crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
+    # data_for_fig = crosstab_for_figs['data']    
+    # customdata = crosstab_for_figs['customdata'].values.T
+    if orientation == 'v':
+        data_for_fig = crosstab_for_figs['data'][::-1]
+        customdata = crosstab_for_figs['customdata'][::-1].values
+        xaxis_title = column_for_y_label
+        yaxis_title = column_for_x_label  
+        if normalized_mode == 'row':
+            xaxis_title, yaxis_title = yaxis_title, xaxis_title
+        hovertemplate=f'{column_for_y_label}'+' = %{x}<br>'+f'{column_for_x_label}'+' = %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'    
+    else:
+        data_for_fig = crosstab_for_figs['data'].T.iloc[::-1]
+        customdata = crosstab_for_figs['customdata'].values.T[::-1]            
+        xaxis_title = column_for_x_label
+        yaxis_title = column_for_y_label
+        if normalized_mode == 'row':
+            xaxis_title, yaxis_title = yaxis_title, xaxis_title
+        hovertemplate=f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'
+
+    fig = heatmap(data_for_fig, font_size=14, title=title)
+    fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
+        family='Segoe UI', size=14, color="rgba(0, 0, 0, 0.7)"), hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))
+    for trace in fig.data:
+        trace.xgap = 3
+        trace.ygap = 3
+        trace.customdata = customdata
+    # center_color_bar = (crosstab_for_figs.max().max() + crosstab_for_figs.min().min()) * 0.7
+    # for annot in fig.layout.annotations:
+    #     annot.font.color = "#d4d4d4"
+    fig =  fig_update_layout(fig)
+    fig.update_layout(coloraxis=dict(colorscale=[
+                            (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))        
+    fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)      
+    return fig
+
+def bar_categories(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a bar chart for categorical columns using the Plotly Express library.
+
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - column_for_axis (str): The name of the column in the DataFrame to be used for creating the axis.
+        - column_for_axis_label (str): The label for the axis.
+        - column_for_legend (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
+        - column_for_legend_label (str): The label for the categories.
+        - title (str): The title of the chart.
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - normalized_mode (str): The mode for normalizing the bars all, col or row (default is 'all').
+        - orientation (str): The orientation of the chart (default is 'v').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+    titles_for_axis = dict(
+        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
+        children = ['Количество детей', 'количество детей', 0]
+        , age = ['Возраст, лет', 'возраст', 1]
+        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
+        # category column
+        , education = ['Уровень образования', 'уровня образования']
+        , family_status = ['Семейное положение', 'семейного положения']
+        , gender = ['Пол', 'пола']
+        , income_type = ['Тип занятости', 'типа занятости']
+        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода']
+    )
+    titles_for_axis = dict(
+        education = ['Уровень образования', 'уровня образования', 'уровню образования']
+        , family_status = ['Семейное положение', 'семейного положения', 'семейному положению']
+        , gender = ['Пол', 'пола', 'полу']
+        , income_type = ['Тип занятости', 'типа занятости', 'типу занятости']
+        , debt = ['Задолженность', 'задолженности', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода', 'категории дохода']
+    )
+    bar(config)
+    """
+    # Проверка входных данных
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'column_for_axis' not in config or not isinstance(config['column_for_axis'], str):
+        raise ValueError("column_for_axis must be a string")
+    if 'column_for_legend' not in config or not isinstance(config['column_for_legend'], str):
+        raise ValueError("column_for_legend must be a string")
+    if 'barmode' in config and not isinstance(config['barmode'], str):
+        raise ValueError("barmode must be a string")
+    if 'barmode' not in config:
+        config['barmode'] = 'group'
+    if 'normalized_mode' not in config:
+        config['normalized_mode'] = 'all'        
+    if 'width' not in config:
+        config['width'] = None
+    if 'height' not in config:
+        config['height'] = None
+    if 'textsize' not in config:
+        config['textsize'] = 14
+    if 'xaxis_show' not in config:
+        config['xaxis_show'] = True
+    if 'yaxis_show' not in config:
+        config['yaxis_show'] = True
+    if 'showgrid_x' not in config:
+        config['showgrid_x'] = True
+    if 'showgrid_y' not in config:
+        config['showgrid_y'] = True
+    # if 'orientation' in config and config['orientation'] == 'h':
+    #     config['x'], config['y'] = config['y'], config['x']
+
+    if titles_for_axis:
+        config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
+        config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+        column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
+        column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
+        temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+        if config['normalized_mode'] == 'col':
+            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_legend']][2]}'
+        elif config['normalized_mode'] == 'row':
+            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_axis']][2]}'
+        else:
+            config['title'] = temp_title        
+    else:
+        if 'column_for_axis_label' not in config:
+            config['column_for_axis_label'] = None
+        if 'column_for_legend_label' not in config:
+            config['column_for_legend_label'] = None
+        if 'title' not in config:
+            config['title'] = None 
+    def make_df_for_fig(crosstab_for_figs, mode):
+        if mode == 'all':
+            # normolized by all size df
+            sum_for_normolized = crosstab_for_figs.sum().sum()
+        if mode == 'col':
+            # normolized by sum of coll
+            sum_for_normolized = crosstab_for_figs.sum()
+        if mode == 'row':
+            # normolized by sum of row
+            crosstab_for_figs = crosstab_for_figs.T
+            sum_for_normolized = crosstab_for_figs.sum()           
+        crosstab_for_figs_all = crosstab_for_figs * 100 / sum_for_normolized
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all, crosstab_for_figs], axis=1, keys=['data', 'customdata'])
+        crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all.sum(axis=1)
+        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+            'sum_row', ascending=False).drop('sum_row', axis=1, level=0)
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all['data'], crosstab_for_figs_all['customdata']], axis=0, keys=['data', 'customdata'])
+        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+            crosstab_for_figs_all.index[0], axis=1, ascending=False)
+        crosstab_for_figs_all = pd.concat(
+            [crosstab_for_figs_all.loc['data'], crosstab_for_figs_all.loc['customdata']], axis=1, keys=['data', 'customdata'])
+        return crosstab_for_figs_all
+    def fig_update_layout(fig):
+        fig.update_layout(          
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+            xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+            legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_font_color='rgba(0, 0, 0, 0.7)',
+            margin=dict(l=50, r=50, b=50, t=70),     
+        ) 
+        return fig     
+    column_for_axis = config['column_for_axis']
+    column_for_legend = config['column_for_legend']
+    column_for_axis_label = config['column_for_axis_label']
+    column_for_legend_label = config['column_for_legend_label']
+    normalized_mode = config['normalized_mode']
+    orientation = config['orientation']
+    title = config['title']
+    df = config['df']
+    crosstab = pd.crosstab(df[column_for_axis], df[column_for_legend])
+    crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
+    data_for_fig = crosstab_for_figs['data']    
+    customdata = crosstab_for_figs['customdata'].values.T
+    if orientation == 'h':
+        data_for_fig = data_for_fig.iloc[::-1,::-1]
+        customdata = customdata[::-1,::-1]
+        xaxis_title = 'Доля'
+        yaxis_title = column_for_axis_label
+        legend_title_text = column_for_legend_label    
+        if normalized_mode == 'row':
+            legend_title_text, yaxis_title = yaxis_title, legend_title_text    
+    else:
+        xaxis_title = column_for_axis_label
+        yaxis_title = 'Доля'
+        legend_title_text = column_for_legend_label
+        if normalized_mode == 'row':
+            xaxis_title, legend_title_text = legend_title_text, xaxis_title
+    fig = px.bar(
+        data_for_fig, barmode='group', orientation=orientation, title=title)
+    fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title, legend_title_text=legend_title_text)
+    trace_colors = [trace.marker.color for trace in reversed(fig.data)]            
+    for i, trace in enumerate(fig.data):
+        if orientation == 'h':
+            # trace.x, trace.y = trace.y, trace.x
+            trace.marker.color = trace_colors[i]
+            trace.textangle=0
+            trace.text = [f'{x:.0f}' if x > 0.5 else '' for x in trace.x]
+            hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
+                                    ' = %{data.name}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
+        else:
+            trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
+            hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
+                                    ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'                
+        trace.customdata = customdata[i]
+    fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))     
+    if orientation == 'h':
+        fig.update_layout(legend_traceorder='reversed')        
+    return fig_update_layout(fig)
