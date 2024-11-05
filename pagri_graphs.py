@@ -1,3 +1,5 @@
+# import importlib
+# importlib.reload(pagri_data_tools)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -95,7 +97,7 @@ def plotly_default_settings(fig):
 
 
 
-def heatmap(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
@@ -376,7 +378,7 @@ def categorical_heatmap_matrix_gen(df, titles_for_axis: dict = None, width=None,
         hovertemplate = xaxis_title + \
             ' = %{x}<br>' + yaxis_title + \
             ' = %{y}<br>Количество = %{z}<extra></extra>'
-        fig = heatmap(heatmap_matrix, title=title)
+        fig = heatmap_simple(heatmap_matrix, title=title)
         fig.update_traces(hovertemplate=hovertemplate, showlegend=False)
         center_color_bar = (heatmap_matrix.max().max() +
                             heatmap_matrix.min().min()) * 0.7
@@ -1650,72 +1652,7 @@ def graph_analysis_gen(df):
             graph_analysis(df, list(cat_pair), num_column)
             yield [num_column] + list(cat_pair)
             
-def bar(config: dict, titles_for_axis: dict = None):
-    """
-    Creates a bar chart using the Plotly Express library.
-
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
-        - x_axis_label (str): The label for the X-axis.
-        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
-        - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.  
-        If None or an empty string, the chart will be created without category.
-        - category_axis_label (str): The label for the categories.
-        - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean').
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
-    )
-    config = dict(
-        df = df
-        , x = 'education'  
-        , x_axis_label = 'Образование'
-        , y = 'total_income'
-        , y_axis_label = 'Доход'
-        , category = 'gender'
-        , category_axis_label = 'Пол'
-        , title = 'Доход в зависимости от пола и уровня образования'
-        , func = 'mean'
-        , barmode = 'group'
-        , width = None
-        , height = None
-        , orientation = 'v'
-        , text = False
-        , textsize = 14
-    )
-    bar(config)
-    """
+def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, graph_type: str = 'bar'):
     # Проверка входных данных
     if not isinstance(config, dict):
         raise TypeError("config must be a dictionary")
@@ -1737,6 +1674,8 @@ def bar(config: dict, titles_for_axis: dict = None):
         config['width'] = None
     if 'height' not in config:
         config['height'] = None
+    if 'text' not in config:
+        config['text'] = False            
     if 'textsize' not in config:
         config['textsize'] = 14
     if 'xaxis_show' not in config:
@@ -1847,8 +1786,15 @@ def bar(config: dict, titles_for_axis: dict = None):
             text = [human_readable_number(el) for el in x]
     else:
         text = None
-    fig = px.bar(x=x, y=y, color=color,
-                 barmode=config['barmode'], text=text, custom_data=custom_data)
+    if graph_type == 'bar':
+        fig = px.bar(x=x, y=y, color=color,
+                    barmode=config['barmode'], text=text, custom_data=custom_data)
+    elif graph_type == 'line':
+        fig = px.line(x=x, y=y, color=color,
+                    text=text, custom_data=custom_data)   
+    elif graph_type == 'area':
+        fig = px.area(x=x, y=y, color=color,
+                    text=text, custom_data=custom_data)               
     color = []
     for trace in fig.data:
         color.append(trace.marker.color)
@@ -1877,11 +1823,17 @@ def bar(config: dict, titles_for_axis: dict = None):
     # hovertemplate += f'<br>cnt_in_sum_pct = '
     # hovertemplate += '%{customdata[1]}'
     hovertemplate += '<extra></extra>'
-    fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
-        family='Open Sans', size=config['textsize']  # Размер шрифта
+    fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white"), textfont=dict(
+        family='Segoe UI', size=config['textsize']  # Размер шрифта
         # color='black'  # Цвет текста
-    ), textposition='auto'  # Положение текстовых меток (outside или inside))
+    ) # Положение текстовых меток (outside или inside))
     )
+    if graph_type == 'bar':
+        fig.update_traces(textposition='auto')
+    elif graph_type == 'line':
+        fig.update_traces(textposition='top center')
+    elif graph_type == 'area':
+        fig.update_traces(textposition='top center')   
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
         # , margin=dict(l=50, r=50, b=50, t=70)
@@ -1918,8 +1870,211 @@ def bar(config: dict, titles_for_axis: dict = None):
         for i, trace in enumerate(fig.data):
             trace.marker.color = color[i]
         fig.update_layout(legend={'traceorder': 'reversed'})
-    return fig
+    return fig    
+            
+def bar(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a bar chart using the Plotly Express library.
 
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
+        - x_axis_label (str): The label for the X-axis.
+        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
+        - y_axis_label (str): The label for the Y-axis.
+        - category (str): The name of the column in the DataFrame to be used for creating categories.  
+        If None or an empty string, the chart will be created without category.
+        - category_axis_label (str): The label for the categories.
+        - title (str): The title of the chart.
+        - func (str): The function to be used for aggregating data (default is 'mean').
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+    titles_for_axis = dict(
+        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
+        children = ['Количество детей', 'количество детей', 0]
+        , age = ['Возраст, лет', 'возраст', 1]
+        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
+        # category column
+        , education = ['Уровень образования', 'уровня образования']
+        , family_status = ['Семейное положение', 'семейного положения']
+        , gender = ['Пол', 'пола']
+        , income_type = ['Тип занятости', 'типа занятости']
+        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода']
+    )
+    config = dict(
+        df = df
+        , x = 'education'  
+        , x_axis_label = 'Образование'
+        , y = 'total_income'
+        , y_axis_label = 'Доход'
+        , category = 'gender'
+        , category_axis_label = 'Пол'
+        , title = 'Доход в зависимости от пола и уровня образования'
+        , func = 'mean'
+        , barmode = 'group'
+        , width = None
+        , height = None
+        , orientation = 'v'
+        , text = False
+        , textsize = 14
+    )
+    bar(config)
+    """
+    return base_graph_for_bar_line_area(config, titles_for_axis, 'bar')
+
+def line(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a line chart using the Plotly Express library.
+
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
+        - x_axis_label (str): The label for the X-axis.
+        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
+        - y_axis_label (str): The label for the Y-axis.
+        - category (str): The name of the column in the DataFrame to be used for creating categories.  
+        If None or an empty string, the chart will be created without category.
+        - category_axis_label (str): The label for the categories.
+        - title (str): The title of the chart.
+        - func (str): The function to be used for aggregating data (default is 'mean').
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+    titles_for_axis = dict(
+        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
+        children = ['Количество детей', 'количество детей', 0]
+        , age = ['Возраст, лет', 'возраст', 1]
+        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
+        # category column
+        , education = ['Уровень образования', 'уровня образования']
+        , family_status = ['Семейное положение', 'семейного положения']
+        , gender = ['Пол', 'пола']
+        , income_type = ['Тип занятости', 'типа занятости']
+        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода']
+    )
+    config = dict(
+        df = df
+        , x = 'education'  
+        , x_axis_label = 'Образование'
+        , y = 'total_income'
+        , y_axis_label = 'Доход'
+        , category = 'gender'
+        , category_axis_label = 'Пол'
+        , title = 'Доход в зависимости от пола и уровня образования'
+        , func = 'mean'
+        , barmode = 'group'
+        , width = None
+        , height = None
+        , orientation = 'v'
+        , text = False
+        , textsize = 14
+    )
+    bar(config)
+    """
+    return base_graph_for_bar_line_area(config, titles_for_axis, 'line')
+
+def area(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a area chart using the Plotly Express library.
+
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
+        - x_axis_label (str): The label for the X-axis.
+        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
+        - y_axis_label (str): The label for the Y-axis.
+        - category (str): The name of the column in the DataFrame to be used for creating categories.  
+        If None or an empty string, the chart will be created without category.
+        - category_axis_label (str): The label for the categories.
+        - title (str): The title of the chart.
+        - func (str): The function to be used for aggregating data (default is 'mean').
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+    titles_for_axis = dict(
+        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
+        children = ['Количество детей', 'количество детей', 0]
+        , age = ['Возраст, лет', 'возраст', 1]
+        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
+        # category column
+        , education = ['Уровень образования', 'уровня образования']
+        , family_status = ['Семейное положение', 'семейного положения']
+        , gender = ['Пол', 'пола']
+        , income_type = ['Тип занятости', 'типа занятости']
+        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода']
+    )
+    config = dict(
+        df = df
+        , x = 'education'  
+        , x_axis_label = 'Образование'
+        , y = 'total_income'
+        , y_axis_label = 'Доход'
+        , category = 'gender'
+        , category_axis_label = 'Пол'
+        , title = 'Доход в зависимости от пола и уровня образования'
+        , func = 'mean'
+        , barmode = 'group'
+        , width = None
+        , height = None
+        , orientation = 'v'
+        , text = False
+        , textsize = 14
+    )
+    bar(config)
+    """
+    return base_graph_for_bar_line_area(config, titles_for_axis, 'area')
 
 # def pairplot_seaborn(df: pd.DataFrame, titles_for_axis: dict = None):
 #     """
@@ -2465,9 +2620,9 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
     if 'yaxis_show' not in config:
         config['yaxis_show'] = True
     if 'showgrid_x' not in config:
-        config['showgrid_x'] = True
+        config['showgrid_x'] = False
     if 'showgrid_y' not in config:
-        config['showgrid_y'] = True
+        config['showgrid_y'] = False
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -2560,7 +2715,7 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
             xaxis_title, yaxis_title = yaxis_title, xaxis_title
         hovertemplate=f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>Доля = %{z:.1f} %<br>Количество = %{customdata}<extra></extra>'
 
-    fig = heatmap(data_for_fig, font_size=14, title=title)
+    fig = heatmap_simple(data_for_fig, font_size=14, title=title)
     fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
         family='Segoe UI', size=14, color="rgba(0, 0, 0, 0.7)"), hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))
     for trace in fig.data:
@@ -2652,6 +2807,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         config['width'] = None
     if 'height' not in config:
         config['height'] = None
+    if 'text' not in config:
+        config['text'] = False        
     if 'textsize' not in config:
         config['textsize'] = 14
     if 'xaxis_show' not in config:
@@ -2722,6 +2879,11 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
             legend_title_font_color='rgba(0, 0, 0, 0.7)',
             legend_font_color='rgba(0, 0, 0, 0.7)',
+            xaxis=dict(
+                visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+            ), yaxis=dict(
+                visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+            ),            
             margin=dict(l=50, r=50, b=50, t=70),     
         ) 
         return fig     
@@ -2760,15 +2922,200 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             # trace.x, trace.y = trace.y, trace.x
             trace.marker.color = trace_colors[i]
             trace.textangle=0
-            trace.text = [f'{x:.0f}' if x > 0.5 else '' for x in trace.x]
+            if 'text' in config and config['text']:
+                trace.text = [f'{x:.0f}' if x > 0.5 else '' for x in trace.x]
             hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
         else:
-            trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
+            if 'text' in config and config['text']:
+                trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
             hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'                
         trace.customdata = customdata[i]
-    fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))     
+    fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14))
+                      , textfont=dict(family='Segoe UI', size=config['textsize']))   
     if orientation == 'h':
         fig.update_layout(legend_traceorder='reversed')        
     return fig_update_layout(fig)
+
+def heatmap(config: dict, titles_for_axis: dict = None):
+    """
+    Creates a heatmap chart for categorical columns using the Plotly Express library.
+
+    Parameters:
+    config (dict): A dictionary containing parameters for creating the chart.
+        - df (DataFrame): A DataFrame containing data for creating the chart.
+        - column_for_x (str): The name of the column in the DataFrame to be used for creating the axis.
+        - column_for_x_label (str): The label for the axis.
+        - column_for_y (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
+        - column_for_y_label (str): The label for the categories.
+        - column_for_value (str): The name of the column in the DataFrame to be used for creating values for heatmap
+        - title (str): The title of the chart.
+        - barmode (str): The mode for displaying bars (default is 'group').
+        - normalized_mode (str): The mode for normalizing the bars (default is 'all').
+        - orientation (str): The orientation of the chart (default is 'v').
+        - width (int): The width of the chart (default is None).
+        - height (int): The height of the chart (default is None).
+        - text (bool):  Whether to display text on the chart (default is False).
+        - textsize (int): Text size (default 14)
+        - xaxis_show (bool):  Whether to show the X-axis (default is True).
+        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
+        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
+        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The created chart.
+
+    Example:
+    config = dict(
+        df = df
+        , column_for_y = 'education'  
+        , column_for_x = 'gender'
+        , column_for_value = 'age'
+        , func = 'mean'
+        , width = None
+        , height = None
+        , orientation = 'h'
+    )
+    titles_for_axis = dict(
+        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
+        children = ['Количество детей', 'количество детей', 0]
+        , age = ['Возраст, лет', 'возраст', 1]
+        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
+        # category column
+        , education = ['Уровень образования', 'уровня образования']
+        , family_status = ['Семейное положение', 'семейного положения']
+        , gender = ['Пол', 'пола']
+        , income_type = ['Тип занятости', 'типа занятости']
+        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
+        , purpose = ['Цель получения кредита', 'цели получения кредита']
+        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
+        , total_income_cat = ['Категория дохода', 'категории дохода']
+    )
+    heatmap(config, titles_for_axis)
+    """
+    # Проверка входных данных
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'column_for_x' not in config or not isinstance(config['column_for_x'], str):
+        raise ValueError("column_for_x must be a string")
+    if 'column_for_y' not in config or not isinstance(config['column_for_y'], str):
+        raise ValueError("column_for_y must be a string")
+    if 'column_for_value' not in config or not isinstance(config['column_for_value'], str):
+        raise ValueError("column_for_value must be a string")    
+    if 'barmode' in config and not isinstance(config['barmode'], str):
+        raise ValueError("barmode must be a string")
+    if config['func'] and config['func'] not in ['mean', 'median', 'sum']:
+        raise ValueError("func must be in ['mean', 'median', 'sum']")    
+    if 'barmode' not in config:
+        config['barmode'] = 'group'
+    if 'func' not in config:
+        config['func'] = 'mean'        
+    if 'width' not in config:
+        config['width'] = None
+    if 'height' not in config:
+        config['height'] = None
+    if 'textsize' not in config:
+        config['textsize'] = 14
+    if 'xaxis_show' not in config:
+        config['xaxis_show'] = True
+    if 'yaxis_show' not in config:
+        config['yaxis_show'] = True
+    if 'showgrid_x' not in config:
+        config['showgrid_x'] = False
+    if 'showgrid_y' not in config:
+        config['showgrid_y'] = False
+            
+    if titles_for_axis:
+        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
+            'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']}
+        config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
+        config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
+        config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
+        func = config['func']
+        numeric = titles_for_axis[config["column_for_value"]][1]
+        cat = titles_for_axis[config["column_for_x"]][1]
+        suffix_type = titles_for_axis[config["column_for_value"]][2]
+        title = f'{func_for_title[func][suffix_type]}'
+        title += f' {numeric} в зависимости от {cat}'
+        title += f' и {titles_for_axis[config["column_for_y"]][1]}'
+        config['title'] = title            
+    else:
+        if 'column_for_x_label' not in config:
+            config['column_for_x_label'] = None
+        if 'column_for_y_label' not in config:
+            config['column_for_y_label'] = None
+        if 'column_for_value_label' not in config:
+            config['column_for_value_label'] = None            
+        if 'title' not in config:
+            config['title'] = None 
+            
+    def make_df_for_fig(df, column_for_x, column_for_y, column_for_value, finc, orientation):
+        func_df =  pd.pivot_table(df, index=column_for_x, columns=column_for_y, values=column_for_value, aggfunc=func, observed=False)
+        if orientation == 'h':
+            func_df = func_df.T
+        ascending_sum = True
+        ascending_index = False
+        na_position = 'last'
+        sort_position = -1
+        func_df['sum'] = func_df.sum(axis=1, numeric_only=True)
+        func_df = func_df.sort_values(
+            'sum', ascending=ascending_sum).drop('sum', axis=1)
+        func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
+        return func_df
+    
+    def fig_update_layout(fig):
+        fig.update_layout(          
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+            xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+            legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_font_color='rgba(0, 0, 0, 0.7)',
+            margin=dict(l=50, r=50, b=50, t=70),       
+        ) 
+        return fig     
+    column_for_x = config['column_for_x']
+    column_for_y = config['column_for_y']
+    column_for_x_label = config['column_for_x_label']
+    column_for_y_label = config['column_for_y_label']
+    column_for_value = config['column_for_value']
+    column_for_value_label = config['column_for_value_label']
+    orientation = config['orientation']
+    func = config['func']
+    title = config['title']
+    df = config['df']
+    df_for_fig= make_df_for_fig(df, column_for_x, column_for_y, column_for_value, func, orientation)
+    fig = heatmap_simple(df_for_fig, font_size=config['textsize'])
+    if titles_for_axis:
+        if orientation == 'h':
+            hovertemplate = f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
+        else:
+            hovertemplate = f'{column_for_y_label}'+' = %{x}<br>'+f'{column_for_x_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
+    else:
+        hovertemplate = None
+    fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
+        family='Segoe UI', size=14), hoverlabel=dict(bgcolor="white", font=dict(family='Segoe UI', color='rgba(0, 0, 0, 0.7)', size=14)))
+    for trace in fig.data:
+        trace.xgap = 3
+        trace.ygap = 3
+    for annot in fig.layout.annotations:
+        annot.font.color = "rgba(0, 0, 0, 0.7)"
+    fig =  fig_update_layout(fig)
+    fig.update_layout(coloraxis=dict(colorscale=[
+                            (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))     
+    if orientation == 'h':
+        fig.update_layout(title=title, xaxis_title=column_for_x_label, yaxis_title=column_for_y_label)      
+    else:
+        fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
+    return fig
