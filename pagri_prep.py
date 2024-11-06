@@ -2112,7 +2112,7 @@ def check_na_in_both_columns(df, cols: list) -> pd.DataFrame:
 
 def get_missing_value_proportion_by_category(
     df: pd.DataFrame, column_with_missing_values: str, category_column: str = None
-) -> pd.DataFrame:
+):
     """
     Return a DataFrame with the proportion of missing values for each category.
 
@@ -2499,7 +2499,7 @@ def get_outlier_quantile_proportion_by_category(
     category_column: str = None,
     lower_quantile: float = 0.05,
     upper_quantile: float = 0.95,
-) -> None:
+):
     """
     Return a DataFrame with the proportion of outliers for each category.
 
@@ -2801,7 +2801,7 @@ def find_columns_with_negative_values(df) -> pd.Series:
 
 def get_negative_proportion_by_category(
     df: pd.DataFrame, column_with_negative: str, category_column: str = None
-) -> None:
+):
     """
     Return a DataFrame with the proportion of negative value for each category.
 
@@ -3020,7 +3020,7 @@ def find_columns_with_zeros_values(df) -> pd.Series:
 
 def get_zeros_proportion_by_category(
     df: pd.DataFrame, column_with_zeros: str, category_column: str = None
-) -> None:
+):
     """
     Return a DataFrame with the proportion of zeros value for each category.
 
@@ -3549,7 +3549,10 @@ def normalize_string_series(column: pd.Series) -> pd.Series:
         raise ValueError("Input must be a pandas Series")
     if not isinstance(column.dropna().iloc[0], str):
         raise ValueError("Series must contain strings")
-    return column.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+    res = column.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+    if isinstance(column.dtype, pd.CategoricalDtype):
+        res = res.astype('category')
+    return res
 
 
 def analys_column_by_category(
@@ -3557,7 +3560,7 @@ def analys_column_by_category(
     df_for_analys: pd.DataFrame,
     column_for_analys: str,
     is_dash: bool = False,
-) -> None:
+):
     """
     Show statisctic column by categories in DataFrame
 
