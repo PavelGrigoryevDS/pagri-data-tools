@@ -2633,9 +2633,9 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
         column_for_y_label_for_title= titles_for_axis[config['column_for_y']][1]
         temp_title = f'Распределение долей для {column_for_x_label_for_title} и {column_for_y_label_for_title}'
         if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_y']][2]}'
+            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_y']][2]}"
         elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_x']][2]}'
+            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_x']][2]}"
         else:
             config['title'] = temp_title
     else:
@@ -2829,9 +2829,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
         temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
         if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_legend']][2]}'
+            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_legend']][2]}"
         elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f'<br>c нормализацией по {titles_for_axis[config['column_for_axis']][2]}'
+            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_axis']][2]}"
         else:
             config['title'] = temp_title        
     else:

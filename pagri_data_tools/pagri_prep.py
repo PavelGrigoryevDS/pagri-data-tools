@@ -142,6 +142,7 @@ def make_all_frame_for_html(df):
     duplicates = dupl
     if duplicates == 0:
         duplicates = "---"
+        duplicates_sub_minis_origin = "---"
     else:
         duplicates = pretty_value(duplicates)
         duplicates_pct = dupl * 100 / df.shape[0]
@@ -154,29 +155,29 @@ def make_all_frame_for_html(df):
         else:
             duplicates_pct = round(duplicates_pct)
         duplicates = f"{duplicates} ({duplicates_pct}%)"
-    dupl_keep_false = df.duplicated(keep=False).sum()
-    dupl_sub = (
-        df.apply(
-            lambda x: (
-                x.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
-                if x.dtype == "object"
-                else x
+        dupl_keep_false = df.duplicated(keep=False).sum()
+        dupl_sub = (
+            df.apply(
+                lambda x: (
+                    x.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+                    if x.dtype == "object"
+                    else x
+                )
             )
+            .duplicated(keep=False)
+            .sum()
         )
-        .duplicated(keep=False)
-        .sum()
-    )
-    duplicates_sub_minis_origin = pretty_value(dupl_sub - dupl_keep_false)
-    duplicates_sub_minis_origin_pct = (dupl_sub - dupl_keep_false) * 100 / dupl
-    if 0 < duplicates_sub_minis_origin_pct < 1:
-        duplicates_sub_minis_origin_pct = "<1"
-    elif duplicates_sub_minis_origin_pct > 99 and duplicates_sub_minis_origin_pct < 100:
-        duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct, 1)
-    else:
-        duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
-    duplicates_sub_minis_origin = (
-        f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
-    )
+        duplicates_sub_minis_origin = pretty_value(dupl_sub - dupl_keep_false)
+        duplicates_sub_minis_origin_pct = (dupl_sub - dupl_keep_false) * 100 / dupl
+        if 0 < duplicates_sub_minis_origin_pct < 1:
+            duplicates_sub_minis_origin_pct = "<1"
+        elif duplicates_sub_minis_origin_pct > 99 and duplicates_sub_minis_origin_pct < 100:
+            duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct, 1)
+        else:
+            duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
+        duplicates_sub_minis_origin = (
+            f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
+        )
     all_rows = pd.DataFrame(
         {
             "Rows": [pretty_value(df.shape[0])],
@@ -1764,7 +1765,8 @@ def my_info_widget_gen(df, graphs=True, num=True, obj=True, date=True):
 
 def make_row_for_html(df, column, funcs):
     fig_func = funcs[-1]
-    fig = fig_func(df[column])
+    if fig_func:
+        fig = fig_func(df[column])
     row_for_html = []
     for func in funcs[:-1]:
         row_for_html.append(func(df[column]))
@@ -1814,23 +1816,30 @@ def make_row_for_html(df, column, funcs):
         .set_properties(**{"text-align": "left"})
         .hide(axis="columns")
         .hide(axis="index"))
-    buf = io.BytesIO()
-    fig.write_image(buf, format='png')
-    buf.seek(0)
-    img_str = base64.b64encode(buf.read()).decode('utf-8')
     # html_elements = ''.join(
     #     f'<div style="margin-right: 40px;">{item.to_html(index=False)}</div>'
     #     for item in row_for_html[:-1]
     # )
-    final_html = f"""
-    <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
-        {res_df}
-        <div>
-            <img src="data:image/png;base64,{img_str}" alt="График"/>
+    if fig_func:
+        buf = io.BytesIO()
+        fig.write_image(buf, format='png')
+        buf.seek(0)
+        img_str = base64.b64encode(buf.read()).decode('utf-8')
+        final_html = f"""
+        <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
+            {res_df.render()}
+            <div>
+                <img src="data:image/png;base64,{img_str}" alt="График"/>
+            </div>
         </div>
-    </div>
-    """
-    #  font-size: 10px;
+        """
+    else:
+        final_html = f"""
+        <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
+            {res_df}
+        </div>
+        """        
+        #  font-size: 10px;
     # {res_df.to_html(index=False)}
     return final_html
 
@@ -1854,6 +1863,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
     if graphs:
         funcs_num += [make_hist_plotly_for_html]
         funcs_obj += [make_bar_obj_for_html]
+        funcs_date += [None]
     if date:
         date_columns = filter(
             lambda x: pd.api.types.is_datetime64_any_dtype(df[x]), df.columns
