@@ -1,9 +1,8 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
     name='pagri_data_tools',  # Имя вашего пакета
     version='0.1',  # Версия вашего пакета
-    packages=find_packages(),  # Найти все пакеты
     install_requires=[
         'dash'
         'pingouin'
