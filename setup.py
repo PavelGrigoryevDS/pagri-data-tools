@@ -5,10 +5,10 @@ setup(
     version='0.1',  # Версия вашего пакета
     packages=find_packages(),  # Найти все пакеты
     install_requires=[
-        'dash==2.18.2'
-        'pingouin==0.5.5'
-        'pyaspeller==2.0.0'
-        'pymystem3==0.2.0'
+        'dash'
+        'pingouin'
+        'pyaspeller'
+        'pymystem3'
         ],
     description='This repository contains data analysis modules, including tools for data preprocessing, visualization, statistical analysis.',  # Описание
     long_description=open('README.md').read(),  # Долгое описание из README
