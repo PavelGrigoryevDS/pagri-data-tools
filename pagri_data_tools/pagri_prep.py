@@ -112,7 +112,7 @@ def make_widget_all_frame(df):
                     ]
                 )
                 .set_properties(**{"text-align": "left"})
-                .hide_index()
+                .hide(axis="index")
             )
         else:
             display(
@@ -190,43 +190,24 @@ def make_all_frame_for_html(df):
     # widget_DataFrame = widgets.Output()
     # with widget_DataFrame:
     #      display_markdown('**DataFrame**', raw=True)
-    if pd.__version__ == "1.3.5":
-        return (
-            all_rows.style.set_caption("DataFrame")
-            .set_table_styles(
-                [
-                    {
-                        "selector": "caption",
-                        "props": [
-                            ("font-size", "18px"),
-                            ("text-align", "left"),
-                            ("font-weight", "bold"),
-                        ],
-                    }
-                ]
-            )
-            .set_properties(**{"text-align": "left"})
-            .hide_index()
+    return (
+        all_rows.style.set_caption("DataFrame")
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "18px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
         )
-    else:
-        return (
-            all_rows.style.set_caption("DataFrame")
-            .set_table_styles(
-                [
-                    {
-                        "selector": "caption",
-                        "props": [
-                            ("font-size", "18px"),
-                            ("text-align", "left"),
-                            ("font-weight", "bold"),
-                        ],
-                    }
-                ]
-            )
-            .set_properties(**{"text-align": "left"})
-            # .hide(axis="columns")
-            .hide(axis="index")
-        )
+        .set_properties(**{"text-align": "left"})
+        # .hide(axis="columns")
+        .hide(axis="index")
+    )
 
 
 def make_widget_range_date(column):
@@ -270,10 +251,25 @@ def make_range_date_for_html(column):
     ram = round(column.__sizeof__() / 1_048_576)
     if ram == 0:
         ram = "<1 Mb"
+    values = column.count()
+    values = pretty_value(column.count())
+    values_pct = column.count() * 100 / column.size
+    if 0 < values_pct < 1:
+        values_pct = "<1"
+    elif values_pct > 99 and values_pct < 100:
+        values_pct = round(values_pct, 1)
+        if values_pct == 100:
+            values_pct = 99.9
+    else:
+        values_pct = round(values_pct)
+    values = f"{values} ({values_pct}%)"
     column_summary = pd.DataFrame(
-        {"First date": [fist_date], "Last date": [last_date], "RAM (Mb)": [ram]}
+        {"First date": [fist_date]
+         , "Last date": [last_date]
+         , "Values": [values]
+         , "RAM (Mb)": [ram]}
     )
-    return column_summary
+    return column_summary.T.reset_index()
     # return (
     #     column_summary.T.reset_index()
     #     .style.set_caption(f"{column_name}")
@@ -296,18 +292,15 @@ def make_range_date_for_html(column):
 
 def make_widget_summary_date(column):
     column_name = column.name
-    values = column.count()
-    values = pretty_value(column.count())
-    values_pct = column.count() * 100 / column.size
-    if 0 < values_pct < 1:
-        values_pct = "<1"
-    elif values_pct > 99 and values_pct < 100:
-        values_pct = round(values_pct, 1)
-        if values_pct == 100:
-            values_pct = 99.9
+    zeros = ((column == 0) | (column == "")).sum()
+    if zeros == 0:
+        zeros = "---"
     else:
-        values_pct = round(values_pct)
-    values = f"{values} ({values_pct}%)"
+        zeros = pretty_value(((column == 0) | (column == "")).sum())
+        zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
+        if zeros_pct == 0:
+            zeros_pct = "<1"
+        zeros = f"{zeros} ({zeros_pct}%)"
     missing = column.isna().sum()
     if missing == 0:
         missing = "---"
@@ -345,7 +338,7 @@ def make_widget_summary_date(column):
         duplicates = f"{duplicates} ({duplicates_pct}%)"
     column_summary = pd.DataFrame(
         {
-            "Values": [values],
+            "Zeros": [zeros],
             "Missing": [missing],
             "Distinct": [distinct],
             "Duplicates": [duplicates],
@@ -378,18 +371,15 @@ def make_widget_summary_date(column):
 
 def make_summary_date_for_html(column):
     column_name = column.name
-    values = column.count()
-    values = pretty_value(column.count())
-    values_pct = column.count() * 100 / column.size
-    if 0 < values_pct < 1:
-        values_pct = "<1"
-    elif values_pct > 99 and values_pct < 100:
-        values_pct = round(values_pct, 1)
-        if values_pct == 100:
-            values_pct = 99.9
+    zeros = ((column == 0) | (column == "")).sum()
+    if zeros == 0:
+        zeros = "---"
     else:
-        values_pct = round(values_pct)
-    values = f"{values} ({values_pct}%)"
+        zeros = pretty_value(((column == 0) | (column == "")).sum())
+        zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
+        if zeros_pct == 0:
+            zeros_pct = "<1"
+        zeros = f"{zeros} ({zeros_pct}%)"
     missing = column.isna().sum()
     if missing == 0:
         missing = "---"
@@ -427,13 +417,13 @@ def make_summary_date_for_html(column):
         duplicates = f"{duplicates} ({duplicates_pct}%)"
     column_summary = pd.DataFrame(
         {
-            "Values": [values],
+            "Zeros": [zeros],
             "Missing": [missing],
             "Distinct": [distinct],
             "Duplicates": [duplicates],
         }
     )
-    return column_summary
+    return column_summary.T.reset_index()
     # return (
     #     column_summary.T.reset_index()
     #     .style
@@ -586,7 +576,7 @@ def make_check_missing_date_for_html(column):
         }
     )
     # display_html(f'<h4>{column_name}</h4>', raw=True)
-    return column_summary
+    return column_summary.T.reset_index()
     # return (
     #     column_summary.T.reset_index()
     #     .style
@@ -1109,7 +1099,7 @@ def make_hist_plotly_for_html(column):
         nbins=20,
         histnorm="percent",
         template="simple_white",
-        height=250,
+        height=220,
         width=300,
     )
     fig.update_traces(
@@ -1125,16 +1115,16 @@ def make_hist_plotly_for_html(column):
         ),
         xaxis_title="",
         yaxis_title="",
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),     
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
         xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)", 
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",            
+        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",
     )
     # fig.layout.yaxis.visible = False
     return fig
@@ -1528,16 +1518,16 @@ def make_widget_bar_obj(column):
         ),
         xaxis_title="",
         yaxis_title="",
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),     
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
         xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)", 
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",         
+        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",
     )
     fig.update_traces(y=text_labels)
     widget_bar_obj = widgets.Output()
@@ -1789,13 +1779,13 @@ def make_row_for_html(df, column, funcs):
     #     .hide(axis="columns").hide(axis="index")
     #     .set_table_attributes("style='display:inline'")._repr_html_())
     # for df_ in row_for_html[1:]:
-    #     res_df += "\xa0\xa0\xa0"   
+    #     res_df += "\xa0\xa0\xa0"
     #     res_df += df_.style.set_caption(f" ").set_properties(**{"text-align": "left"}).hide(axis="columns").hide(axis="index").set_table_attributes("style='display:inline'")._repr_html_()
     res_df = pd.concat(row_for_html, axis=1).T.reset_index(drop=True).T
-    res_df.insert(2, '', " "*30) 
+    res_df.insert(2, '', " "*30)
     try:
-        res_df.insert(5, ' ', " "*30) 
-        res_df.insert(8, '  ', " "*30) 
+        res_df.insert(5, ' ', " "*30)
+        res_df.insert(8, '  ', " "*30)
     except:
         pass
     # display(res_df)
@@ -1827,7 +1817,7 @@ def make_row_for_html(df, column, funcs):
         img_str = base64.b64encode(buf.read()).decode('utf-8')
         final_html = f"""
         <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
-            {res_df.render()}
+            {res_df.to_html()}
             <div>
                 <img src="data:image/png;base64,{img_str}" alt="График"/>
             </div>
@@ -1836,9 +1826,9 @@ def make_row_for_html(df, column, funcs):
     else:
         final_html = f"""
         <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
-            {res_df}
+            {res_df.to_html()}
         </div>
-        """        
+        """
         #  font-size: 10px;
     # {res_df.to_html(index=False)}
     return final_html
@@ -1871,14 +1861,14 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
         for column in date_columns:
             row_for_html = make_row_for_html(df, column, funcs_date)
             # Отображение HTML-кода
-            display(HTML(row_for_html))   
+            display(HTML(row_for_html))
             yield
     if num:
         num_columns = filter(lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
         for column in num_columns:
             row_for_html = make_row_for_html(df, column, funcs_num)
             # Отображение HTML-кода
-            display(HTML(row_for_html))   
+            display(HTML(row_for_html))
             yield
 
     if obj:
@@ -1890,7 +1880,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
         for column in obj_columns:
             row_for_html = make_row_for_html(df, column, funcs_obj)
             # Отображение HTML-кода
-            display(HTML(row_for_html))   
+            display(HTML(row_for_html))
             yield
 
 def check_duplicated(df):
