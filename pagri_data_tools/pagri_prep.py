@@ -38,7 +38,8 @@ def pretty_value(value):
 
     # Объединяем части целой части в обратном порядке
     result = ' '.join(reversed(parts)).lstrip('0')
-
+    if fractional_part and not result:
+        result = '0'
     # Форматируем дробную часть, если она не нулевая
     if fractional_part > 0:
         # Убираем ведущие нули из дробной части
