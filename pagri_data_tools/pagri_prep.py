@@ -16,29 +16,36 @@ import base64
 
 def pretty_value(value):
     """
-    Функция делает удобное представление числа с пробелами после разрядов
+    Функция делает удобное представление числа с пробелами после разрядов.
+    Работает как с целыми числами, так и с числами с плавающей точкой.
     """
     if value == 0:
-        return 0
-    if value > 0:
-        part1 = int(value % 1e3) if value % 1e3 != 0 else ""
-        part2 = f"{(value // 1e3) % 1e3:.0f} " if value // 1e3 != 0 else ""
-        part3 = f"{(value // 1e6) % 1e3:.0f} " if int((value // 1e6) % 1e3) != 0 else ""
-        part4 = f"{(value // 1e9) % 1e3:.0f} " if int((value // 1e9) % 1e3) != 0 else ""
-        part5 = (
-            f"{(value // 1e12) % 1e3:.0f} " if int((value // 1e12) % 1e3) != 0 else ""
-        )
-        return f"{part5}{part4}{part3}{part2}{part1}"
-    else:
-        value = abs(value)
-        part1 = int(value % 1e3) if value % 1e3 != 0 else ""
-        part2 = f"{(value // 1e3) % 1e3:.0f} " if value // 1e3 != 0 else ""
-        part3 = f"{(value // 1e6) % 1e3:.0f} " if int((value // 1e6) % 1e3) != 0 else ""
-        part4 = f"{(value // 1e9) % 1e3:.0f} " if int((value // 1e9) % 1e3) != 0 else ""
-        part5 = (
-            f"{(value // 1e12) % 1e3:.0f} " if int((value // 1e12) % 1e3) != 0 else ""
-        )
-        return f"-{part5}{part4}{part3}{part2}{part1}"
+        return "0"
+
+    # Определяем, отрицательное ли число
+    is_negative = value < 0
+    value = abs(value)
+
+    # Разделяем целую и дробную часть
+    integer_part = int(value)
+    fractional_part = value - integer_part
+
+    # Форматируем целую часть
+    parts = []
+    while integer_part > 0:
+        parts.append(f"{integer_part % 1000:03d}")  # Добавляем последние три цифры
+        integer_part //= 1000  # Убираем последние три цифры
+
+    # Объединяем части целой части в обратном порядке
+    result = ' '.join(reversed(parts)).lstrip('0')
+
+    # Форматируем дробную часть, если она не нулевая
+    if fractional_part > 0:
+        # Убираем ведущие нули из дробной части
+        fractional_str = str(round(fractional_part, 2))[2:]  # Получаем строку после "0."
+        result += f".{fractional_str}"
+
+    return f"-{result}" if is_negative else result
 
 
 def make_widget_all_frame(df):
@@ -998,7 +1005,8 @@ def make_value_counts_for_html(column):
             pct_str = "<1%"
         else:
             pct_str = f"({x[column_name_pct]:.0%})"
-        return f"{x[column_name]:.0f} {pct_str}"
+        # return f"{x[column_name]:.0f} {pct_str}"
+        return f"{pretty_value(x[column_name])} {pct_str}"
 
     top_5 = (
         pd.concat([val_cnt, val_cnt_norm], axis=1)
