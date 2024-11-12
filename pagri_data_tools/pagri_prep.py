@@ -3564,7 +3564,7 @@ def normalize_string_series(column: pd.Series) -> pd.Series:
     return res
 
 
-def analys_column_by_category(
+def analys_filtered_df_by_category(
     df: pd.DataFrame,
     df_for_analys: pd.DataFrame,
     column_for_analys: str,
@@ -3586,13 +3586,13 @@ def analys_column_by_category(
     ]
     for category_column in category_columns:
         analys_df = (
-            df_for_analys.groupby(category_column, observed=False)
+            df_for_analys.groupby(category_column, observed=False, dropna=False)
             .size()
             .reset_index(name="count")
         )
         summ_counts = analys_df["count"].sum()
         all_df = (
-            df.groupby(category_column, observed=False).size().reset_index(name="total")
+            df.groupby(category_column, observed=False, dropna=False).size().reset_index(name="total")
         )
         result_df = pd.merge(analys_df, all_df, on=category_column)
         result_df["count_in_total_pct"] = result_df["count"] / result_df["total"]
@@ -3616,7 +3616,8 @@ def analys_column_by_category(
             for col in result_df.columns:
                 if pd.api.types.is_float_dtype(result_df[col]):
                     result_df[col] = result_df[col].apply(lambda x: f"{x:.1%}")
-            yield result_df
+            caption = f'Value in "{column_for_analys}" by category "{category_column}"'
+            yield caption, result_df
 
         else:
             display(
@@ -3672,15 +3673,14 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
     for col in series_for_analys.index:
         if not series_for_analys[col][col].value_counts().empty:
             if is_dash:
-                yield series_for_analys[col][col].value_counts().to_frame(
-                    "outliers"
-                ).head(10)
+                caption = f"Value counts"
+                yield caption, series_for_analys[col][col].value_counts().reset_index().head(10)
             else:
-                print(f"Value counts outliers")
+                print(f"Value counts")
                 display(
                     series_for_analys[col][col]
                     .value_counts()
-                    .to_frame("outliers")
+                    .to_frame("count")
                     .head(10)
                     .style.set_caption(f"{col}")
                     .set_table_styles(
@@ -3696,14 +3696,16 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
                         ]
                     )
                 )
+                yield
                 yield series_for_analys[col].sample(10)
         if is_dash:
-            yield series_for_analys[col].sample(10)
+            caption  = f"Sample in {col}"
+            yield caption, series_for_analys[col].sample(10)
         else:
             display(
                 series_for_analys[col]
-                .sample(10)
-                .style.set_caption(f"Sample outliers in {col}")
+                .sample(5)
+                .style.set_caption(f"Sample in {col}")
                 .set_table_styles(
                     [
                         {
@@ -3719,11 +3721,11 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
             )
             yield
         if is_dash:
-            gen = analys_column_by_category(
+            gen = analys_filtered_df_by_category(
                 df, series_for_analys[col], col, is_dash=True
             )
         else:
-            gen = analys_column_by_category(df, series_for_analys[col], col)
+            gen = analys_filtered_df_by_category(df, series_for_analys[col], col)
         for _ in gen:
             if is_dash:
                 yield _
