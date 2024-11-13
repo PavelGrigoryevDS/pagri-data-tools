@@ -14,6 +14,32 @@ from pymystem3 import Mystem
 import io
 import base64
 
+def count_share(series: pd.Series) -> str:
+    """
+    Calculate count and percentage of True values in a boolean Series.
+
+    Parameters
+    ----------
+    series : pd.Series
+        Boolean Series containing True/False values from a condition
+
+    Returns
+    -------
+    str
+        Formatted string with count and percentage in format: "count (percentage%)"
+        Example: "150 (23.5%)"
+
+    Examples
+    --------
+    >>> df = pd.DataFrame({'price': [100, 200, 300, 400, 500]})
+    >>> count_share(df['price'] > 300)
+    '2 (40.0%)'
+    """    
+    total_count = len(series)
+    matching_count = series.sum()
+    percentage = (matching_count / total_count) * 100
+    return f"{matching_count} ({percentage:.1f}%)"
+
 def pretty_value(value):
     """
     Функция делает удобное представление числа с пробелами после разрядов.
@@ -3617,7 +3643,7 @@ def analys_filtered_df_by_category(
                 if pd.api.types.is_float_dtype(result_df[col]):
                     result_df[col] = result_df[col].apply(lambda x: f"{x:.1%}")
             caption = f'Value in "{column_for_analys}" by category "{category_column}"'
-            yield caption, result_df
+            yield caption, 'by_category', col, category_column, result_df
 
         else:
             display(
@@ -3670,13 +3696,15 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
     is_dash (bool):  режим работы в Dash или нет
 
     """
+    df_size = df.shape[0]
     for col in series_for_analys.index:
+        cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
         if not series_for_analys[col][col].value_counts().empty:
             if is_dash:
-                caption = f"Value counts"
-                yield caption, series_for_analys[col][col].value_counts().reset_index().head(10)
+                caption = f"Value counts ({cnt_for_display_in_sample:.2%})"
+                yield caption, 'value_counts', col, _, series_for_analys[col][col].value_counts().reset_index().head(10)
             else:
-                print(f"Value counts")
+                print(f"Value counts ({cnt_for_display_in_sample:.2%})")
                 display(
                     series_for_analys[col][col]
                     .value_counts()
@@ -3699,13 +3727,13 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
                 yield
                 yield series_for_analys[col].sample(10)
         if is_dash:
-            caption  = f"Sample in {col}"
-            yield caption, series_for_analys[col].sample(10)
+            caption  = f"Sample in {col} ({cnt_for_display_in_sample:.2%})"
+            yield caption, 'sample', col, _, , series_for_analys[col].sample(10)
         else:
             display(
                 series_for_analys[col]
                 .sample(5)
-                .style.set_caption(f"Sample in {col}")
+                .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
                 .set_table_styles(
                     [
                         {
