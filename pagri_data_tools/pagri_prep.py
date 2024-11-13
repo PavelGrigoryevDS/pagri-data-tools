@@ -3729,7 +3729,7 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
         if is_dash:
             caption  = f"Sample in {col} ({cnt_for_display_in_sample:.2%})"
             yield caption, 'sample', col, _, , series_for_analys[col].sample(10)
-        else:
+        else: 
             display(
                 series_for_analys[col]
                 .sample(5)
