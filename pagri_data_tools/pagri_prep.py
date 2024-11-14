@@ -3590,7 +3590,7 @@ def normalize_string_series(column: pd.Series) -> pd.Series:
     return res
 
 
-def analys_filtered_df_by_category(
+def analyze_filtered_df_by_category(
     df: pd.DataFrame,
     df_for_analys: pd.DataFrame,
     column_for_analys: str,
@@ -3643,7 +3643,7 @@ def analys_filtered_df_by_category(
                 if pd.api.types.is_float_dtype(result_df[col]):
                     result_df[col] = result_df[col].apply(lambda x: f"{x:.1%}")
             caption = f'Value in "{column_for_analys}" by category "{category_column}"'
-            yield caption, 'by_category', col, category_column, result_df
+            yield caption, 'by_category', column_for_analys, category_column, result_df
 
         else:
             display(
@@ -3687,7 +3687,7 @@ def analys_filtered_df_by_category(
             yield
 
 
-def analys_by_category_gen(df, series_for_analys, is_dash=False):
+def analyze_by_category_gen(df, series_for_analys, is_dash=False):
     """
     Генератор.
     Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
@@ -3702,7 +3702,7 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
         if not series_for_analys[col][col].value_counts().empty:
             if is_dash:
                 caption = f"Value counts ({cnt_for_display_in_sample:.2%})"
-                yield caption, 'value_counts', col, _, series_for_analys[col][col].value_counts().reset_index().head(10)
+                yield caption, 'value_counts', col, None, series_for_analys[col][col].value_counts().reset_index().head(10)
             else:
                 print(f"Value counts ({cnt_for_display_in_sample:.2%})")
                 display(
@@ -3728,7 +3728,7 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
                 yield series_for_analys[col].sample(10)
         if is_dash:
             caption  = f"Sample in {col} ({cnt_for_display_in_sample:.2%})"
-            yield caption, 'sample', col, _, , series_for_analys[col].sample(10)
+            yield caption, 'sample', col, None, series_for_analys[col].sample(10)
         else: 
             display(
                 series_for_analys[col]
@@ -3749,11 +3749,11 @@ def analys_by_category_gen(df, series_for_analys, is_dash=False):
             )
             yield
         if is_dash:
-            gen = analys_filtered_df_by_category(
+            gen = analyze_filtered_df_by_category(
                 df, series_for_analys[col], col, is_dash=True
             )
         else:
-            gen = analys_filtered_df_by_category(df, series_for_analys[col], col)
+            gen = analyze_filtered_df_by_category(df, series_for_analys[col], col)
         for _ in gen:
             if is_dash:
                 yield _
@@ -3933,3 +3933,134 @@ def top_n_values_gen(
                 .hide(axis="index")
             )
             yield
+
+def analyze_share_by_category(
+    df: pd.DataFrame,
+    df_for_analys: pd.DataFrame,
+    column_for_analys: str,
+    category_column: str
+):
+    """
+    Show statisctic column by categories in DataFrame
+
+    Parameters:
+    df (pd.DataFrame): origin DataFrame
+    df_for_analys (pd.DataFrame): DataFrame for analysis
+
+    Returns:
+    None
+    """
+    size_all = df.shape[0]
+    analys_df = (
+        df_for_analys.groupby(category_column, observed=False, dropna=False)
+        .size()
+        .reset_index(name="count")
+    )
+    summ_counts = analys_df["count"].sum()
+    all_df = (
+        df.groupby(category_column, observed=False, dropna=False).size().reset_index(name="total")
+    )
+    result_df = pd.merge(analys_df, all_df, on=category_column)
+    result_df["count_in_total_pct"] = result_df["count"] / result_df["total"]
+    result_df["count_in_sum_count_pct"] = result_df["count"] / summ_counts
+    result_df["total_in_sum_total_pct"] = result_df["total"] / size_all
+    result_df["diff_sum_pct"] = (
+        result_df["count_in_sum_count_pct"] - result_df["total_in_sum_total_pct"]
+    )
+    display(
+        result_df[
+            [
+                category_column,
+                "total",
+                "count",
+                "count_in_total_pct",
+                "count_in_sum_count_pct",
+                "total_in_sum_total_pct",
+                "diff_sum_pct",
+            ]
+        ]
+        .style.set_caption(
+            f'Share in "{column_for_analys}" by category "{category_column}"'
+        )
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "18px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
+        )
+        .format(
+            "{:.1%}",
+            subset=[
+                "count_in_total_pct",
+                "count_in_sum_count_pct",
+                "total_in_sum_total_pct",
+                "diff_sum_pct",
+            ],
+        )
+        .hide(axis="index")
+    )
+
+
+def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=None):
+    """
+    Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
+    И затем выводит информацию по каждой категории в таблице.
+
+    df - исходный датафрейм
+    series_for_analys - series c датафреймами, которые нужно проанализировать по категориям
+    col - колонка, по которой будет проводиться анализ
+    category - категория, по которой будет проводиться анализ
+    mode - режим, в котором будет проводиться анализ (value_counts, sample, by_category)
+    """
+    df_size = df.shape[0]
+    cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
+    if mode == 'value_counts':
+        print(f"Value counts in {col} ({cnt_for_display_in_sample:.2%})")
+        display(
+            series_for_analys[col][col]
+            .value_counts()
+            .to_frame("count")
+            .head(10)
+            .style.set_caption(f"{col}")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+        )
+        return
+    if mode == 'sample':
+        display(
+            series_for_analys[col]
+            .sample(5)
+            .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+        )
+        return
+    if mode == 'by_category':
+        analyze_share_by_category(df, series_for_analys[col], col, category)
+        
