@@ -2004,7 +2004,7 @@ def line(config: dict, titles_for_axis: dict = None):
         , text = False
         , textsize = 14
     )
-    bar(config)
+    line(config)
     """
     return base_graph_for_bar_line_area(config, titles_for_axis, 'line')
 

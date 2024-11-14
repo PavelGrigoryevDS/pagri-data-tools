@@ -14,7 +14,7 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 from tqdm.auto import tqdm
 
 
-def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_for_axis: dict = None):
+def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_for_axis: dict = None, title=None):
     """
     Plot the feature importances of a random forest classifier using Plotly Express.
 
@@ -22,6 +22,7 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_fo
     df (pandas.DataFrame): The input DataFrame containing the features and target variable.
     target (str): The name of the target variable column in the DataFrame.
     titles_for_axis (dict):  A dictionary containing titles for the axes.
+    title (str): Title.
 
     Returns:
     fig (plotly.graph_objs.Figure): The feature importance plot.
@@ -68,29 +69,46 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_fo
         'Importance', ascending=False)
 
     # Create the bar chart
-    fig = px.bar(feature_importances, x='Importance', y='Feature',
-                 title=f'График важности признаков для предсказания {target_str}')
+    if title:
+        title=title # f'График важности признаков для предсказания {target}'
+    else: 
+        title='График важности признаков'        
+    # Create the bar chart
+    fig = px.bar(feature_importances, x='Importance', y='Feature', title=title)
     fig.update_layout(
         yaxis=dict(categoryorder='total ascending', title=dict(
-            font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), text='Названия признаков')),
+            font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), text='Название признака')),
         xaxis=dict(title=dict(font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
                    text='Оценка важности'), showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"),
         width=700,  # Set the width of the graph
         height=500,  # Set the height of the graph
         template='simple_white',  # Set the template to simple_white
-        title_font=dict(size=24, color="rgba(0, 0, 0, 0.6)"),
-        # Для подписей и меток
-        font=dict(size=14, family="Open Sans", color="rgba(0, 0, 0, 1)"),
-        # xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        # yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
         # xaxis_linewidth=2,
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         # yaxis_linewidth=2
-        margin=dict(l=50, r=50, b=50, t=100),
+        margin=dict(l=50, r=50, b=50, t=70),
         hoverlabel=dict(bgcolor="white"),
+        # xaxis=dict(
+        #     showgrid=True
+        #     , gridwidth=1
+        #     , gridcolor="rgba(0, 0, 0, 0.1)"
+        # ),
+        # yaxis=dict(
+        #     showgrid=True
+        #     , gridwidth=1
+        #     , gridcolor="rgba(0, 0, 0, 0.07)"
+        # )        
     )
     # Set the bar color to mediumpurple
     fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)')
@@ -98,17 +116,28 @@ def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_fo
     return fig
 
 
-def plot_feature_importances_regression(df: pd.DataFrame, target: str):
+def plot_feature_importances_regression(df: pd.DataFrame, target: str, titles_for_axis: dict = None, title=None):
     """
     Plot the feature importances of a random forest regressor using Plotly Express.
 
     Parameters:
     df (pandas.DataFrame): The input DataFrame containing the features and target variable.
     target (str): The name of the target variable column in the DataFrame.
-
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+    title (str): Title.
     Returns:
     fig (plotly.graph_objs.Figure): The feature importance plot.
 
+    Notes:
+    This function trains a random forest classifier on the input DataFrame, extracts the feature importances,
+    and plots them using Plotly Express. 
+    Examples:
+        titles_for_axis = dict(
+            debt = 'долга'
+            , children = 'Кол-во детей'
+            , age = 'Возраст'
+            , total_income = 'Доход')
+        title = 'График важности признаков для предсказания цены'
     Notes:
     This function trains a random forest regressor on the input DataFrame, extracts the feature importances,
     and plots them using Plotly Express.
@@ -121,7 +150,9 @@ def plot_feature_importances_regression(df: pd.DataFrame, target: str):
     target_series = df_tmp[target]
     # Get the feature names
     feature_names = df_features.columns
-
+    if titles_for_axis:
+        feature_names = [titles_for_axis[feature] for feature in feature_names]
+        target = titles_for_axis[target]
     # Normalize the data using Standard Scaler
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(df_features)
@@ -138,19 +169,50 @@ def plot_feature_importances_regression(df: pd.DataFrame, target: str):
     # Sort the feature importances in descending order
     feature_importances = feature_importances.sort_values(
         'Importance', ascending=False)
-
+    if title:
+        title=title # f'График важности признаков для предсказания {target}'
+    else: 
+        title='График важности признаков'
     # Create the bar chart
-    fig = px.bar(feature_importances, x='Importance', y='Feature',
-                 title=f'Feature Importances for {target}')
+    fig = px.bar(feature_importances, x='Importance', y='Feature', title=title)
     fig.update_layout(
-        yaxis=dict(categoryorder='total ascending'),
+        yaxis=dict(categoryorder='total ascending', title=dict(
+            font=dict(size=18, color="rgba(0, 0, 0, 0.5)"), text='Название признака')),
+        xaxis=dict(title=dict(font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+                   text='Оценка важности'), showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"),
         width=700,  # Set the width of the graph
         height=500,  # Set the height of the graph
-        hoverlabel=dict(bgcolor='white'),
-        template='simple_white'  # Set the template to simple_white
+        template='simple_white',  # Set the template to simple_white
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        # xaxis_linewidth=2,
+        # yaxis_linewidth=2
+        margin=dict(l=50, r=50, b=50, t=70),
+        hoverlabel=dict(bgcolor="white"),
+        # xaxis=dict(
+        #     showgrid=True
+        #     , gridwidth=1
+        #     , gridcolor="rgba(0, 0, 0, 0.1)"
+        # ),
+        # yaxis=dict(
+        #     showgrid=True
+        #     , gridwidth=1
+        #     , gridcolor="rgba(0, 0, 0, 0.07)"
+        # )        
     )
     # Set the bar color to mediumpurple
-    fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)')
+    hovertemplate = 'Оценка важности = %{x}<br>Название признака = %{y}<extra></extra>'
+    fig.update_traces(marker_color='rgba(128, 60, 170, 0.9)', hovertemplate=hovertemplate)
 
     return fig
 
