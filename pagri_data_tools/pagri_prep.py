@@ -1041,6 +1041,7 @@ def make_value_counts_for_html(column):
         .apply(make_value_counts_row, axis=1)
         .to_frame()
     )
+
     return top_5.reset_index(drop=True)
     # return (
     #     top_5.style
@@ -1608,7 +1609,7 @@ def make_hbox(widgets_: list):
     return hbox
 
 
-def my_info(df, graphs=True, num=True, obj=True, date=True):
+def my_info_old(df, graphs=True, num=True, obj=True, date=True):
     """
     Show information about a pandas DataFrame.
 
@@ -1824,6 +1825,7 @@ def make_row_for_html(df, column, funcs):
     except:
         pass
     # display(res_df)
+    res_df = res_df.fillna('')
     res_df = (res_df
         .style.set_caption(f"{column}")
         .set_table_styles(
@@ -1917,6 +1919,41 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
             # Отображение HTML-кода
             display(HTML(row_for_html))
             yield
+            
+def my_info_column(df, column, graphs=True):
+
+    funcs_num = [
+        make_summary_for_html,
+        make_pct_for_html,
+        make_std_for_html,
+        make_value_counts_for_html,
+    ]
+    funcs_obj = [make_summary_obj_for_html, make_value_counts_obj_for_html]
+    funcs_date = [
+        make_range_date_for_html,
+        make_summary_date_for_html,
+        make_check_missing_date_for_html,
+    ]
+    if graphs:
+        funcs_num += [make_hist_plotly_for_html]
+        funcs_obj += [make_bar_obj_for_html]
+        funcs_date += [None]
+    if pd.api.types.is_datetime64_any_dtype(df[column]):
+        row_for_html = make_row_for_html(df, column, funcs_date)
+        # Отображение HTML-кода
+        display(HTML(row_for_html))
+        return
+    if pd.api.types.is_numeric_dtype(df[column]):
+        row_for_html = make_row_for_html(df, column, funcs_num)
+        # Отображение HTML-кода
+        display(HTML(row_for_html))
+        return
+
+    if not pd.api.types.is_numeric_dtype(df[column]) and not pd.api.types.is_datetime64_any_dtype(df[column]):
+        row_for_html = make_row_for_html(df, column, funcs_obj)
+        # Отображение HTML-кода
+        display(HTML(row_for_html))
+        return            
 
 def check_duplicated(df):
     """
