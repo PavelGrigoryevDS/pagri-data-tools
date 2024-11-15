@@ -1870,7 +1870,7 @@ def make_row_for_html(df, column, funcs):
     # {res_df.to_html(index=False)}
     return final_html
 
-def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
+def info_gen(df, graphs=True, num=True, obj=True, date=True):
     if not num and not obj and not date:
         return
     yield make_all_frame_for_html(df)
@@ -1920,7 +1920,7 @@ def my_info_gen(df, graphs=True, num=True, obj=True, date=True):
             display(HTML(row_for_html))
             yield
             
-def my_info_column(df, column, graphs=True):
+def info_column(df, column, graphs=True):
 
     funcs_num = [
         make_summary_for_html,
