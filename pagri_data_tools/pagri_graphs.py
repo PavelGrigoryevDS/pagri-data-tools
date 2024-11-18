@@ -3055,7 +3055,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             config['title'] = None 
             
     def make_df_for_fig(df, column_for_x, column_for_y, column_for_value, finc, orientation):
-        func_df =  pd.pivot_table(df, index=column_for_x, columns=column_for_y, values=column_for_value, aggfunc=func, observed=False)
+        func_df =  pd.pivot_table(df, index=column_for_x, columns=column_for_y, values=column_for_value, aggfunc=func, observed=True)
         if orientation == 'h':
             func_df = func_df.T
         ascending_sum = True
