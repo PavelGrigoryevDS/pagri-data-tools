@@ -3119,3 +3119,170 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     else:
         fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
     return fig
+
+def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3):
+    """
+    Create a pairplot of numerical variables in a dataframe using Plotly.
+
+    Parameters:
+    df (pandas.DataFrame): Input dataframe
+    pairs (dict): Dict of pairs of column names to plot.
+        Each pair should be a key in the form of a tuple, and the value should be a dictionary where the keys represent the columns from the pair,  
+        and the values are ranges for truncating the values (upper and lower bounds).
+    coloring (bool, optional): Whether to color the points based on density (count elements in sector). Defaults to True.
+    width (int, optional): Width of the plot. Defaults to 800.
+    height (int, optional): Height of the plot. Defaults to 800.
+    titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
+    horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
+    vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
+    rows (int, optional): Number of rows in the subplot grid. Defaults to None.
+    cols (int, optional): Number of columns in the subplot grid. Defaults to None.
+
+    Returns:
+    fig (plotly.graph_objs.Figure): The resulting pairplot figure
+    
+    Example:
+        pairs = {('total_images', 'last_price'): None, ('total_images', 'floors_total'): {'total_images': [-2.15, 22.45], 'floors_total': [0.51, 28.54]}}
+    """
+    if df.empty:
+        raise ValueError("Input dataframe is empty")
+    num_columns = list(
+        filter(lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns))
+    if not pairs:
+        raise ValueError(
+            "pairs must contains at least one pair of column names")
+    combinations = list(pairs.keys())
+    len_comb = len(combinations)
+
+    # Определить размер сетки
+    if rows is None or cols is None:
+        size = int(np.ceil(np.sqrt(len_comb)))
+        rows = size
+        cols = size
+    else:
+        if rows * cols < len_comb:
+            raise ValueError(
+                "The number of rows and columns is not enough to accommodate all combinations")
+        rows = rows
+        cols = cols
+
+    fig = make_subplots(
+        rows=rows, cols=cols, horizontal_spacing=horizontal_spacing, vertical_spacing=vertical_spacing)
+
+    for i, (col1, col2) in enumerate(combinations):
+        row, col = divmod(i, cols)
+        if titles_for_axis:
+            xaxes_title = titles_for_axis[col1]
+            yaxes_title = titles_for_axis[col2]
+        else:
+            xaxes_title = col1
+            yaxes_title = col2
+            
+        if coloring:
+            title = 'Зависимости числовых переменных с учетом плотности точек'
+            if pairs[(col1, col2)]:
+                if pairs[(col1, col2)][col1]:
+                    df_trim = df[df[col1].between(*pairs[(col1, col2)][col1])]
+                if pairs[(col1, col2)][col2]:
+                    df_trim = df_trim[df_trim[col2].between(*pairs[(col1, col2)][col2])]
+            else:
+                df_trim = df.copy()                    
+            df_trim['x_sector'] = pd.cut(df_trim[col1], bins=100)
+            df_trim['y_sector'] = pd.cut(df_trim[col2], bins=100)
+            # df_trim.head()
+            df_trim['density'] = df_trim.groupby(['x_sector', 'y_sector'], observed=True)[col1].transform('size')
+            if i == 0:
+                max_density = df_trim['density'].max()
+            fig.add_trace(go.Scattergl(
+                x=df_trim[col1], 
+                y=df_trim[col2], 
+                mode='markers', 
+                marker=dict(
+                    color=df_trim['density'],  # Используем значения для цветовой шкалы
+                    coloraxis=f"coloraxis{i+1}",
+                    # showscale=False,
+                    line=dict(color='white', width=0.5)
+                    # Убираем coloraxis, чтобы не показывать colorbar
+                ),
+            ), row=row+1, col=col+1)            
+            # fig_scatter = px.scatter(
+            #     df, x=col1, y=col2,
+            #     color='density',
+            #     color_continuous_scale = 'Viridis',
+            #     # color_continuous_scale=[(0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')],
+            #     render_mode='webgl',
+            # )
+            # fig_scatter.update_traces(marker=dict(line=dict(color='white', width=0.5)))
+            # fig_scatter.update_layout(coloraxis=dict(colorbar=dict(title='Density', titlefont=dict(size=12))), coloraxis_colorbar=coloraxis_name)
+            # fig_scatter.update_layout(coloraxis_colorbar=dict(title='Density'))
+        else:
+            title = 'Зависимости между числовыми переменными'
+            if pairs[(col1, col2)]:
+                if pairs[(col1, col2)][col1]:
+                    df_trim = df[df[col1].between(*pairs[(col1, col2)][col1])]
+                if pairs[(col1, col2)][col2]:
+                    df_trim = df_trim[df_trim[col2].between(*pairs[(col1, col2)][col2])]      
+            else:
+                df_trim = df.copy()
+            fig_scatter = px.scatter(df_trim, x=col1, y=col2, render_mode='webgl')
+            fig_scatter.update_traces(marker=dict(line=dict(color='white', width=0.5)))
+            fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
+        # fig_scatter.update_traces(marker=dict(
+        #     line=dict(color='white', width=0.5))) #, coloraxis=f"coloraxis{i+1}", showscale=False))
+        # fig_scatter.update_traces(
+        #     hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}')
+        # fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
+        # fig.update_coloraxes
+        fig.update_xaxes(
+            title_text=xaxes_title,
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+            linecolor="rgba(0, 0, 0, 0.5)",
+            row=row+1, col=col+1,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(0, 0, 0, 0.1)"
+        )
+        fig.update_yaxes(
+            title_text=yaxes_title,
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
+            linecolor="rgba(0, 0, 0, 0.5)",
+            row=row+1, col=col+1,
+            showgrid=True,
+            gridwidth=1,
+            gridcolor="rgba(0, 0, 0, 0.07)"
+        )
+    # Добавляем цветовую шкалу
+
+    # fig.update_layout(coloraxis=dict(colorbar=dict(title='Density', showticks=False)))
+    # fig.update_layout(coloraxis=dict(colorbar=dict(title='Density', titlefont=dict(size=12))), coloraxis_colorbar=coloraxis_name)
+    # fig.update_layout(coloraxis1=dict(colorbar=dict(title=f'Colorbar {i+1}', x=1.05, y=0.5, thickness=20)))
+        # coloraxis2=dict(colorbar=dict(title='Colorbar 2', x=1.05, y=0.5, thickness=20)))
+    # # Update the layout
+    fig.update_layout(coloraxis1=dict(colorbar=dict(title='Плотность', tickvals=[max_density * i / 10 for i in range(10)], ticktext=[f'{i * 10}%' for i in range(10)])))
+    for i in range(2, len(fig.data)+1):
+        fig.update_layout(**{f'coloraxis{i}': dict(showscale=False)})
+        
+    fig.update_layout(
+        height=height,
+        width=width,
+        margin=dict(l=50, r=50, t=90, b=50),
+        title=title,
+        # Для подписей и меток
+        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white"),
+    )
+    fig.update_layout(showlegend=False)
+    return fig
