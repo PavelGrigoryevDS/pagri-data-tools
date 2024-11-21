@@ -333,7 +333,73 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
     )
     return fig
 
+def categorical_heatmap_matrix(df, col1, col2, titles_for_axis: dict = None, width=None, height=None):
+    """
+    Generate a heatmap matrix for all possible combinations of categorical variables in a dataframe.
 
+    This function takes a pandas DataFrame as input and generates a heatmap matrix for each pair of categorical variables.
+    The heatmap matrix is a visual representation of the cross-tabulation of two categorical variables, which can help identify patterns and relationships between them.
+
+    Parameters:
+    df (pandas DataFrame): Input DataFrame containing categorical variables.
+    titles_for_axis (dict):  A dictionary containing titles for the axes.
+
+    Returns:
+    None
+    """
+    def human_readable_number(x):
+        if x >= 1e6 or x <= -1e6:
+            return f"{x/1e6:.1f} M"
+        elif x >= 1e3 or x <= -1e3:
+            return f"{x/1e3:.1f} k"
+        else:
+            return f"{x:.0f}"
+    # Получаем список категориальных переменных
+    categorical_cols = df.select_dtypes(include=['category']).columns
+    size = df.shape[0]
+    # Перебираем все возможные комбинации категориальных переменных
+    # Создаем матрицу тепловой карты
+    heatmap_matrix = pd.crosstab(df[col1], df[col2])
+
+    # Визуализируем матрицу тепловой карты
+
+    if not titles_for_axis:
+        title = f'Тепловая карта количества для {col1} и {col2}'
+        xaxis_title = f'{col2}'
+        yaxis_title = f'{col1}'
+    else:
+        title = f'Тепловая карта количества для {titles_for_axis[col1][1]} и {titles_for_axis[col2][1]}'
+        xaxis_title = f'{titles_for_axis[col2][0]}'
+        yaxis_title = f'{titles_for_axis[col1][0]}'
+    hovertemplate = xaxis_title + \
+        ' = %{x}<br>' + yaxis_title + \
+        ' = %{y}<br>Количество = %{z}<extra></extra>'
+    fig = heatmap_simple(heatmap_matrix, title=title)
+    fig.update_traces(hovertemplate=hovertemplate, showlegend=False)
+    center_color_bar = (heatmap_matrix.max().max() +
+                        heatmap_matrix.min().min()) * 0.7
+    annotations = [
+        dict(
+            text=f"{human_readable_number(heatmap_matrix.values[row, col])} ({(heatmap_matrix.values[row, col] * 100 / size):.0f} %)" if heatmap_matrix.values[row, col] * 100 / size >= 1
+            else f"{human_readable_number(heatmap_matrix.values[row, col])} (<1 %)" if heatmap_matrix.values[row, col] * 100 / size > 0
+            else '-',
+            x=col,
+            y=row,
+            showarrow=False,
+            font=dict(
+                color="black" if heatmap_matrix.values[row, col] <
+                center_color_bar else "white",
+                size=16
+            )
+        )
+        for row, col in np.ndindex(heatmap_matrix.values.shape)
+    ]
+    fig.update_layout(
+        # , title={'text': f'<b>{title}</b>'}
+        width=width, height=height, xaxis_title=xaxis_title, yaxis_title=yaxis_title, annotations=annotations
+    )
+    plotly_default_settings(fig)
+    return fig
 
 
 def categorical_heatmap_matrix_gen(df, titles_for_axis: dict = None, width=None, height=None):
