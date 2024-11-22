@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
+from scipy.stats import gaussian_kde
 
 pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -3186,7 +3187,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
     return fig
 
-def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3):
+def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3, density_mode='count'):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
@@ -3203,6 +3204,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
     vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
     rows (int, optional): Number of rows in the subplot grid. Defaults to None.
     cols (int, optional): Number of columns in the subplot grid. Defaults to None.
+    density_mode (str): Mode for calculate density ('kde' or 'count')
 
     Returns:
     fig (plotly.graph_objs.Figure): The resulting pairplot figure
@@ -3219,7 +3221,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
             "pairs must contains at least one pair of column names")
     combinations = list(pairs.keys())
     len_comb = len(combinations)
-
+    df_size = df.shape[0]
     # Определить размер сетки
     if rows is None or cols is None:
         size = int(np.ceil(np.sqrt(len_comb)))
@@ -3252,11 +3254,15 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
                 if pairs[(col1, col2)][col2]:
                     df_trim = df_trim[df_trim[col2].between(*pairs[(col1, col2)][col2])]
             else:
-                df_trim = df.copy()                    
-            df_trim['x_sector'] = pd.cut(df_trim[col1], bins=100)
-            df_trim['y_sector'] = pd.cut(df_trim[col2], bins=100)
-            # df_trim.head()
-            df_trim['density'] = df_trim.groupby(['x_sector', 'y_sector'], observed=True)[col1].transform('size')
+                df_trim = df.copy()        
+            if density_mode == 'count':
+                df_trim['x_sector'] = pd.cut(df_trim[col1], bins=20)
+                df_trim['y_sector'] = pd.cut(df_trim[col2], bins=20)
+                # df_trim.head()
+                df_trim['density'] = df_trim.groupby(['x_sector', 'y_sector'], observed=True)[col1].transform('size')
+            elif density_mode == 'kde':
+                xy = np.vstack([df_trim[col1], df_trim[col2]])
+                df_trim['density']  = gaussian_kde(xy)(xy)
             if i == 0:
                 max_density = df_trim['density'].max()
             fig.add_trace(go.Scattergl(
