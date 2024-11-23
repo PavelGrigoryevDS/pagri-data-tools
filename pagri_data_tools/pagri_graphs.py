@@ -1753,6 +1753,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['showgrid_x'] = True
     if 'showgrid_y' not in config:
         config['showgrid_y'] = True
+    if 'sort' not in config:
+        config['sort'] = True        
+        
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
@@ -1822,21 +1825,16 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                    .groupby(cat_columns, observed=True)
                    .agg(num=(num_column, func), count=(num_column, 'count'))
                    .reset_index())
-        func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
-            'num'].transform('sum')
-        func_df['count'] = func_df['count'].apply(
-            lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
-        # func_df['sum_cnt'] = func_df.groupby(cat_columns[0])['cnt'].transform('sum')
-        # size = df.shape[0]
-        # func_df['sum_cnt_pct'] = func_df['sum_cnt'].apply(lambda x: f'{(x / size):.1%}')
-        # func_df['cnt_in_sum_pct'] = (func_df['cnt'] / func_df['sum_cnt']).apply(lambda x: f'{x:.1%}')
-        func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
-                   .drop('temp', axis=1)
-                   .rename(columns={'num': num_column})
-                   # .sort_values(columns[0], ascending=ascending)
-                   )
+        if config['sort']:
+            func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
+                'num'].transform('sum')
+            func_df['count'] = func_df['count'].apply(
+                lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
+            func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
+                    .drop('temp', axis=1)
+                    )
 
-        return func_df
+        return func_df.rename(columns={'num': num_column})
     df_for_fig = prepare_df(config)
     x = df_for_fig[config['x']].values
     y = df_for_fig[config['y']].values
