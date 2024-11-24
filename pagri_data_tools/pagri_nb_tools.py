@@ -656,13 +656,13 @@ def correct_notebook_text(notebook_path: str, save_mode: str = 'final', work_mod
         output_filename_splited = notebook_path.split('.')
         output_filename_splited[-2] += '_temp'
         output_filename = '.'.join(output_filename_splited)
+        answer = input(
+            'Был выбран режим работы "draft", результат сохраниться в файл "{output_filename}"\nЕсли хотите сохранить в исходный файл, то введите "final":\n')
+        if answer == 'final':
+            output_filename = notebook_path        
     else:
         output_filename = notebook_path
     print('End')
-    answer = input(
-        'Был выбран режим работы "draft", результат сохраниться в файл "{output_filename}"\nЕсли хотите сохранить в исходный файл, то введите "final":\n')
-    if answer == 'final':
-        output_filename = notebook_path
     nb = nb_reads(json.dumps(nb_json), as_version=4)
     save_notebook(nb, output_filename)
 

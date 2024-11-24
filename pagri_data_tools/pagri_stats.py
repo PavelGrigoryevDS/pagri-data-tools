@@ -309,6 +309,55 @@ def calculate_cohens_d(sample1: pd.Series, sample2: pd.Series, equal_var=False) 
 # Хи-квадрат Пирсона
 # Не чувствителен к гетероскедастичности (неравномерной дисперсии) данных.
 
+def chisquare(sample: pd.Series, alpha: float = 0.05, return_results: bool = False) -> None:
+    """
+    Calculate a one-way chi-square test.
+    Perform Pearson's chi-squared test for the null hypothesis that the categorical data has the given frequencies.
+
+    Parameters:
+    - sample(pd.Series): First categorical variable
+    - alpha (float, optional): Significance level (default: 0.05)
+    - return_results (bool, optional): Return (chi2, p_value, dof, expected) instead of printing (default=False).
+
+    Returns:
+    - If return_results is False: 
+    None
+    - If return_results is True
+        - chi2 : (float) 
+            The test statistic.
+        - p : (float) 
+            The p-value of the test
+        - dof : (int)
+            Degrees of freedom
+        - expected : (ndarray, same shape as observed)
+            The expected frequencies, based on the marginal sums of the table.
+    """
+    if alpha < 0 or alpha > 1:
+        raise Exception(f"alpha must be between 0 and 1, but got {alpha}")
+    if not isinstance(sample, pd.Series):
+        raise ValueError("Input samples must be pd.Series")
+    if not len(sample) > 0:
+        raise ValueError("All samples must have at least one value")
+    if alpha < 0 or alpha > 1:
+        raise Exception(f"alpha must be between 0 and 1, but got {alpha}")
+    if sample.isna().sum():
+        raise ValueError(
+            f'column1 and column2 must not have missing values.\ncolumn1 have {sample.isna().sum()} missing values')
+
+    chi2, p_value = stats.chisquare(sample)
+
+    if not return_results:
+        print('Хи-квадрат Пирсона')
+        print('alpha = ', alpha)
+        print('p-value = ', p_value)
+        if p_value < alpha:
+            print(colored(
+                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
+        else:
+            print(colored(
+                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    else:
+        return chi2, p_value
 
 def chi2_pearson(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, return_results: bool = False) -> None:
     """
