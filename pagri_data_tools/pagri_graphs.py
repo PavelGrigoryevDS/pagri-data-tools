@@ -1851,6 +1851,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             text = [human_readable_number(el) for el in x]
     else:
         text = None
+    # display(df_for_fig)
+    display(custom_data)
     if graph_type == 'bar':
         fig = px.bar(x=x, y=y, color=color,
                     barmode=config['barmode'], text=text, custom_data=custom_data)
