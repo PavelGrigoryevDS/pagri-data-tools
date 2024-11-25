@@ -7,7 +7,7 @@ from tqdm.auto import tqdm
 # from nltk.tokenize import word_tokenize
 
 
-def add_links_and_numbers_to_headings(notebook_path: str, mode: str = 'draft', link_type: str = "name", start_level: int = 2):
+def add_links_and_numbers_to_headings(notebook_path: str, mode: str = 'draft', link_type: str = "name", start_level: int = 2, add_link_to_content = False):
     """
     Добавляет ссылки к заголовкам в ноутбуке.
 
@@ -88,7 +88,7 @@ def add_links_and_numbers_to_headings(notebook_path: str, mode: str = 'draft', l
                     else:
                         raise ValueError(
                             "Неправильный тип ссылки. Должно быть 'name' или 'id'.")
-                    if not is_previous_cell_header:
+                    if add_link_to_content and not is_previous_cell_header:
                         header += '\n<a href="#ref-to-toc">вернуться к оглавлению</a>'
                     new_source.append(header)
                     is_previous_cell_header = True
@@ -212,7 +212,7 @@ def generate_toc(notebook_path: str, mode: str = 'draft', indent_char: str = "&e
     print(f"Table of content added to {output_filename}")
 
 
-def make_headers_link_and_toc(notebook_path: str, mode: str = 'draft', start_level: int = 2, link_type_header: str = "name", indent_char: str = "&emsp;", link_type_toc: str = "html", is_make_headers_link: bool = True, is_make_toc: bool = True):
+def make_headers_link_and_toc(notebook_path: str, mode: str = 'draft', start_level: int = 2, link_type_header: str = "name", indent_char: str = "&emsp;", link_type_toc: str = "html", is_make_headers_link: bool = True, is_make_toc: bool = False):
     ''' 
     Функция добавляет ссылки в название headers и создает содеражние
 
@@ -338,12 +338,12 @@ def add_conclusions_and_anomalies(notebook_path: str, mode: str = 'draft', link_
                     conclusions.append(
                         (toc_conclusion_or_anomaly, conclusion_or_anomaly))
                     if not cell_has_ref_to_toc:
-                        conclusion_or_anomaly_for_ref += '\n<a href="#ref-to-conclusions">вернуться к оглавлению</a>'
+                        conclusion_or_anomaly_for_ref += '\n<a href="#ref-to-conclusions">Вернуться к выводам</a>'
                 if line.strip().startswith("_anomalies_"):
                     anomalies.append(
                         (toc_conclusion_or_anomaly, conclusion_or_anomaly))
                     if not cell_has_ref_to_toc:
-                        conclusion_or_anomaly_for_ref += '\n<a href="#ref-to-anomalies">вернуться к оглавлению</a>'
+                        conclusion_or_anomaly_for_ref += '\n<a href="#ref-to-anomalies">Вернуться к выводам</a>'
                 new_source.append(conclusion_or_anomaly_for_ref)
                 cell_has_ref_to_toc = True
             else:
@@ -361,9 +361,9 @@ def add_conclusions_and_anomalies(notebook_path: str, mode: str = 'draft', link_
     conclusions = [conclusion[0] for conclusion in conclusions]
     anomalies = [anomalie[0] for anomalie in anomalies]
     conclusions = [
-        '**Главные выводы:**<a name="ref-to-conclusions"></a>\n'] + conclusions
+        '**Главные выводы:**<a name="ref-to-conclusions"></a>  \n'] + conclusions
     anomalies = [
-        '**Аномалии и особенности в данных:**<a name="ref-to-anomalies"></a>\n'] + anomalies
+        '**Аномалии и особенности в данных:**<a name="ref-to-anomalies"></a>  \n'] + anomalies
     conclusions_cell = nb_v4.new_markdown_cell([''.join(conclusions)])
     anomalies_cell = nb_v4.new_markdown_cell([''.join(anomalies)])
     nb_json['cells'].insert(0, conclusions_cell)
@@ -721,7 +721,7 @@ def add_hypotheses_links_and_toc(notebook_path: str, mode: str = 'draft', link_t
                 else:
                     raise ValueError(
                         "Неправильный тип ссылки. Должно быть 'markdown' или 'html'.")
-                hypothesis_for_ref += '  \n<a href="#ref-to-toc-hypotheses">вернуться к оглавлению</a>'
+                hypothesis_for_ref += '  \n<a href="#ref-to-toc-hypotheses">Вернуться к выводам</a>'
                 new_source.append(hypothesis_for_ref)
             else:
                 new_source.append(line)
