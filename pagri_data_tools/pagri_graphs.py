@@ -313,7 +313,7 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
         fig.update_layout(width=width)
     if height is not None:
         fig.update_layout(height=height)
-    hovertemplate = 'Название столбца (ось X) = %{x}<br>Название столбца (ось Y) = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
+    hovertemplate = 'ось X)= %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
     fig.update_traces(hovertemplate=hovertemplate)
     fig.update_layout(
         title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
@@ -333,6 +333,147 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
         hoverlabel=dict(bgcolor="white")
     )
     return fig
+
+def heatmap_corr_gen(df, part_size = 10, title='Тепловая карта корреляционных связей между числовыми столбцами', titles_for_axis: dict = None, xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+    """
+    Creates a heatmap from a Pandas DataFrame using Plotly.
+
+    Parameters:
+    - `df`: The Pandas DataFrame to create the heatmap from.
+    - 'part_size': max rows in corr matrix
+    - `title`: The title of the heatmap (default is an empty string).
+    - `titles_for_axis` (dict):  A dictionary containing titles for the axes.
+    - `xtick_text`: The custom tick labels for the x-axis (default is None).
+    - `ytick_text`: The custom tick labels for the y-axis (default is None).
+    - `xaxis_label`: The label for the x-axis (default is None).
+    - `yaxis_label`: The label for the y-axis (default is None).
+    - `width`: The width of the heatmap (default is None).
+    - `height`: The height of the heatmap (default is None).
+    - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
+    - `font_size`: The font size for the text in the annotations (default is 14).
+
+    Returns:
+    - A Plotly figure object representing the heatmap.
+
+    Notes:
+    - If `xtick_text` or `ytick_text` is provided, it must have the same length as the number of columns or rows in the DataFrame, respectively.
+    - The heatmap is created with a custom colorscale and hover labels.
+    - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
+    """
+    num_columns = filter(
+        lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
+    df_corr = df[num_columns].corr()
+    
+    # Разделение на группы по 10 на 10
+    part_size = 10
+    num_rows = df_corr.shape[0]
+    num_groups = (num_rows + part_size - 1) // part_size  # Количество групп
+    # print(num_groups)
+    # # Создание списка для хранения матриц
+    correlation_matrices = []
+
+    for i in range(num_groups):
+        for j in range(num_groups):
+            start_index_row = i * part_size
+            start_index_col = j * part_size
+            end_index_row = min(start_index_row + part_size, num_rows)
+            end_index_col = min(start_index_col + part_size, num_rows)
+            group_matrix = df_corr.iloc[start_index_row:end_index_row, start_index_col:end_index_col]
+            correlation_matrices.append(group_matrix)
+    for correlation_matrice in correlation_matrices:
+        if titles_for_axis:
+            correlation_matrice.columns = [titles_for_axis[column]
+                            for column in correlation_matrice.columns]
+            correlation_matrice.index = [titles_for_axis[index] for index in correlation_matrice.index]
+        # Create figure
+        fig = go.Figure(data=go.Heatmap(
+            z=correlation_matrice.values,
+            x=correlation_matrice.columns,
+            y=correlation_matrice.index,
+            xgap=3,
+            ygap=3,
+            colorscale=[[0, 'rgba(204, 153, 255, 0.1)'], [1, 'rgb(127, 60, 141)']],
+            hoverongaps=False,
+            hoverinfo="x+y+z",
+            hoverlabel=dict(
+                bgcolor="white",
+                # Increase font size to font_size
+                font=dict(color="black", size=font_size)
+            )
+        ))
+
+        # Create annotations
+        center_color_bar = (correlation_matrice.max().max() + correlation_matrice.min().min()) * 0.7
+        annotations = [
+            dict(
+                text=f"{correlation_matrice.values[row, col]:.{decimal_places}f}",
+                x=col,
+                y=row,
+                showarrow=False,
+                font=dict(
+                    color="black" if correlation_matrice.values[row, col] <
+                    center_color_bar else "white",
+                    size=font_size
+                )
+            )
+            for row, col in np.ndindex(correlation_matrice.values.shape)
+        ]
+
+        # Update layout
+        fig.update_layout(
+            title=title,
+            annotations=annotations,
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=False)
+        )
+
+        # Update axis labels if custom labels are provided
+        if xtick_text is not None:
+            if len(xtick_text) != len(correlation_matrice.columns):
+                raise ValueError(
+                    "xtick_text must have the same length as the number of columns in the DataFrame")
+            fig.update_layout(xaxis=dict(tickvals=range(
+                len(xtick_text)), ticktext=xtick_text))
+
+        if ytick_text is not None:
+            if len(ytick_text) != len(correlation_matrice.index):
+                raise ValueError(
+                    "ytick_text must have the same length as the number of rows in the DataFrame")
+            fig.update_layout(yaxis=dict(tickvals=range(
+                len(ytick_text)), ticktext=ytick_text))
+
+        # Update axis labels if custom labels are provided
+        if xaxis_label is not None:
+            fig.update_layout(xaxis=dict(title=xaxis_label))
+
+        if yaxis_label is not None:
+            fig.update_layout(yaxis=dict(title=yaxis_label))
+
+        # Update figure size if custom size is provided
+        if width is not None:
+            fig.update_layout(width=width)
+        if height is not None:
+            fig.update_layout(height=height)
+        hovertemplate = 'ось X = %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
+        fig.update_traces(hovertemplate=hovertemplate)
+        fig.update_layout(
+            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+            xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+            legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_font_color='rgba(0, 0, 0, 0.7)',
+            # yaxis_linewidth=2
+            margin=dict(l=50, r=50, b=50, t=70),
+            hoverlabel=dict(bgcolor="white")
+        )
+        yield fig
 
 def categorical_heatmap_matrix(df, col1, col2, titles_for_axis: dict = None, width=None, height=None):
     """

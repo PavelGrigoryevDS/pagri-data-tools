@@ -3,6 +3,7 @@ import json
 import re
 from pyaspeller import YandexSpeller
 from IPython.display import display_html
+import IPython
 from tqdm.auto import tqdm
 # from nltk.tokenize import word_tokenize
 
@@ -742,3 +743,40 @@ def add_hypotheses_links_and_toc(notebook_path: str, mode: str = 'draft', link_t
     with open(output_filename, 'w', encoding='utf-8') as out_f:
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {output_filename}")
+
+def check_observes_new_line(notebook_path: str, mode: str = 'draft'):
+    try:
+        with open(notebook_path, 'r', encoding='utf-8') as in_f:
+            nb_json = json.load(in_f)
+    except FileNotFoundError:
+        print(f"Error: File not found - {notebook_path}")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format - {notebook_path}")
+        return
+    for cell in nb_json["cells"]:
+        source = cell["source"]
+        new_source = []
+        is_obs_found = False
+        for line in source:
+            # Если мы нашли "Наблюдения" и следующая строка не пустая, добавляем пустую строку
+            if is_obs_found and line.strip() == '':
+                is_obs_found = False  # Сбрасываем флаг
+            elif is_obs_found:
+                # Если это последняя строка и флаг установлен, добавляем пустую строку
+                new_source.append('\n')  # Добавляем пустую строку         
+            if '**Наблюдения:**' in line:
+                is_obs_found = True
+            new_source.append(line)
+        cell["source"] = new_source    
+    nb = nb_reads(json.dumps(nb_json), as_version=4)
+    # Save the nbformat object to the file
+    if mode == 'draft':
+        output_filename_splited = notebook_path.split('.')
+        output_filename_splited[-2] += '_temp'
+        output_filename = '.'.join(output_filename_splited)
+    else:
+        output_filename = notebook_path
+    with open(output_filename, 'w', encoding='utf-8') as out_f:
+        nb_write(nb, out_f, version=4)
+    print(f"Corrected notebook saved to {output_filename}")        
