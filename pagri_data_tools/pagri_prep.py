@@ -1151,12 +1151,9 @@ def make_hist_plotly_for_html(column):
         ),
         xaxis_title="",
         yaxis_title="",
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
+        font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
+        xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+        yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.5)",
         yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
@@ -1554,12 +1551,9 @@ def make_widget_bar_obj(column):
         ),
         xaxis_title="",
         yaxis_title="",
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
-        xaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_title_font=dict(size=18, color="rgba(0, 0, 0, 0.8)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.8)"),
+        font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
+        xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+        yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.5)",
         yaxis_linecolor="rgba(0, 0, 0, 0.5)",
         xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
@@ -1588,6 +1582,13 @@ def make_bar_obj_for_html(column):
         ),
         xaxis_title="",
         yaxis_title="",
+        font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
+        xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+        yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+        xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",  
     )
     fig.update_traces(y=text_labels)
     # fig.tight_layout()
@@ -1998,24 +1999,27 @@ def find_columns_with_duplicates(df) -> pd.Series:
         if is_duplicated.any():
             dfs_duplicated[col] = df[is_duplicated]
             cnt_duplicated[col] = dfs_duplicated[col].shape[0]
-    display(
-        cnt_duplicated.apply(lambda x: f"{x} ({(x / size):.2%})")
-        .to_frame()
-        .style.set_caption("Duplicates")
-        .set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": [
-                        ("font-size", "18px"),
-                        ("text-align", "left"),
-                        ("font-weight", "bold"),
-                    ],
-                }
-            ]
+    if cnt_duplicated.empty:
+        print('There are no duplicated values')
+    else:               
+        display(
+            cnt_duplicated.apply(lambda x: f"{x} ({(x / size):.2%})")
+            .to_frame()
+            .style.set_caption("Duplicates")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .hide(axis="columns")
         )
-        .hide(axis="columns")
-    )
     return dfs_duplicated
 
 
@@ -2127,44 +2131,47 @@ def find_columns_with_missing_values(df) -> pd.Series:
         if is_na.any():
             dfs_na[col] = df[is_na]
             cnt_missing[col] = dfs_na[col].shape[0]
-    if pd.__version__ == "1.3.5":
-        display(
-            cnt_missing.apply(lambda x: f"{x} ({(x / size):.2%})")
-            .to_frame()
-            .style.set_caption("Missings")
-            .set_table_styles(
-                [
-                    {
-                        "selector": "caption",
-                        "props": [
-                            ("font-size", "18px"),
-                            ("text-align", "left"),
-                            ("font-weight", "bold"),
-                        ],
-                    }
-                ]
+    if cnt_missing.empty:
+        print('There are no missing values')
+    else:            
+        if pd.__version__ == "1.3.5":
+            display(
+                cnt_missing.apply(lambda x: f"{x} ({(x / size):.2%})")
+                .to_frame()
+                .style.set_caption("Missings")
+                .set_table_styles(
+                    [
+                        {
+                            "selector": "caption",
+                            "props": [
+                                ("font-size", "18px"),
+                                ("text-align", "left"),
+                                ("font-weight", "bold"),
+                            ],
+                        }
+                    ]
+                )
+                .hide_columns()
             )
-            .hide_columns()
-        )
-    else:
-        display(
-            cnt_missing.apply(lambda x: f"{x} ({(x / size):.2%})")
-            .to_frame()
-            .style.set_caption("Missings")
-            .set_table_styles(
-                [
-                    {
-                        "selector": "caption",
-                        "props": [
-                            ("font-size", "18px"),
-                            ("text-align", "left"),
-                            ("font-weight", "bold"),
-                        ],
-                    }
-                ]
+        else:
+            display(
+                cnt_missing.apply(lambda x: f"{x} ({(x / size):.2%})")
+                .to_frame()
+                .style.set_caption("Missings")
+                .set_table_styles(
+                    [
+                        {
+                            "selector": "caption",
+                            "props": [
+                                ("font-size", "18px"),
+                                ("text-align", "left"),
+                                ("font-weight", "bold"),
+                            ],
+                        }
+                    ]
+                )
+                .hide(axis="columns")
             )
-            .hide(axis="columns")
-        )
     return dfs_na
 
 
@@ -2850,24 +2857,27 @@ def find_columns_with_negative_values(df) -> pd.Series:
         if is_negative.any():
             dfs_na[col] = df[is_negative]
             cnt_negative[col] = dfs_na[col].shape[0]
-    display(
-        cnt_negative.apply(lambda x: f"{x} ({(x / size):.2%})")
-        .to_frame()
-        .style.set_caption("Negative")
-        .set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": [
-                        ("font-size", "18px"),
-                        ("text-align", "left"),
-                        ("font-weight", "bold"),
-                    ],
-                }
-            ]
+    if cnt_negative.empty:
+        print('There are no negative values')
+    else:
+        display(
+            cnt_negative.apply(lambda x: f"{x} ({(x / size):.2%})")
+            .to_frame()
+            .style.set_caption("Negative")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .hide(axis="columns")
         )
-        .hide(axis="columns")
-    )
     return dfs_na
 
 
@@ -3069,24 +3079,27 @@ def find_columns_with_zeros_values(df) -> pd.Series:
         if is_zeros.any():
             dfs_na[col] = df[is_zeros]
             cnt_zeros[col] = dfs_na[col].shape[0]
-    display(
-        cnt_zeros.apply(lambda x: f"{x} ({(x / size):.2%})")
-        .to_frame()
-        .style.set_caption("Zeros")
-        .set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": [
-                        ("font-size", "18px"),
-                        ("text-align", "left"),
-                        ("font-weight", "bold"),
-                    ],
-                }
-            ]
+    if cnt_zeros.empty:
+        print('There are no zeros values')
+    else:            
+        display(
+            cnt_zeros.apply(lambda x: f"{x} ({(x / size):.2%})")
+            .to_frame()
+            .style.set_caption("Zeros")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .hide(axis="columns")
         )
-        .hide(axis="columns")
-    )
     return dfs_na
 
 
@@ -4063,7 +4076,7 @@ def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=
     df_size = df.shape[0]
     cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
     if mode == 'value_counts':
-        print(f"Value counts in {col} ({cnt_for_display_in_sample:.2%})")
+        display(f"Value counts in {col} ({cnt_for_display_in_sample:.2%})")
         display(
             series_for_analys[col][col]
             .value_counts()
