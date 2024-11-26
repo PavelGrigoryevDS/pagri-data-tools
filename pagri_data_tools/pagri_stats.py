@@ -2295,7 +2295,8 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
                            p_value_method: str = 'normal_approx',
                            plot: bool = True,
                            return_boot_data: bool = False,
-                           return_results: bool = False) -> tuple:
+                           return_results: bool = False,
+                           with_tqdm: bool = False) -> tuple:
     """
     Perform bootstrap resampling to estimate the difference of a statistic between two samples.
 
@@ -2392,10 +2393,16 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
     # Bootstrap Sampling
     boot_data = np.empty(num_boot)
     max_len = max(len(sample1), len(sample2))
-    for i in tqdm(range(num_boot), desc="Bootstrapping"):
-        samples_1 = sample1.sample(max_len, replace=True).values
-        samples_2 = sample2.sample(max_len, replace=True).values
-        boot_data[i] = stat_func(samples_1) - stat_func(samples_2)
+    if with_tqdm:
+        for i in tqdm(range(num_boot), desc="Bootstrapping"):
+            samples_1 = sample1.sample(max_len, replace=True).values
+            samples_2 = sample2.sample(max_len, replace=True).values
+            boot_data[i] = stat_func(samples_1) - stat_func(samples_2)
+    else:
+        for i in range(num_boot):
+            samples_1 = sample1.sample(max_len, replace=True).values
+            samples_2 = sample2.sample(max_len, replace=True).values
+            boot_data[i] = stat_func(samples_1) - stat_func(samples_2)        
 
     # Confidence Interval Calculation
     lower_bound = (1 - bootstrap_conf_level) / 2
@@ -2447,7 +2454,8 @@ def bootstrap_single_sample(sample: pd.Series,
                             num_boot: int = 1000,
                             plot: bool = True,
                             return_boot_data: bool = False,
-                            return_results: bool = False) -> tuple:
+                            return_results: bool = False,
+                            with_tqdm: bool = False) -> tuple:
     """
     Perform bootstrap resampling to estimate the variability of a statistic for a single sample.
 
@@ -2540,10 +2548,14 @@ def bootstrap_single_sample(sample: pd.Series,
     # Bootstrap Sampling
     boot_data = np.empty(num_boot)
     max_len = len(sample)
-    for i in tqdm(range(num_boot), desc="Bootstrapping"):
-        samples_1 = sample.sample(max_len, replace=True).values
-        boot_data[i] = stat_func(samples_1)
-
+    if with_tqdm:
+        for i in tqdm(range(num_boot), desc="Bootstrapping"):
+            samples_1 = sample.sample(max_len, replace=True).values
+            boot_data[i] = stat_func(samples_1)
+    else:
+        for i in range(num_boot):
+            samples_1 = sample.sample(max_len, replace=True).values
+            boot_data[i] = stat_func(samples_1)        
     # Confidence Interval Calculation
     lower_bound = (1 - bootstrap_conf_level) / 2
     upper_bound = 1 - lower_bound
