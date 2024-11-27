@@ -171,77 +171,6 @@ def make_widget_all_frame(df):
     return widget_all_frame
 
 
-def make_all_frame_for_html(df):
-    dupl = df.duplicated().sum()
-    duplicates = dupl
-    if duplicates == 0:
-        duplicates = "---"
-        duplicates_sub_minis_origin = "---"
-    else:
-        duplicates = pretty_value(duplicates)
-        duplicates_pct = dupl * 100 / df.shape[0]
-        if 0 < duplicates_pct < 1:
-            duplicates_pct = "<1"
-        elif duplicates_pct > 99 and duplicates_pct < 100:
-            duplicates_pct = round(duplicates_pct, 1)
-            if duplicates_pct == 100:
-                duplicates_pct = 99.9
-        else:
-            duplicates_pct = round(duplicates_pct)
-        duplicates = f"{duplicates} ({duplicates_pct}%)"
-        dupl_keep_false = df.duplicated(keep=False).sum()
-        dupl_sub = (
-            df.apply(
-                lambda x: (
-                    x.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
-                    if x.dtype == "object"
-                    else x
-                )
-            )
-            .duplicated(keep=False)
-            .sum()
-        )
-        duplicates_sub_minis_origin = pretty_value(dupl_sub - dupl_keep_false)
-        duplicates_sub_minis_origin_pct = (dupl_sub - dupl_keep_false) * 100 / dupl
-        if 0 < duplicates_sub_minis_origin_pct < 1:
-            duplicates_sub_minis_origin_pct = "<1"
-        elif duplicates_sub_minis_origin_pct > 99 and duplicates_sub_minis_origin_pct < 100:
-            duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct, 1)
-        else:
-            duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
-        duplicates_sub_minis_origin = (
-            f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
-        )
-    all_rows = pd.DataFrame(
-        {
-            "Rows": [pretty_value(df.shape[0])],
-            "Features": [df.shape[1]],
-            "RAM (Mb)": [round(df.__sizeof__() / 1_048_576)],
-            "Duplicates": [duplicates],
-            "Dupl (sub - origin)": [duplicates_sub_minis_origin],
-        }
-    )
-    # widget_DataFrame = widgets.Output()
-    # with widget_DataFrame:
-    #      display_markdown('**DataFrame**', raw=True)
-    return (
-        all_rows.style.set_caption("DataFrame")
-        .set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": [
-                        ("font-size", "18px"),
-                        ("text-align", "left"),
-                        ("font-weight", "bold"),
-                    ],
-                }
-            ]
-        )
-        .set_properties(**{"text-align": "left"})
-        # .hide(axis="columns")
-        .hide(axis="index")
-    )
 
 
 def make_widget_range_date(column):
@@ -277,52 +206,6 @@ def make_widget_range_date(column):
             .hide(axis="index")
         )
     return widget_summary
-
-def make_range_date_for_html(column):
-    column_name = column.name
-    fist_date = column.min()
-    last_date = column.max()
-    ram = round(column.__sizeof__() / 1_048_576)
-    if ram == 0:
-        ram = "<1 Mb"
-    values = column.count()
-    values = pretty_value(column.count())
-    values_pct = column.count() * 100 / column.size
-    if 0 < values_pct < 1:
-        values_pct = "<1"
-    elif values_pct > 99 and values_pct < 100:
-        values_pct = round(values_pct, 1)
-        if values_pct == 100:
-            values_pct = 99.9
-    else:
-        values_pct = round(values_pct)
-    values = f"{values} ({values_pct}%)"
-    column_summary = pd.DataFrame(
-        {"First date": [fist_date]
-         , "Last date": [last_date]
-         , "Values": [values]
-         , "RAM (Mb)": [ram]}
-    )
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style.set_caption(f"{column_name}")
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
 
 def make_widget_summary_date(column):
     column_name = column.name
@@ -403,81 +286,8 @@ def make_widget_summary_date(column):
         )
     return widget_summary
 
-def make_summary_date_for_html(column):
-    column_name = column.name
-    zeros = ((column == 0) | (column == "")).sum()
-    if zeros == 0:
-        zeros = "---"
-    else:
-        zeros = pretty_value(((column == 0) | (column == "")).sum())
-        zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
-        if zeros_pct == 0:
-            zeros_pct = "<1"
-        zeros = f"{zeros} ({zeros_pct}%)"
-    missing = column.isna().sum()
-    if missing == 0:
-        missing = "---"
-    else:
-        missing = pretty_value(column.isna().sum())
-        missing_pct = round(column.isna().sum() * 100 / column.size)
-        if missing_pct == 0:
-            missing_pct = "<1"
-        missing = f"{missing} ({missing_pct}%)"
-    distinct = pretty_value(column.nunique())
-    distinct_pct = column.nunique() * 100 / column.size
-    if distinct_pct > 99 and distinct_pct < 100:
-        distinct_pct = round(distinct_pct, 1)
-        if distinct_pct == 100:
-            distinct_pct = 99.9
-    else:
-        distinct_pct = round(distinct_pct)
-    if distinct_pct == 0:
-        distinct_pct = "<1"
-    distinct = f"{distinct} ({distinct_pct}%)"
-    duplicates = column.duplicated().sum()
-    if duplicates == 0:
-        duplicates = "---"
-    else:
-        duplicates = pretty_value(duplicates)
-        duplicates_pct = column.duplicated().sum() * 100 / column.size
-        if 0 < duplicates_pct < 1:
-            duplicates_pct = "<1"
-        elif duplicates_pct > 99 and duplicates_pct < 100:
-            duplicates_pct = round(duplicates_pct, 1)
-            if duplicates_pct == 100:
-                duplicates_pct = 99.9
-        else:
-            duplicates_pct = round(duplicates_pct)
-        duplicates = f"{duplicates} ({duplicates_pct}%)"
-    column_summary = pd.DataFrame(
-        {
-            "Zeros": [zeros],
-            "Missing": [missing],
-            "Distinct": [distinct],
-            "Duplicates": [duplicates],
-        }
-    )
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style
-    #     # .set_caption(f'{column_name}')
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
+
+
 
 def make_widget_check_missing_date(column):
     column_name = column.name
@@ -557,81 +367,6 @@ def make_widget_check_missing_date(column):
         )
     return widget_summary
 
-def make_check_missing_date_for_html(column):
-    column_name = column.name
-    fist_date = column.min()
-    last_date = column.max()
-    date_range = pd.date_range(start=fist_date, end=last_date, freq="D")
-    years = date_range.year.unique()
-    years_missed_pct = (~years.isin(column.dt.year.unique())).sum() * 100 / years.size
-    if 0 < years_missed_pct < 1:
-        years_missed_pct = "<1"
-    elif years_missed_pct > 99:
-        years_missed_pct = round(years_missed_pct, 1)
-    else:
-        years_missed_pct = round(years_missed_pct)
-    months = date_range.to_period("M").unique()
-    months_missed_pct = (
-        (~months.isin(column.dt.to_period("M").unique())).sum() * 100 / months.size
-    )
-    if 0 < months_missed_pct < 1:
-        months_missed_pct = "<1"
-    elif months_missed_pct > 99:
-        months_missed_pct = round(months_missed_pct, 1)
-    else:
-        months_missed_pct = round(months_missed_pct)
-    weeks = date_range.to_period("W").unique()
-    weeks_missed_pct = (
-        (~weeks.isin(column.dt.to_period("W").unique())).sum() * 100 / weeks.size
-    )
-    if 0 < weeks_missed_pct < 1:
-        weeks_missed_pct = "<1"
-    elif weeks_missed_pct > 99:
-        weeks_missed_pct = round(weeks_missed_pct, 1)
-    else:
-        weeks_missed_pct = round(weeks_missed_pct)
-    days = date_range.unique().to_period("D")
-    days_missed_pct = (
-        (~days.isin(column.dt.to_period("D").unique())).sum() * 100 / days.size
-    )
-    if 0 < days_missed_pct < 1:
-        days_missed_pct = "<1"
-    elif days_missed_pct > 99:
-        days_missed_pct = round(days_missed_pct, 1)
-    else:
-        days_missed_pct = round(days_missed_pct)
-
-    column_summary = pd.DataFrame(
-        {
-            "Years missing": [f"{years_missed_pct}%"],
-            "Months missing": [f"{months_missed_pct}%"],
-            "Weeks missing": [f"{weeks_missed_pct}%"],
-            "Days missing": [f"{days_missed_pct}%"],
-        }
-    )
-    # display_html(f'<h4>{column_name}</h4>', raw=True)
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style
-    #     # .set_caption(f'{column_name}')
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    #     # .format('{:.0f}', subset=0)
-    # )
 
 def make_widget_summary(column):
     column_name = column.name
@@ -739,108 +474,7 @@ def make_widget_summary(column):
     return widget_summary
 
 
-def make_summary_for_html(column):
-    column_name = column.name
-    values = column.count()
-    values = pretty_value(column.count())
-    values_pct = column.count() * 100 / column.size
-    if 0 < values_pct < 1:
-        values_pct = "<1"
-    elif values_pct > 99 and values_pct < 100:
-        values_pct = round(values_pct, 1)
-        if values_pct == 100:
-            values_pct = 99.9
-    else:
-        values_pct = round(values_pct)
-    values = f"{values} ({values_pct}%)"
-    missing = column.isna().sum()
-    if missing == 0:
-        missing = "---"
-    else:
-        missing = pretty_value(column.isna().sum())
-        missing_pct = round(column.isna().sum() * 100 / column.size)
-        if missing_pct == 0:
-            missing_pct = "<1"
-        missing = f"{missing} ({missing_pct}%)"
-    distinct = pretty_value(column.nunique())
-    distinct_pct = column.nunique() * 100 / column.size
-    if distinct_pct > 99 and distinct_pct < 100:
-        distinct_pct = round(distinct_pct, 1)
-        if distinct_pct == 100:
-            distinct_pct = 99.9
-    else:
-        distinct_pct = round(distinct_pct)
-    if distinct_pct == 0:
-        distinct_pct = "<1"
-    distinct = f"{distinct} ({distinct_pct}%)"
-    zeros = ((column == 0) | (column == "")).sum()
-    if zeros == 0:
-        zeros = "---"
-    else:
-        zeros = pretty_value(((column == 0) | (column == "")).sum())
-        zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
-        if zeros_pct == 0:
-            zeros_pct = "<1"
-        zeros = f"{zeros} ({zeros_pct}%)"
-    negative = (column < 0).sum()
-    if negative == 0:
-        negative = "---"
-    else:
-        negative = pretty_value(negative)
-        negative_pct = round((column < 0).sum() * 100 / column.size)
-        if negative_pct == 0:
-            negative_pct = "<1"
-        negative = f"{negative} ({negative_pct}%)"
-    duplicates = column.duplicated().sum()
-    if duplicates == 0:
-        duplicates = "---"
-    else:
-        duplicates = pretty_value(duplicates)
-        duplicates_pct = column.duplicated().sum() * 100 / column.size
-        if 0 < duplicates_pct < 1:
-            duplicates_pct = "<1"
-        elif duplicates_pct > 99 and duplicates_pct < 100:
-            duplicates_pct = round(duplicates_pct, 1)
-            if duplicates_pct == 100:
-                duplicates_pct = 99.9
-        else:
-            duplicates_pct = round(duplicates_pct)
-        duplicates = f"{duplicates} ({duplicates_pct}%)"
-    ram = round(column.__sizeof__() / 1_048_576)
-    if ram == 0:
-        ram = "<1 Mb"
-    column_summary = pd.DataFrame(
-        {
-            "Values": [values],
-            "Missing": [missing],
-            "Distinct": [distinct],
-            "Duplicates": [duplicates],
-            "Zeros": [zeros],
-            "Negative": [negative],
-            "RAM (Mb)": [ram],
-        }
-    )
-    # display_html(f'<h4>{column_name}</h4>', raw=True)
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style.set_caption(f"{column_name}")
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
+
 
 
 def make_widget_pct(column):
@@ -877,34 +511,6 @@ def make_widget_pct(column):
     return widget_pct
 
 
-def make_pct_for_html(column):
-    max_ = pretty_value(column.max())
-    q_95 = pretty_value(column.quantile(0.95))
-    q_75 = pretty_value(column.quantile(0.75))
-    median_ = pretty_value(column.median())
-    q_25 = pretty_value(column.quantile(0.25))
-    q_5 = pretty_value(column.quantile(0.05))
-    min_ = pretty_value(column.min())
-    column_summary = pd.DataFrame(
-        {
-            "Max": [max_],
-            "95%": [q_95],
-            "75%": [q_75],
-            "Median": [median_],
-            "25%": [q_25],
-            "5%": [q_5],
-            "Min": [min_],
-        }
-    )
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style.set_caption(f"")
-    #     .set_table_styles([{"selector": "caption", "props": [("font-size", "15px")]}])
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
 
 
 def make_widget_std(column):
@@ -945,38 +551,8 @@ def make_widget_std(column):
     return widget_std
 
 
-def make_std_for_html(column):
-    avg_ = pretty_value(column.mean())
-    mode_ = column.mode()
-    if mode_.size > 1:
-        mode_ = "---"
-    else:
-        mode_ = pretty_value(mode_.iloc[0])
-    range_ = pretty_value(column.max() - column.min())
-    iQR = pretty_value(column.quantile(0.75) - column.quantile(0.25))
-    std = pretty_value(column.std())
-    kurt = f"{column.kurtosis():.2f}"
-    skew = f"{column.skew():.2f}"
-    column_summary = pd.DataFrame(
-        {
-            "Avg": [avg_],
-            "Mode": [mode_],
-            "Range": [range_],
-            "iQR": [iQR],
-            "std": [std],
-            "kurt": [kurt],
-            "skew": [skew],
-        }
-    )
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style.set_caption(f"")
-    #     .set_table_styles([{"selector": "caption", "props": [("font-size", "15px")]}])
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
+
+
 
 
 def make_widget_value_counts(column):
@@ -1018,46 +594,6 @@ def make_widget_value_counts(column):
         )
     # widget_value_counts.
     return widget_value_counts
-
-
-def make_value_counts_for_html(column):
-    column_name = column.name
-    val_cnt = column.value_counts().iloc[:7]
-    val_cnt_norm = column.value_counts(normalize=True).iloc[:7]
-    column_name_pct = column_name + "_pct"
-    val_cnt_norm.name = column_name_pct
-
-    def make_value_counts_row(x):
-        if x[column_name_pct] < 0.01:
-            pct_str = "<1%"
-        else:
-            pct_str = f"({x[column_name_pct]:.0%})"
-        # return f"{x[column_name]:.0f} {pct_str}"
-        return f"{pretty_value(x[column_name])} {pct_str}"
-
-    top_5 = (
-        pd.concat([val_cnt, val_cnt_norm], axis=1)
-        .reset_index()
-        .apply(make_value_counts_row, axis=1)
-        .to_frame()
-    )
-
-    return top_5.reset_index(drop=True)
-    # return (
-    #     top_5.style
-    #     # .set_caption(f'Value counts top')
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [("font-size", "16px"), ("text-align", "left")],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
 
 
 def num_trunc(x):
@@ -1129,57 +665,6 @@ def make_widget_hist_plotly(column):
     return widget_hist
 
 
-def make_hist_plotly_for_html(column):
-    fig = px.histogram(
-        column,
-        nbins=20,
-        histnorm="percent",
-        template="simple_white",
-        height=220,
-        width=300,
-    )
-    fig.update_traces(
-        marker_color="rgba(128, 60, 170, 0.9)",
-        text=f"*",
-        textfont=dict(color="rgba(128, 60, 170, 0.9)"),
-    )
-    fig.update_layout(
-        margin=dict(l=0, r=10, b=0, t=10),
-        showlegend=False,
-        hoverlabel=dict(
-            bgcolor="white",
-        ),
-        xaxis_title="",
-        yaxis_title="",
-        font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
-        xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",
-    )
-    # fig.layout.yaxis.visible = False
-    return fig
-
-
-# def make_widget_violin(column):
-#     fig, ax = plt.subplots(figsize=(2, 2.44))
-#     sns.violinplot(column, ax=ax, color='#9370db')
-#     ax.set(ylabel='', xlabel='')
-#     # ax.tick_params(right= False,top= False,left= False, bottom= False)
-#     # plt.axis('off')
-#     ax.set_xticks([])
-#     ax.set_yticks([])
-#     plt.gca().spines['top'].set_alpha(0.3)
-#     plt.gca().spines['left'].set_alpha(0.3)
-#     plt.gca().spines['right'].set_alpha(0.3)
-#     plt.gca().spines['bottom'].set_alpha(0.3)
-#     plt.close()
-#     widget_violin = widgets.Output()
-#     with widget_violin:
-#         display(fig)
-#     return widget_violin
 
 
 def make_widget_violine_plotly(column):
@@ -1331,131 +816,6 @@ def make_widget_summary_obj(column):
     return widget_summary_obj
 
 
-def make_summary_obj_for_html(column):
-    column_name = column.name
-    values = column.count()
-    values = pretty_value(column.count())
-    values_pct = column.count() * 100 / column.size
-    if 0 < values_pct < 1:
-        values_pct = "<1"
-    elif values_pct > 99 and values_pct < 100:
-        values_pct = round(values_pct, 1)
-        if values_pct == 100:
-            values_pct = 99.9
-    else:
-        values_pct = round(values_pct)
-    values = f"{values} ({values_pct}%)"
-    missing = column.isna().sum()
-    if missing == 0:
-        missing = "---"
-    else:
-        missing = pretty_value(column.isna().sum())
-        missing_pct = round(column.isna().sum() * 100 / column.size)
-        if missing_pct == 0:
-            missing_pct = "<1"
-        missing = f"{missing} ({missing_pct}%)"
-    distinct = pretty_value(column.nunique())
-    distinct_pct = column.nunique() * 100 / column.size
-    if distinct_pct > 99 and distinct_pct < 100:
-        distinct_pct = round(distinct_pct, 1)
-        if distinct_pct == 100:
-            distinct_pct = 99.9
-    else:
-        distinct_pct = round(distinct_pct)
-    if distinct_pct == 0:
-        distinct_pct = "<1"
-    distinct = f"{distinct} ({distinct_pct}%)"
-    zeros = ((column == 0) | (column == "")).sum()
-    if zeros == 0:
-        zeros = "---"
-    else:
-        zeros = pretty_value(((column == 0) | (column == "")).sum())
-        zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
-        if zeros_pct == 0:
-            zeros_pct = "<1"
-        zeros = f"{zeros} ({zeros_pct}%)"
-    duplicates = column.duplicated().sum()
-    if duplicates == 0:
-        duplicates = "---"
-        duplicates_sub_minis_origin = "---"
-    else:
-        duplicates = pretty_value(duplicates)
-        duplicates_pct = column.duplicated().sum() * 100 / column.size
-        if 0 < duplicates_pct < 1:
-            duplicates_pct = "<1"
-        elif duplicates_pct > 99 and duplicates_pct < 100:
-            duplicates_pct = round(duplicates_pct, 1)
-            if duplicates_pct == 100:
-                duplicates_pct = 99.9
-        else:
-            duplicates_pct = round(duplicates_pct)
-        duplicates = f"{duplicates} ({duplicates_pct}%)"
-        duplicates_keep_false = column.duplicated(keep=False).sum()
-        duplicates_sub = (
-            column.str.lower()
-            .str.strip()
-            .str.replace(r"\s+", " ", regex=True)
-            .duplicated(keep=False)
-            .sum()
-        )
-        duplicates_sub_minis_origin = duplicates_sub - duplicates_keep_false
-        if duplicates_sub_minis_origin == 0:
-            duplicates_sub_minis_origin = "---"
-        else:
-            duplicates_sub_minis_origin = pretty_value(duplicates_sub_minis_origin)
-            duplicates_sub_minis_origin_pct = (
-                (duplicates_sub - duplicates_keep_false) * 100 / duplicates_sub
-            )
-            if 0 < duplicates_sub_minis_origin_pct < 1:
-                duplicates_sub_minis_origin_pct = "<1"
-            elif (
-                duplicates_sub_minis_origin_pct > 99
-                and duplicates_sub_minis_origin_pct < 100
-            ) or duplicates_sub_minis_origin_pct < 1:
-                duplicates_sub_minis_origin_pct = round(
-                    duplicates_sub_minis_origin_pct, 1
-                )
-            else:
-                duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
-            duplicates_sub_minis_origin = (
-                f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
-            )
-
-    ram = round(column.__sizeof__() / 1_048_576)
-    if ram == 0:
-        ram = "<1 Mb"
-    column_summary = pd.DataFrame(
-        {
-            "Values": [values],
-            "Missing": [missing],
-            "Distinct": [distinct],
-            "Duplicated origin": [duplicates],
-            "Dupl (modify - origin)": [duplicates_sub_minis_origin],
-            "Empty": [zeros],
-            "RAM (Mb)": [ram],
-        }
-    )
-    return column_summary.T.reset_index()
-    # return (
-    #     column_summary.T.reset_index()
-    #     .style.set_caption(f"{column_name}")
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
-
 
 def make_widget_value_counts_obj(column):
     column_name = column.name
@@ -1498,42 +858,7 @@ def make_widget_value_counts_obj(column):
     return widget_value_counts_obj
 
 
-def make_value_counts_obj_for_html(column):
-    column_name = column.name
-    val_cnt = column.value_counts().iloc[:7]
-    val_cnt_norm = column.value_counts(normalize=True).iloc[:7]
-    column_name_pct = column_name + "_pct"
-    val_cnt_norm.name = column_name_pct
 
-    def make_value_counts_row(x):
-        if x[column_name_pct] < 0.01:
-            pct_str = "<1%"
-        else:
-            pct_str = f"({x[column_name_pct]:.0%})"
-        return f"{x[column_name]} {pct_str}"
-
-    top_5 = (
-        pd.concat([val_cnt, val_cnt_norm], axis=1)
-        .reset_index()
-        .apply(make_value_counts_row, axis=1)
-        .to_frame()
-    )
-    return top_5.reset_index(drop=True)
-    # return (
-    #     top_5.style
-    #     # .set_caption(f'Value counts top')
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [("font-size", "16px"), ("text-align", "left")],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns")
-    #     .hide(axis="index")
-    # )
 
 
 def make_widget_bar_obj(column):
@@ -1567,32 +892,6 @@ def make_widget_bar_obj(column):
     return widget_bar_obj
 
 
-def make_bar_obj_for_html(column):
-    df_fig = column.value_counts(ascending=True).iloc[-10:]
-    text_labels = [label[:30] for label in df_fig.index.to_list()]
-    fig = px.bar(
-        df_fig, orientation="h", template="simple_white", height=220, width=500
-    )
-    fig.update_traces(marker_color="rgba(128, 60, 170, 0.8)")
-    fig.update_layout(
-        margin=dict(l=0, r=0, b=0, t=5),
-        showlegend=False,
-        hoverlabel=dict(
-            bgcolor="white",
-        ),
-        xaxis_title="",
-        yaxis_title="",
-        font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
-        xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
-        yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.5)",
-        xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.5)",  
-    )
-    fig.update_traces(y=text_labels)
-    # fig.tight_layout()
-    return fig
 
 
 def make_hbox(widgets_: list):
@@ -1790,171 +1089,790 @@ def my_info_widget_gen(df, graphs=True, num=True, obj=True, date=True):
             widgets_ = [func(df[column]) for func in func_obj]
             yield widgets.GridBox(widgets_, layout=layout)
 
-def make_row_for_html(df, column, funcs):
-    fig_func = funcs[-1]
-    if fig_func:
-        fig = fig_func(df[column])
-    row_for_html = []
-    for func in funcs[:-1]:
-        row_for_html.append(func(df[column]))
-        # display(func(df[column]))
-    # res_df = (row_for_html[0]
-    #     .style.set_caption(f"{column}")
-    #     .set_table_styles(
-    #         [
-    #             {
-    #                 "selector": "caption",
-    #                 "props": [
-    #                     ("font-size", "16px"),
-    #                     ("text-align", "left"),
-    #                     ("font-weight", "bold"),
-    #                 ],
-    #             }
-    #         ]
-    #     )
-    #     .set_properties(**{"text-align": "left"})
-    #     .hide(axis="columns").hide(axis="index")
-    #     .set_table_attributes("style='display:inline'")._repr_html_())
-    # for df_ in row_for_html[1:]:
-    #     res_df += "\xa0\xa0\xa0"
-    #     res_df += df_.style.set_caption(f" ").set_properties(**{"text-align": "left"}).hide(axis="columns").hide(axis="index").set_table_attributes("style='display:inline'")._repr_html_()
-    res_df = pd.concat(row_for_html, axis=1).T.reset_index(drop=True).T
-    res_df.insert(2, '', " "*30)
-    try:
-        res_df.insert(5, ' ', " "*30)
-        res_df.insert(8, '  ', " "*30)
-    except:
-        pass
-    # display(res_df)
-    res_df = res_df.fillna('')
-    res_df = (res_df
-        .style.set_caption(f"{column}")
-        .set_table_styles(
-            [
-                {
-                    "selector": "caption",
-                    "props": [
-                        ("font-size", "16px"),
-                        ("text-align", "left"),
-                        ("font-weight", "bold"),
-                    ],
-                }
-            ]
+class info_gen:
+    def __init__(self, df, column = None, graphs=True, num=True, obj=True, date=True,  mode='gen'):
+        '''
+        mode: 'gen' - генератор, 'column' - столбец
+        '''
+        if mode == 'column' and not column:
+            raise ValueError("Для режима 'column' необходимо указать столбец")
+        self.hist_mode = 'simple'  # Значение по умолчанию она гистограама без обрезания по квантилям
+        if mode == 'gen':
+            self.gen = self.info_gen(df, graphs, num, obj, date)  # Создаем генератор
+        else:
+            self.gen = self.info_column(df, column, graphs)  # Создаем генератор
+    def next(self, hist_mode=None):
+        """Возвращает следующее значение из генератора.
+        
+        Если new_mode равно 'dual', меняет текущий режим на 'dual' (2 гистограмы, вторая обрезанная по квантилям)
+        Если new_mode равен None, возвращает к значению по умолчанию 'simple'.
+        """
+        if hist_mode is not None:
+            if hist_mode not in ['simple', 'dual']:
+                return "Invalid hist_mode. hist_mode must be 'simple' or 'dual'"  
+            self.hist_mode = hist_mode  # Меняем режим
+        else:
+            self.hist_mode = 'simple'  # Возвращаем к значению по умолчанию
+
+        try:
+            return next(self.gen)  # Получаем следующее значение из генератора
+        except StopIteration:
+            return "Generator has finished"  # Генератор закончился, возвращаем None
+        
+
+    def info_gen(self, df, graphs=True, num=True, obj=True, date=True):
+        if not num and not obj and not date:
+            return
+        yield self.make_all_frame_for_html(df)
+
+        funcs_num = [
+            self.make_summary_for_html,
+            self.make_pct_for_html,
+            self.make_std_for_html,
+            self.make_value_counts_for_html,
+        ]
+        funcs_obj = [self.make_summary_obj_for_html, self.make_value_counts_obj_for_html]
+        funcs_date = [
+            self.make_range_date_for_html,
+            self.make_summary_date_for_html,
+            self.make_check_missing_date_for_html,
+        ]
+        if graphs:
+            funcs_num += [self.make_hist_plotly_for_html]
+            funcs_obj += [self.make_bar_obj_for_html]
+            funcs_date += [None]
+        if date:
+            date_columns = filter(
+                lambda x: pd.api.types.is_datetime64_any_dtype(df[x]), df.columns
+            )
+            for column in date_columns:
+                row_for_html = self.make_row_for_html(df, column, funcs_date)
+                # Отображение HTML-кода
+                display(HTML(row_for_html))
+                yield
+        if num:
+            num_columns = filter(lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
+            for column in num_columns:
+                row_for_html = self.make_row_for_html(df, column, funcs_num)
+                # Отображение HTML-кода
+                display(HTML(row_for_html))
+                yield
+
+        if obj:
+            obj_columns = filter(
+                lambda x: not pd.api.types.is_numeric_dtype(df[x])
+                and not pd.api.types.is_datetime64_any_dtype(df[x]),
+                df.columns,
+            )
+            for column in obj_columns:
+                row_for_html = self.make_row_for_html(df, column, funcs_obj)
+                # Отображение HTML-кода
+                display(HTML(row_for_html))
+                yield        
+        
+    def info_column(self, df, column, graphs=True):
+
+        funcs_num = [
+            self.make_summary_for_html,
+            self.make_pct_for_html,
+            self.make_std_for_html,
+            self.make_value_counts_for_html,
+        ]
+        funcs_obj = [self.make_summary_obj_for_html, self.make_value_counts_obj_for_html]
+        funcs_date = [
+            self.make_range_date_for_html,
+            self.make_summary_date_for_html,
+            self.make_check_missing_date_for_html,
+        ]
+        if graphs:
+            funcs_num += [self.make_hist_plotly_for_html]
+            funcs_obj += [self.make_bar_obj_for_html]
+            funcs_date += [None]
+        if pd.api.types.is_datetime64_any_dtype(df[column]):
+            row_for_html = self.make_row_for_html(df, column, funcs_date)
+            # Отображение HTML-кода
+            display(HTML(row_for_html))
+            yield
+        if pd.api.types.is_numeric_dtype(df[column]):
+            row_for_html = self.make_row_for_html(df, column, funcs_num)
+            # Отображение HTML-кода
+            display(HTML(row_for_html))
+            yield
+
+        if not pd.api.types.is_numeric_dtype(df[column]) and not pd.api.types.is_datetime64_any_dtype(df[column]):
+            row_for_html = self.make_row_for_html(df, column, funcs_obj)
+            # Отображение HTML-кода
+            display(HTML(row_for_html))
+            yield                    
+        
+    def pretty_value(value):
+        """
+        Функция делает удобное представление числа с пробелами после разрядов.
+        Работает как с целыми числами, так и с числами с плавающей точкой.
+        """
+        if value == 0:
+            return "0"
+
+        # Определяем, отрицательное ли число
+        is_negative = value < 0
+        value = abs(value)
+
+        # Разделяем целую и дробную часть
+        integer_part = int(value)
+        fractional_part = value - integer_part
+
+        # Форматируем целую часть
+        parts = []
+        while integer_part > 0:
+            parts.append(f"{integer_part % 1000:03d}")  # Добавляем последние три цифры
+            integer_part //= 1000  # Убираем последние три цифры
+
+        # Объединяем части целой части в обратном порядке
+        result = ' '.join(reversed(parts)).lstrip('0')
+        if fractional_part and not result:
+            result = '0'
+        # Форматируем дробную часть, если она не нулевая
+        if fractional_part > 0:
+            # Убираем ведущие нули из дробной части
+            fractional_str = str(round(fractional_part, 2))[2:]  # Получаем строку после "0."
+            result += f".{fractional_str}"
+
+        return f"-{result}" if is_negative else result        
+    
+    def make_all_frame_for_html(self, df):
+        dupl = df.duplicated().sum()
+        duplicates = dupl
+        if duplicates == 0:
+            duplicates = "---"
+            duplicates_sub_minis_origin = "---"
+        else:
+            duplicates = pretty_value(duplicates)
+            duplicates_pct = dupl * 100 / df.shape[0]
+            if 0 < duplicates_pct < 1:
+                duplicates_pct = "<1"
+            elif duplicates_pct > 99 and duplicates_pct < 100:
+                duplicates_pct = round(duplicates_pct, 1)
+                if duplicates_pct == 100:
+                    duplicates_pct = 99.9
+            else:
+                duplicates_pct = round(duplicates_pct)
+            duplicates = f"{duplicates} ({duplicates_pct}%)"
+            dupl_keep_false = df.duplicated(keep=False).sum()
+            dupl_sub = (
+                df.apply(
+                    lambda x: (
+                        x.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+                        if x.dtype == "object"
+                        else x
+                    )
+                )
+                .duplicated(keep=False)
+                .sum()
+            )
+            duplicates_sub_minis_origin = pretty_value(dupl_sub - dupl_keep_false)
+            duplicates_sub_minis_origin_pct = (dupl_sub - dupl_keep_false) * 100 / dupl
+            if 0 < duplicates_sub_minis_origin_pct < 1:
+                duplicates_sub_minis_origin_pct = "<1"
+            elif duplicates_sub_minis_origin_pct > 99 and duplicates_sub_minis_origin_pct < 100:
+                duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct, 1)
+            else:
+                duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
+            duplicates_sub_minis_origin = (
+                f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
+            )
+        all_rows = pd.DataFrame(
+            {
+                "Rows": [pretty_value(df.shape[0])],
+                "Features": [df.shape[1]],
+                "RAM (Mb)": [round(df.__sizeof__() / 1_048_576)],
+                "Duplicates": [duplicates],
+                "Dupl (sub - origin)": [duplicates_sub_minis_origin],
+            }
         )
-        .set_properties(**{"text-align": "left"})
-        .hide(axis="columns")
-        .hide(axis="index"))
-    # html_elements = ''.join(
-    #     f'<div style="margin-right: 40px;">{item.to_html(index=False)}</div>'
-    #     for item in row_for_html[:-1]
-    # )
-    if fig_func:
-        buf = io.BytesIO()
-        fig.write_image(buf, format='png')
-        buf.seek(0)
-        img_str = base64.b64encode(buf.read()).decode('utf-8')
-        final_html = f"""
-        <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
-            {res_df.to_html()}
-            <div>
-                <img src="data:image/png;base64,{img_str}" alt="График"/>
+        # widget_DataFrame = widgets.Output()
+        # with widget_DataFrame:
+        #      display_markdown('**DataFrame**', raw=True)
+        return (
+            all_rows.style.set_caption("DataFrame")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .set_properties(**{"text-align": "left"})
+            # .hide(axis="columns")
+            .hide(axis="index")
+        )
+
+    def make_range_date_for_html(self, column):
+        column_name = column.name
+        fist_date = column.min()
+        last_date = column.max()
+        ram = round(column.__sizeof__() / 1_048_576)
+        if ram == 0:
+            ram = "<1 Mb"
+        values = column.count()
+        values = pretty_value(column.count())
+        values_pct = column.count() * 100 / column.size
+        if 0 < values_pct < 1:
+            values_pct = "<1"
+        elif values_pct > 99 and values_pct < 100:
+            values_pct = round(values_pct, 1)
+            if values_pct == 100:
+                values_pct = 99.9
+        else:
+            values_pct = round(values_pct)
+        values = f"{values} ({values_pct}%)"
+        column_summary = pd.DataFrame(
+            {"First date": [fist_date]
+            , "Last date": [last_date]
+            , "Values": [values]
+            , "RAM (Mb)": [ram]}
+        )
+        return column_summary.T.reset_index()
+
+    def make_summary_date_for_html(self, column):
+        column_name = column.name
+        zeros = ((column == 0) | (column == "")).sum()
+        if zeros == 0:
+            zeros = "---"
+        else:
+            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
+            if zeros_pct == 0:
+                zeros_pct = "<1"
+            zeros = f"{zeros} ({zeros_pct}%)"
+        missing = column.isna().sum()
+        if missing == 0:
+            missing = "---"
+        else:
+            missing = pretty_value(column.isna().sum())
+            missing_pct = round(column.isna().sum() * 100 / column.size)
+            if missing_pct == 0:
+                missing_pct = "<1"
+            missing = f"{missing} ({missing_pct}%)"
+        distinct = pretty_value(column.nunique())
+        distinct_pct = column.nunique() * 100 / column.size
+        if distinct_pct > 99 and distinct_pct < 100:
+            distinct_pct = round(distinct_pct, 1)
+            if distinct_pct == 100:
+                distinct_pct = 99.9
+        else:
+            distinct_pct = round(distinct_pct)
+        if distinct_pct == 0:
+            distinct_pct = "<1"
+        distinct = f"{distinct} ({distinct_pct}%)"
+        duplicates = column.duplicated().sum()
+        if duplicates == 0:
+            duplicates = "---"
+        else:
+            duplicates = pretty_value(duplicates)
+            duplicates_pct = column.duplicated().sum() * 100 / column.size
+            if 0 < duplicates_pct < 1:
+                duplicates_pct = "<1"
+            elif duplicates_pct > 99 and duplicates_pct < 100:
+                duplicates_pct = round(duplicates_pct, 1)
+                if duplicates_pct == 100:
+                    duplicates_pct = 99.9
+            else:
+                duplicates_pct = round(duplicates_pct)
+            duplicates = f"{duplicates} ({duplicates_pct}%)"
+        column_summary = pd.DataFrame(
+            {
+                "Zeros": [zeros],
+                "Missing": [missing],
+                "Distinct": [distinct],
+                "Duplicates": [duplicates],
+            }
+        )
+        return column_summary.T.reset_index()
+
+    def make_check_missing_date_for_html(self, column):
+        column_name = column.name
+        fist_date = column.min()
+        last_date = column.max()
+        date_range = pd.date_range(start=fist_date, end=last_date, freq="D")
+        years = date_range.year.unique()
+        years_missed_pct = (~years.isin(column.dt.year.unique())).sum() * 100 / years.size
+        if 0 < years_missed_pct < 1:
+            years_missed_pct = "<1"
+        elif years_missed_pct > 99:
+            years_missed_pct = round(years_missed_pct, 1)
+        else:
+            years_missed_pct = round(years_missed_pct)
+        months = date_range.to_period("M").unique()
+        months_missed_pct = (
+            (~months.isin(column.dt.to_period("M").unique())).sum() * 100 / months.size
+        )
+        if 0 < months_missed_pct < 1:
+            months_missed_pct = "<1"
+        elif months_missed_pct > 99:
+            months_missed_pct = round(months_missed_pct, 1)
+        else:
+            months_missed_pct = round(months_missed_pct)
+        weeks = date_range.to_period("W").unique()
+        weeks_missed_pct = (
+            (~weeks.isin(column.dt.to_period("W").unique())).sum() * 100 / weeks.size
+        )
+        if 0 < weeks_missed_pct < 1:
+            weeks_missed_pct = "<1"
+        elif weeks_missed_pct > 99:
+            weeks_missed_pct = round(weeks_missed_pct, 1)
+        else:
+            weeks_missed_pct = round(weeks_missed_pct)
+        days = date_range.unique().to_period("D")
+        days_missed_pct = (
+            (~days.isin(column.dt.to_period("D").unique())).sum() * 100 / days.size
+        )
+        if 0 < days_missed_pct < 1:
+            days_missed_pct = "<1"
+        elif days_missed_pct > 99:
+            days_missed_pct = round(days_missed_pct, 1)
+        else:
+            days_missed_pct = round(days_missed_pct)
+
+        column_summary = pd.DataFrame(
+            {
+                "Years missing": [f"{years_missed_pct}%"],
+                "Months missing": [f"{months_missed_pct}%"],
+                "Weeks missing": [f"{weeks_missed_pct}%"],
+                "Days missing": [f"{days_missed_pct}%"],
+            }
+        )
+        # display_html(f'<h4>{column_name}</h4>', raw=True)
+        return column_summary.T.reset_index()
+
+    def make_summary_for_html(self, column):
+        column_name = column.name
+        values = column.count()
+        values = pretty_value(column.count())
+        values_pct = column.count() * 100 / column.size
+        if 0 < values_pct < 1:
+            values_pct = "<1"
+        elif values_pct > 99 and values_pct < 100:
+            values_pct = round(values_pct, 1)
+            if values_pct == 100:
+                values_pct = 99.9
+        else:
+            values_pct = round(values_pct)
+        values = f"{values} ({values_pct}%)"
+        missing = column.isna().sum()
+        if missing == 0:
+            missing = "---"
+        else:
+            missing = pretty_value(column.isna().sum())
+            missing_pct = round(column.isna().sum() * 100 / column.size)
+            if missing_pct == 0:
+                missing_pct = "<1"
+            missing = f"{missing} ({missing_pct}%)"
+        distinct = pretty_value(column.nunique())
+        distinct_pct = column.nunique() * 100 / column.size
+        if distinct_pct > 99 and distinct_pct < 100:
+            distinct_pct = round(distinct_pct, 1)
+            if distinct_pct == 100:
+                distinct_pct = 99.9
+        else:
+            distinct_pct = round(distinct_pct)
+        if distinct_pct == 0:
+            distinct_pct = "<1"
+        distinct = f"{distinct} ({distinct_pct}%)"
+        zeros = ((column == 0) | (column == "")).sum()
+        if zeros == 0:
+            zeros = "---"
+        else:
+            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
+            if zeros_pct == 0:
+                zeros_pct = "<1"
+            zeros = f"{zeros} ({zeros_pct}%)"
+        negative = (column < 0).sum()
+        if negative == 0:
+            negative = "---"
+        else:
+            negative = pretty_value(negative)
+            negative_pct = round((column < 0).sum() * 100 / column.size)
+            if negative_pct == 0:
+                negative_pct = "<1"
+            negative = f"{negative} ({negative_pct}%)"
+        duplicates = column.duplicated().sum()
+        if duplicates == 0:
+            duplicates = "---"
+        else:
+            duplicates = pretty_value(duplicates)
+            duplicates_pct = column.duplicated().sum() * 100 / column.size
+            if 0 < duplicates_pct < 1:
+                duplicates_pct = "<1"
+            elif duplicates_pct > 99 and duplicates_pct < 100:
+                duplicates_pct = round(duplicates_pct, 1)
+                if duplicates_pct == 100:
+                    duplicates_pct = 99.9
+            else:
+                duplicates_pct = round(duplicates_pct)
+            duplicates = f"{duplicates} ({duplicates_pct}%)"
+        ram = round(column.__sizeof__() / 1_048_576)
+        if ram == 0:
+            ram = "<1 Mb"
+        column_summary = pd.DataFrame(
+            {
+                "Values": [values],
+                "Missing": [missing],
+                "Distinct": [distinct],
+                "Duplicates": [duplicates],
+                "Zeros": [zeros],
+                "Negative": [negative],
+                "RAM (Mb)": [ram],
+            }
+        )
+        # display_html(f'<h4>{column_name}</h4>', raw=True)
+        return column_summary.T.reset_index()
+
+    def make_pct_for_html(self, column):
+        max_ = pretty_value(column.max())
+        q_95 = pretty_value(column.quantile(0.95))
+        q_75 = pretty_value(column.quantile(0.75))
+        median_ = pretty_value(column.median())
+        q_25 = pretty_value(column.quantile(0.25))
+        q_5 = pretty_value(column.quantile(0.05))
+        min_ = pretty_value(column.min())
+        column_summary = pd.DataFrame(
+            {
+                "Max": [max_],
+                "95%": [q_95],
+                "75%": [q_75],
+                "Median": [median_],
+                "25%": [q_25],
+                "5%": [q_5],
+                "Min": [min_],
+            }
+        )
+        return column_summary.T.reset_index()
+
+    def make_std_for_html(self, column):
+        avg_ = pretty_value(column.mean())
+        mode_ = column.mode()
+        if mode_.size > 1:
+            mode_ = "---"
+        else:
+            mode_ = pretty_value(mode_.iloc[0])
+        range_ = pretty_value(column.max() - column.min())
+        iQR = pretty_value(column.quantile(0.75) - column.quantile(0.25))
+        std = pretty_value(column.std())
+        kurt = f"{column.kurtosis():.2f}"
+        skew = f"{column.skew():.2f}"
+        column_summary = pd.DataFrame(
+            {
+                "Avg": [avg_],
+                "Mode": [mode_],
+                "Range": [range_],
+                "iQR": [iQR],
+                "std": [std],
+                "kurt": [kurt],
+                "skew": [skew],
+            }
+        )
+        return column_summary.T.reset_index()
+
+    def make_value_counts_for_html(self, column):
+        column_name = column.name
+        val_cnt = column.value_counts().iloc[:7]
+        val_cnt_norm = column.value_counts(normalize=True).iloc[:7]
+        column_name_pct = column_name + "_pct"
+        val_cnt_norm.name = column_name_pct
+
+        def make_value_counts_row(x):
+            if x[column_name_pct] < 0.01:
+                pct_str = "<1%"
+            else:
+                pct_str = f"({x[column_name_pct]:.0%})"
+            # return f"{x[column_name]:.0f} {pct_str}"
+            return f"{pretty_value(x[column_name])} {pct_str}"
+
+        top_5 = (
+            pd.concat([val_cnt, val_cnt_norm], axis=1)
+            .reset_index()
+            .apply(make_value_counts_row, axis=1)
+            .to_frame()
+        )
+
+        return top_5.reset_index(drop=True)
+
+    def make_hist_plotly_for_html(self, column):
+        fig = px.histogram(
+            column,
+            nbins=20,
+            histnorm="percent",
+            template="simple_white",
+            height=220,
+            width=300,
+        )
+        fig.update_traces(
+            marker_color="rgba(128, 60, 170, 0.9)",
+            text=f"*",
+            textfont=dict(color="rgba(128, 60, 170, 0.9)"),
+        )
+        fig.update_layout(
+            margin=dict(l=0, r=0, b=0, t=0),
+            showlegend=False,
+            hoverlabel=dict(
+                bgcolor="white",
+            ),
+            xaxis_title="",
+            yaxis_title="",
+            font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
+            xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+            yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+            xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.5)",
+        )
+        # fig.layout.yaxis.visible = False
+        return fig
+
+    def make_summary_obj_for_html(self, column):
+        column_name = column.name
+        values = column.count()
+        values = pretty_value(column.count())
+        values_pct = column.count() * 100 / column.size
+        if 0 < values_pct < 1:
+            values_pct = "<1"
+        elif values_pct > 99 and values_pct < 100:
+            values_pct = round(values_pct, 1)
+            if values_pct == 100:
+                values_pct = 99.9
+        else:
+            values_pct = round(values_pct)
+        values = f"{values} ({values_pct}%)"
+        missing = column.isna().sum()
+        if missing == 0:
+            missing = "---"
+        else:
+            missing = pretty_value(column.isna().sum())
+            missing_pct = round(column.isna().sum() * 100 / column.size)
+            if missing_pct == 0:
+                missing_pct = "<1"
+            missing = f"{missing} ({missing_pct}%)"
+        distinct = pretty_value(column.nunique())
+        distinct_pct = column.nunique() * 100 / column.size
+        if distinct_pct > 99 and distinct_pct < 100:
+            distinct_pct = round(distinct_pct, 1)
+            if distinct_pct == 100:
+                distinct_pct = 99.9
+        else:
+            distinct_pct = round(distinct_pct)
+        if distinct_pct == 0:
+            distinct_pct = "<1"
+        distinct = f"{distinct} ({distinct_pct}%)"
+        zeros = ((column == 0) | (column == "")).sum()
+        if zeros == 0:
+            zeros = "---"
+        else:
+            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
+            if zeros_pct == 0:
+                zeros_pct = "<1"
+            zeros = f"{zeros} ({zeros_pct}%)"
+        duplicates = column.duplicated().sum()
+        if duplicates == 0:
+            duplicates = "---"
+            duplicates_sub_minis_origin = "---"
+        else:
+            duplicates = pretty_value(duplicates)
+            duplicates_pct = column.duplicated().sum() * 100 / column.size
+            if 0 < duplicates_pct < 1:
+                duplicates_pct = "<1"
+            elif duplicates_pct > 99 and duplicates_pct < 100:
+                duplicates_pct = round(duplicates_pct, 1)
+                if duplicates_pct == 100:
+                    duplicates_pct = 99.9
+            else:
+                duplicates_pct = round(duplicates_pct)
+            duplicates = f"{duplicates} ({duplicates_pct}%)"
+            duplicates_keep_false = column.duplicated(keep=False).sum()
+            duplicates_sub = (
+                column.str.lower()
+                .str.strip()
+                .str.replace(r"\s+", " ", regex=True)
+                .duplicated(keep=False)
+                .sum()
+            )
+            duplicates_sub_minis_origin = duplicates_sub - duplicates_keep_false
+            if duplicates_sub_minis_origin == 0:
+                duplicates_sub_minis_origin = "---"
+            else:
+                duplicates_sub_minis_origin = pretty_value(duplicates_sub_minis_origin)
+                duplicates_sub_minis_origin_pct = (
+                    (duplicates_sub - duplicates_keep_false) * 100 / duplicates_sub
+                )
+                if 0 < duplicates_sub_minis_origin_pct < 1:
+                    duplicates_sub_minis_origin_pct = "<1"
+                elif (
+                    duplicates_sub_minis_origin_pct > 99
+                    and duplicates_sub_minis_origin_pct < 100
+                ) or duplicates_sub_minis_origin_pct < 1:
+                    duplicates_sub_minis_origin_pct = round(
+                        duplicates_sub_minis_origin_pct, 1
+                    )
+                else:
+                    duplicates_sub_minis_origin_pct = round(duplicates_sub_minis_origin_pct)
+                duplicates_sub_minis_origin = (
+                    f"{duplicates_sub_minis_origin} ({duplicates_sub_minis_origin_pct}%)"
+                )
+
+        ram = round(column.__sizeof__() / 1_048_576)
+        if ram == 0:
+            ram = "<1 Mb"
+        column_summary = pd.DataFrame(
+            {
+                "Values": [values],
+                "Missing": [missing],
+                "Distinct": [distinct],
+                "Duplicated origin": [duplicates],
+                "Dupl (modify - origin)": [duplicates_sub_minis_origin],
+                "Empty": [zeros],
+                "RAM (Mb)": [ram],
+            }
+        )
+        return column_summary.T.reset_index()
+
+    def make_value_counts_obj_for_html(self, column):
+        column_name = column.name
+        val_cnt = column.value_counts().iloc[:7]
+        val_cnt_norm = column.value_counts(normalize=True).iloc[:7]
+        column_name_pct = column_name + "_pct"
+        val_cnt_norm.name = column_name_pct
+
+        def make_value_counts_row(x):
+            if x[column_name_pct] < 0.01:
+                pct_str = "<1%"
+            else:
+                pct_str = f"({x[column_name_pct]:.0%})"
+            return f"{x[column_name]} {pct_str}"
+
+        top_5 = (
+            pd.concat([val_cnt, val_cnt_norm], axis=1)
+            .reset_index()
+            .apply(make_value_counts_row, axis=1)
+            .to_frame()
+        )
+        return top_5.reset_index(drop=True)
+
+    def make_bar_obj_for_html(self, column):
+        df_fig = column.value_counts(ascending=True).iloc[-10:]
+        text_labels = [label[:30] for label in df_fig.index.to_list()]
+        fig = px.bar(
+            df_fig, orientation="h", template="simple_white", height=220, width=500
+        )
+        fig.update_traces(marker_color="rgba(128, 60, 170, 0.8)")
+        fig.update_layout(
+            margin=dict(l=0, r=0, b=0, t=5),
+            showlegend=False,
+            hoverlabel=dict(
+                bgcolor="white",
+            ),
+            xaxis_title="",
+            yaxis_title="",
+            font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
+            xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+            yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
+            xaxis_linecolor="rgba(0, 0, 0, 0.5)",
+            yaxis_linecolor="rgba(0, 0, 0, 0.5)",
+            xaxis_tickcolor="rgba(0, 0, 0, 0.5)",
+            yaxis_tickcolor="rgba(0, 0, 0, 0.5)",  
+        )
+        fig.update_traces(y=text_labels)
+        # fig.tight_layout()
+        return fig
+
+    def make_row_for_html(self, df, column, funcs):
+        fig_func = funcs[-1]
+        if fig_func:
+            fig = fig_func(df[column])
+            if pd.api.types.is_numeric_dtype(df[column]):
+                lower_bound = df[column].quantile(0.01)
+                upper_bound = df[column].quantile(0.99)
+                fig_without_outliers = fig_func(df[(df[column] >= lower_bound) & (df[column] <= upper_bound)][column])
+        row_for_html = []
+        for func in funcs[:-1]:
+            row_for_html.append(func(df[column]))
+            # display(func(df[column]))
+        res_df = pd.concat(row_for_html, axis=1).T.reset_index(drop=True).T
+        res_df.insert(2, '', " "*30)
+        try:
+            res_df.insert(5, ' ', " "*30)
+            res_df.insert(8, '  ', " "*30)
+        except:
+            pass
+        # display(res_df)
+        res_df = res_df.fillna('')
+        if pd.api.types.is_numeric_dtype(df[column]):
+            res_df_caption = f'Статистика и гистограмма столбца "{column}"'
+        elif pd.api.types.is_datetime64_any_dtype(df[column]):
+            res_df_caption = f'Статистика столбца "{column}"'
+        else:
+            res_df_caption = f'Статистика и топ-10 значений столбца "{column}"'
+        res_df = (res_df
+            .style.set_caption(res_df_caption)
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "16px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .set_properties(**{"text-align": "left"})
+            .hide(axis="columns")
+            .hide(axis="index"))
+        if fig_func:
+            buf = io.BytesIO()
+            fig.write_image(buf, format='png')
+            buf.seek(0)
+            img_str = base64.b64encode(buf.read()).decode('utf-8')
+            if pd.api.types.is_numeric_dtype(df[column]) and self.hist_mode == 'dual':
+                buf = io.BytesIO()
+                fig_without_outliers.write_image(buf, format='png')
+                buf.seek(0)
+                img_without_outliers_str = base64.b64encode(buf.read()).decode('utf-8')        
+            final_html = f"""
+            <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
+                {res_df.to_html()}
+                <div>
+                    <img src="data:image/png;base64,{img_str}" alt="График"/>
+                </div>
+            """
+            if pd.api.types.is_numeric_dtype(df[column]) and self.hist_mode == 'dual':
+                final_html += f"""
+                <div>
+                    <img src="data:image/png;base64,{img_without_outliers_str}" alt="График"/>
+                </div>            
             </div>
-        </div>
-        """
-    else:
-        final_html = f"""
-        <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
-            {res_df.to_html()}
-        </div>
-        """
-        #  font-size: 10px;
-    # {res_df.to_html(index=False)}
-    return final_html
+            """
+            else:
+                final_html += f"""          
+            </div>
+            """
+        else:
+            final_html = f"""
+            <div style="display: flex; justify-content: flex-start; align-items: flex-end;">
+                {res_df.to_html()}
+            </div>
+            """
+            #  font-size: 10px;
+        # {res_df.to_html(index=False)}
+        return final_html
 
-def info_gen(df, graphs=True, num=True, obj=True, date=True):
-    if not num and not obj and not date:
-        return
-    yield make_all_frame_for_html(df)
-
-    funcs_num = [
-        make_summary_for_html,
-        make_pct_for_html,
-        make_std_for_html,
-        make_value_counts_for_html,
-    ]
-    funcs_obj = [make_summary_obj_for_html, make_value_counts_obj_for_html]
-    funcs_date = [
-        make_range_date_for_html,
-        make_summary_date_for_html,
-        make_check_missing_date_for_html,
-    ]
-    if graphs:
-        funcs_num += [make_hist_plotly_for_html]
-        funcs_obj += [make_bar_obj_for_html]
-        funcs_date += [None]
-    if date:
-        date_columns = filter(
-            lambda x: pd.api.types.is_datetime64_any_dtype(df[x]), df.columns
-        )
-        for column in date_columns:
-            row_for_html = make_row_for_html(df, column, funcs_date)
-            # Отображение HTML-кода
-            display(HTML(row_for_html))
-            yield
-    if num:
-        num_columns = filter(lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
-        for column in num_columns:
-            row_for_html = make_row_for_html(df, column, funcs_num)
-            # Отображение HTML-кода
-            display(HTML(row_for_html))
-            yield
-
-    if obj:
-        obj_columns = filter(
-            lambda x: not pd.api.types.is_numeric_dtype(df[x])
-            and not pd.api.types.is_datetime64_any_dtype(df[x]),
-            df.columns,
-        )
-        for column in obj_columns:
-            row_for_html = make_row_for_html(df, column, funcs_obj)
-            # Отображение HTML-кода
-            display(HTML(row_for_html))
-            yield
-            
-def info_column(df, column, graphs=True):
-
-    funcs_num = [
-        make_summary_for_html,
-        make_pct_for_html,
-        make_std_for_html,
-        make_value_counts_for_html,
-    ]
-    funcs_obj = [make_summary_obj_for_html, make_value_counts_obj_for_html]
-    funcs_date = [
-        make_range_date_for_html,
-        make_summary_date_for_html,
-        make_check_missing_date_for_html,
-    ]
-    if graphs:
-        funcs_num += [make_hist_plotly_for_html]
-        funcs_obj += [make_bar_obj_for_html]
-        funcs_date += [None]
-    if pd.api.types.is_datetime64_any_dtype(df[column]):
-        row_for_html = make_row_for_html(df, column, funcs_date)
-        # Отображение HTML-кода
-        display(HTML(row_for_html))
-        return
-    if pd.api.types.is_numeric_dtype(df[column]):
-        row_for_html = make_row_for_html(df, column, funcs_num)
-        # Отображение HTML-кода
-        display(HTML(row_for_html))
-        return
-
-    if not pd.api.types.is_numeric_dtype(df[column]) and not pd.api.types.is_datetime64_any_dtype(df[column]):
-        row_for_html = make_row_for_html(df, column, funcs_obj)
-        # Отображение HTML-кода
-        display(HTML(row_for_html))
-        return            
 
 def check_duplicated(df):
     """
