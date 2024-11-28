@@ -1818,10 +1818,8 @@ class info_gen:
             res_df_caption = f'Статистика столбца "{column}"'
         else:
             res_df_caption = f'Статистика и топ-10 значений столбца "{column}"'
-        res_df = (res_df
-            .style.set_caption(res_df_caption)
-            .set_table_styles(
-                [
+        if not pd.api.types.is_numeric_dtype(df[column]) and not pd.api.types.is_datetime64_any_dtype(df[column]):
+            table_style = [
                     {
                         "selector": "caption",
                         "props": [
@@ -1829,8 +1827,26 @@ class info_gen:
                             ("text-align", "left"),
                             ("font-weight", "bold"),
                         ],
-                    }
+                    },
+                    {
+                        "selector": "th, td",  # Применяем стиль к заголовкам и ячейкам
+                        "props": [("min-width", "100px")]  # Устанавливаем минимальную ширину столбца
+                    }                    
                 ]
+        else:
+            table_style = [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "16px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }                 
+                ]            
+        res_df = (res_df
+            .style.set_caption(res_df_caption)
+            .set_table_styles(table_style
             )
             .set_properties(**{"text-align": "left"})
             .hide(axis="columns")
@@ -2105,6 +2121,19 @@ def check_na_in_both_columns(df, cols: list) -> pd.DataFrame:
         f"{na_df.shape[0]} ({(na_df.shape[0] / size):.2%}) rows with missings simultaneously in {cols}"
     )
     return na_df
+
+def check_zeros_in_both_columns(df, cols: list) -> pd.DataFrame:
+    """
+    Функция проверяет есть ли нулевые значения одновременно во всех указанных столбцах
+    и возвращает датафрейм только со строками, в которых нулевые значения одновременно во всех столбцах.
+    """
+    size = df.shape[0]
+    mask = (df[cols] == 0).all(axis=1)
+    zero_df = df[mask]
+    print(
+        f"{zero_df.shape[0]} ({(zero_df.shape[0] / size):.2%}) rows with zeros simultaneously in {cols}"
+    )
+    return zero_df
 
 
 def get_missing_value_proportion_by_category(
@@ -3839,10 +3868,10 @@ def fill_na_with_function_by_categories(
         )
 
 
-def quantiles_columns(column, quantiles=[0.05, 0.25, 0.5, 0.75, 0.95]):
+def quantiles_columns(column: pd.Series, quantiles=[0.05, 0.25, 0.5, 0.75, 0.95]):
     max_ = pretty_value(column.max())
     column_summary = pd.DataFrame({"Max": [max_]})
-    for quantile in quantiles:
+    for quantile in quantiles[::-1]:
         column_summary[f"{quantile * 100:.0f}"] = pretty_value(
             column.quantile(quantile)
         )
