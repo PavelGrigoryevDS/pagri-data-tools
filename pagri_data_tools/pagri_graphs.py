@@ -2756,6 +2756,8 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
         - column_for_x_label (str): The label for the axis.
         - column_for_y (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
         - column_for_y_label (str): The label for the categories.
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.        
         - title (str): The title of the chart.
         - barmode (str): The mode for displaying bars (default is 'group').
         - normalized_mode (str): The mode for normalizing the bars (default is 'all').
@@ -2817,6 +2819,8 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
         config['barmode'] = 'group'
     if 'normalized_mode' not in config:
         config['normalized_mode'] = 'all'        
+    if 'orientation' not in config:
+        config['orientation'] = 'v'             
     if 'width' not in config:
         config['width'] = None
     if 'height' not in config:
@@ -2831,6 +2835,10 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
         config['showgrid_x'] = False
     if 'showgrid_y' not in config:
         config['showgrid_y'] = False
+    if 'top_n_trim_axis' not in config:
+        config['top_n_trim_axis'] = None
+    if 'top_n_trim_legend' not in config:
+        config['top_n_trim_legend'] = None           
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -2904,6 +2912,10 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
     df = config['df']
     crosstab = pd.crosstab(df[column_for_x], df[column_for_y])
     crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
+    if config['top_n_trim_axis']:
+        crosstab_for_figs = crosstab_for_figs.iloc[:config['top_n_trim_axis']]
+    if config['top_n_trim_legend']:
+        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']], crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
     # data_for_fig = crosstab_for_figs['data']    
     # customdata = crosstab_for_figs['customdata'].values.T
     if orientation == 'v':
@@ -2950,6 +2962,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         - column_for_axis_label (str): The label for the axis.
         - column_for_legend (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
         - column_for_legend_label (str): The label for the categories.
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
         - title (str): The title of the chart.
         - barmode (str): The mode for displaying bars (default is 'group').
         - normalized_mode (str): The mode for normalizing the bars all, col or row (default is 'all').
@@ -3009,6 +3023,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         raise ValueError("barmode must be a string")
     if 'barmode' not in config:
         config['barmode'] = 'group'
+    if 'orientation' not in config:
+        config['orientation'] = 'v'        
     if 'normalized_mode' not in config:
         config['normalized_mode'] = 'all'        
     if 'width' not in config:
@@ -3027,6 +3043,10 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         config['showgrid_x'] = True
     if 'showgrid_y' not in config:
         config['showgrid_y'] = True
+    if 'top_n_trim_axis' not in config:
+        config['top_n_trim_axis'] = None
+    if 'top_n_trim_legend' not in config:
+        config['top_n_trim_legend'] = None                
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -3105,8 +3125,12 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     df = config['df']
     crosstab = pd.crosstab(df[column_for_axis], df[column_for_legend])
     crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
+    if config['top_n_trim_axis']:
+        crosstab_for_figs = crosstab_for_figs.iloc[:config['top_n_trim_axis']]
+    if config['top_n_trim_legend']:
+        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']], crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])    
     data_for_fig = crosstab_for_figs['data']    
-    customdata = crosstab_for_figs['customdata'].values.T
+    customdata = crosstab_for_figs['customdata'].values.T    
     if orientation == 'h':
         data_for_fig = data_for_fig.iloc[::-1,::-1]
         customdata = customdata[::-1,::-1]
