@@ -313,7 +313,7 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
         fig.update_layout(width=width)
     if height is not None:
         fig.update_layout(height=height)
-    hovertemplate = 'ось X)= %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
+    hovertemplate = 'ось X= %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
     fig.update_traces(hovertemplate=hovertemplate)
     fig.update_layout(
         title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
