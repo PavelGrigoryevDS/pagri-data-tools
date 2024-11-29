@@ -3179,6 +3179,10 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                       , textfont=dict(family='Segoe UI', size=config['textsize']))   
     if orientation == 'h':
         fig.update_layout(legend_traceorder='reversed')        
+    fig.update_layout(
+        height=config['height'],
+        width=config['width'],
+    )        
     return fig_update_layout(fig)
 
 def heatmap(config: dict, titles_for_axis: dict = None):
