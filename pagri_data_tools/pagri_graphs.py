@@ -2984,19 +2984,18 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
 
     Example:
     titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
+        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
+        # Распределение долей по городу и тарифу с нормализацией по городу
+        city = ['Город', 'города', 'городу']
+        , tariff = ['Тариф', 'тарифа', 'тарифу']
+        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
+        , age_cat = ['Возрастная категория', 'возрастной категории', 'возрастной категории']
+        , call_date_month = ['Месяц звонка', 'месяца звонка', 'месяцу звонка']
+        , duration_cat = ['Категория длительности звонка', 'категории длительности звонка', 'категории длительности звонка']
+        , message_date_month = ['Месяц звонка', 'месяца звонка', 'месяцу звонка']
+        , mb_used_cat = ['Категория интернет трафика', 'категории интернет трафика', 'категории интернет трафика']
+        , session_date_month = ['Дата интернет сессии', 'даты интернет сессии', 'дате интернет сессии']
+        
     )
     titles_for_axis = dict(
         education = ['Уровень образования', 'уровня образования', 'уровню образования']
@@ -3046,7 +3045,11 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     if 'top_n_trim_axis' not in config:
         config['top_n_trim_axis'] = None
     if 'top_n_trim_legend' not in config:
-        config['top_n_trim_legend'] = None                
+        config['top_n_trim_legend'] = None    
+    if 'sort_axis' not in config:
+        config['sort_axis'] = True
+    if 'sort_legend' not in config:
+        config['sort_legend'] = True                                
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -3057,9 +3060,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
         temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
         if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_legend']][2]}"
+            config['title'] = temp_title + f" c нормализацией по {titles_for_axis[config['column_for_legend']][2]}"
         elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_axis']][2]}"
+            config['title'] = temp_title + f" c нормализацией по {titles_for_axis[config['column_for_axis']][2]}"
         else:
             config['title'] = temp_title        
     else:
@@ -3084,15 +3087,23 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         crosstab_for_figs_all = pd.concat(
             [crosstab_for_figs_all, crosstab_for_figs], axis=1, keys=['data', 'customdata'])
         crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all.sum(axis=1)
-        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
-            'sum_row', ascending=False).drop('sum_row', axis=1, level=0)
-        crosstab_for_figs_all = pd.concat(
-            [crosstab_for_figs_all['data'], crosstab_for_figs_all['customdata']], axis=0, keys=['data', 'customdata'])
-        crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
-            crosstab_for_figs_all.index[0], axis=1, ascending=False)
-        crosstab_for_figs_all = pd.concat(
-            [crosstab_for_figs_all.loc['data'], crosstab_for_figs_all.loc['customdata']], axis=1, keys=['data', 'customdata'])
+        if config['sort_axis'] :
+            max_sum_index = 0        
+            crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+                'sum_row', ascending=False).drop('sum_row', axis=1, level=0)
+        else:
+                max_sum_index = crosstab_for_figs_all['sum_row'].idxmax()
+                max_sum_index = crosstab_for_figs_all.index.get_loc(max_sum_index)
+                crosstab_for_figs_all = crosstab_for_figs_all.drop('sum_row', axis=1, level=0)        
+        if config['sort_legend'] :
+            crosstab_for_figs_all = pd.concat(
+                [crosstab_for_figs_all['data'], crosstab_for_figs_all['customdata']], axis=0, keys=['data', 'customdata'])
+            crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
+                crosstab_for_figs_all.index[max_sum_index], axis=1, ascending=False)
+            crosstab_for_figs_all = pd.concat(
+                [crosstab_for_figs_all.loc['data'], crosstab_for_figs_all.loc['customdata']], axis=1, keys=['data', 'customdata'])
         return crosstab_for_figs_all
+    
     def fig_update_layout(fig):
         fig.update_layout(          
             title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
