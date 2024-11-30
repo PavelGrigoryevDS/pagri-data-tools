@@ -1896,7 +1896,17 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['showgrid_y'] = True
     if 'sort' not in config:
         config['sort'] = True        
-        
+    if 'top_n_trim_axis' not in config:
+        config['top_n_trim_axis'] = None
+    if 'top_n_trim_legend' not in config:
+        config['top_n_trim_legend'] = None    
+    if 'sort_axis' not in config:
+        config['sort_axis'] = True
+    if 'sort_legend' not in config:
+        config['sort_legend'] = True   
+    if 'textposition' not in config:
+        config['textposition'] = None   
+                        
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
@@ -1966,17 +1976,23 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                    .groupby(cat_columns, observed=True)
                    .agg(num=(num_column, func), count=(num_column, 'count'))
                    .reset_index())
-        if config['sort']:
+        if config['sort_axis']:
             func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
                 'num'].transform('sum')
-            func_df['count'] = func_df['count'].apply(
-                lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
             func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
                     .drop('temp', axis=1)
                     )
+        if not config['sort_legend']:
+            if config['sort_axis']:
+                func_df = (func_df.sort_values([cat_columns[0], cat_columns[1]], ascending=[False, True])
+                        )            
+        func_df['count'] = func_df['count'].apply(
+            lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
+
 
         return func_df.rename(columns={'num': num_column})
     df_for_fig = prepare_df(config)
+    # display(df_for_fig)
     x = df_for_fig[config['x']].values
     y = df_for_fig[config['y']].values
     x_axis_label = config['x_axis_label']
@@ -2078,6 +2094,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         for i, trace in enumerate(fig.data):
             trace.marker.color = color[i]
         fig.update_layout(legend={'traceorder': 'reversed'})
+    if config['textposition']:
+        fig.update_traces(textposition=config['textposition'])
     return fig    
             
 def bar(config: dict, titles_for_axis: dict = None):
@@ -2093,6 +2111,10 @@ def bar(config: dict, titles_for_axis: dict = None):
         - y_axis_label (str): The label for the Y-axis.
         - category (str): The name of the column in the DataFrame to be used for creating categories.  
         If None or an empty string, the chart will be created without category.
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
+        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
         - func (str): The function to be used for aggregating data (default is 'mean').
@@ -2101,6 +2123,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - height (int): The height of the chart (default is None).
         - text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
+        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
@@ -2113,19 +2136,17 @@ def bar(config: dict, titles_for_axis: dict = None):
 
     Example:
     titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
+        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
+        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
+        age = ['Возраст', 'возраст', 1]
+        , using_duration = ['Длительность использования', 'длительность использования', 2]
+        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
+        , revenue = ['Выручка', 'выручка', 2]
+        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
+        # Распределение долей по городу и тарифу с нормализацией по городу
+        , city = ['Город', 'города', 'городу']
+        , tariff = ['Тариф', 'тарифа', 'тарифу']
+        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
     )
     config = dict(
         df = df
@@ -2161,6 +2182,10 @@ def line(config: dict, titles_for_axis: dict = None):
         - y_axis_label (str): The label for the Y-axis.
         - category (str): The name of the column in the DataFrame to be used for creating categories.  
         If None or an empty string, the chart will be created without category.
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
+        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
         - func (str): The function to be used for aggregating data (default is 'mean').
@@ -2169,6 +2194,7 @@ def line(config: dict, titles_for_axis: dict = None):
         - height (int): The height of the chart (default is None).
         - text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
+        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
@@ -2181,19 +2207,17 @@ def line(config: dict, titles_for_axis: dict = None):
 
     Example:
     titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
+        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
+        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
+        age = ['Возраст', 'возраст', 1]
+        , using_duration = ['Длительность использования', 'длительность использования', 2]
+        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
+        , revenue = ['Выручка', 'выручка', 2]
+        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
+        # Распределение долей по городу и тарифу с нормализацией по городу
+        , city = ['Город', 'города', 'городу']
+        , tariff = ['Тариф', 'тарифа', 'тарифу']
+        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
     )
     config = dict(
         df = df
@@ -2229,6 +2253,10 @@ def area(config: dict, titles_for_axis: dict = None):
         - y_axis_label (str): The label for the Y-axis.
         - category (str): The name of the column in the DataFrame to be used for creating categories.  
         If None or an empty string, the chart will be created without category.
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
+        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
         - func (str): The function to be used for aggregating data (default is 'mean').
@@ -2237,6 +2265,7 @@ def area(config: dict, titles_for_axis: dict = None):
         - height (int): The height of the chart (default is None).
         - text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
+        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
@@ -2249,19 +2278,17 @@ def area(config: dict, titles_for_axis: dict = None):
 
     Example:
     titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
+        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
+        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
+        age = ['Возраст', 'возраст', 1]
+        , using_duration = ['Длительность использования', 'длительность использования', 2]
+        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
+        , revenue = ['Выручка', 'выручка', 2]
+        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
+        # Распределение долей по городу и тарифу с нормализацией по городу
+        , city = ['Город', 'города', 'городу']
+        , tariff = ['Тариф', 'тарифа', 'тарифу']
+        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
     )
     config = dict(
         df = df

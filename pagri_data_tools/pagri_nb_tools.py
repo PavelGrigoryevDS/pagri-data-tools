@@ -780,3 +780,55 @@ def check_observes_new_line(notebook_path: str, mode: str = 'draft'):
     with open(output_filename, 'w', encoding='utf-8') as out_f:
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {output_filename}")        
+    
+def collect_observations(notebook_path_for_find: str, notebook_path_for_save: str): #, mode: str = 'draft'):
+    try:
+        with open(notebook_path_for_find, 'r', encoding='utf-8') as in_f:
+            nb_json = json.load(in_f)
+    except FileNotFoundError:
+        print(f"Error: File not found - {notebook_path_for_find}")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format - {notebook_path_for_find}")
+        return
+    is_working = False
+    observations = []
+    for cell in nb_json["cells"]:
+        source = cell["source"]
+        is_obs_found = False
+        for line in source:
+            if '_start_' in line:
+                is_working = True
+            if '_end_' in line:
+                is_working = False
+            if is_working:
+                if is_obs_found and line.strip() != '':# Сбрасываем флаг
+                    if not line.endswith('\n'):
+                        line += '\n'
+                    observations.append(line)
+                if '**Наблюдения:**' in line:
+                    is_obs_found = True
+             
+    observations_cell = nb_v4.new_markdown_cell([''.join(observations)])
+    try:
+        with open(notebook_path_for_save, 'r', encoding='utf-8') as in_f:
+            nb_json = json.load(in_f)
+    except FileNotFoundError:
+        return f"Error: File not found - {notebook_path_for_save}"
+    except json.JSONDecodeError:
+        return f"Error: Invalid JSON format - {notebook_path_for_save}"    
+    cell_number = next((i for i, cell in enumerate(nb_json["cells"])
+                        if any("_gen_" in line for line in cell["source"])), None)
+    nb_json['cells'][cell_number:cell_number] = [observations_cell]    
+    
+    nb = nb_reads(json.dumps(nb_json), as_version=4)
+    # Save the nbformat object to the file
+    # if mode == 'draft':
+    #     output_filename_splited = notebook_path.split('.')
+    #     output_filename_splited[-2] += '_temp'
+    #     output_filename = '.'.join(output_filename_splited)
+    # else:
+    #     output_filename = notebook_path
+    with open(notebook_path_for_save, 'w', encoding='utf-8') as out_f:
+        nb_write(nb, out_f, version=4)
+    print(f"Corrected notebook saved to {notebook_path_for_save}")            
