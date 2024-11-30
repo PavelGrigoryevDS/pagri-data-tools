@@ -3179,18 +3179,26 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             trace.textangle=0
             if 'text' in config and config['text']:
                 trace.text = [f'{x:.0f}' if x > 0.5 else '' for x in trace.x]
-            hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
+            if config['column_for_legend']:
+                hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
+            else:
+                hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
         else:
             if 'text' in config and config['text']:
                 trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
-            hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
-                                    ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'                
+            if config['column_for_legend']:
+                hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
+                                    ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'       
+            else:
+                hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'   
         trace.customdata = customdata[i]
     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14))
                       , textfont=dict(family='Segoe UI', size=config['textsize']))   
     if config['textposition']:
         fig.update_traces(textposition=config['textposition'])
+    if not config['column_for_legend']:
+        fig.update_layout(showlegend=False)
     if orientation == 'h':
         fig.update_layout(legend_traceorder='reversed')        
     fig.update_layout(
@@ -3462,6 +3470,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
             fig.add_trace(go.Scattergl(
                 x=df_trim[col1], 
                 y=df_trim[col2], 
+                hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}<extra></extra>', 
                 mode='markers', 
                 marker=dict(
                     color=df_trim['density'],  # Используем значения для цветовой шкалы
@@ -3495,8 +3504,6 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
             fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
         # fig_scatter.update_traces(marker=dict(
         #     line=dict(color='white', width=0.5))) #, coloraxis=f"coloraxis{i+1}", showscale=False))
-        # fig_scatter.update_traces(
-        #     hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}')
         # fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
         # fig.update_coloraxes
         fig.update_xaxes(
