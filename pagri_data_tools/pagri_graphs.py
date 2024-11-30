@@ -2972,6 +2972,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         - height (int): The height of the chart (default is None).
         - text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
+        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
@@ -3016,7 +3017,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         raise ValueError("df must be a pandas DataFrame")
     if 'column_for_axis' not in config or not isinstance(config['column_for_axis'], str):
         raise ValueError("column_for_axis must be a string")
-    if 'column_for_legend' not in config or not isinstance(config['column_for_legend'], str):
+    if 'column_for_legend' in config and not isinstance(config['column_for_legend'], str):
         raise ValueError("column_for_legend must be a string")
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
@@ -3034,6 +3035,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         config['text'] = False        
     if 'textsize' not in config:
         config['textsize'] = 14
+    if 'textposition' not in config:
+        config['textposition'] = None   
     if 'xaxis_show' not in config:
         config['xaxis_show'] = True
     if 'yaxis_show' not in config:
@@ -3049,16 +3052,22 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     if 'sort_axis' not in config:
         config['sort_axis'] = True
     if 'sort_legend' not in config:
-        config['sort_legend'] = True                                
+        config['sort_legend'] = True     
+    if 'column_for_legend' not in config:
+        config['column_for_legend'] = None                                    
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
     if titles_for_axis:
         config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
-        config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
         column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
-        column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
-        temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+        if config['column_for_legend']:
+            config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+            column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
+            temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+        else:
+            config['column_for_legend_label'] = None
+            temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
         if config['normalized_mode'] == 'col':
             config['title'] = temp_title + f" c нормализацией по {titles_for_axis[config['column_for_legend']][2]}"
         elif config['normalized_mode'] == 'row':
@@ -3134,7 +3143,10 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     orientation = config['orientation']
     title = config['title']
     df = config['df']
-    crosstab = pd.crosstab(df[column_for_axis], df[column_for_legend])
+    if config['column_for_legend']:
+        crosstab = pd.crosstab(df[column_for_axis], df[column_for_legend])
+    else:
+        crosstab = df.groupby(column_for_axis, observed=True).size().to_frame('share') 
     crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
     if config['top_n_trim_axis']:
         crosstab_for_figs = crosstab_for_figs.iloc[:config['top_n_trim_axis']]
@@ -3177,6 +3189,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         trace.customdata = customdata[i]
     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14))
                       , textfont=dict(family='Segoe UI', size=config['textsize']))   
+    if config['textposition']:
+        fig.update_traces(textposition=config['textposition'])
     if orientation == 'h':
         fig.update_layout(legend_traceorder='reversed')        
     fig.update_layout(
