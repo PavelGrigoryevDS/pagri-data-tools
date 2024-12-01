@@ -78,6 +78,7 @@ def plotly_default_settings(fig):
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         # xaxis_linewidth=2,
         # yaxis_linewidth=2
@@ -204,6 +205,7 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
@@ -327,6 +329,7 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
@@ -468,6 +471,7 @@ def heatmap_corr_gen(df, part_size = 10, title='Тепловая карта ко
             xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
             yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
             legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_title_font_size = 14,
             legend_font_color='rgba(0, 0, 0, 0.7)',
             # yaxis_linewidth=2
             margin=dict(l=50, r=50, b=50, t=70),
@@ -1998,6 +2002,10 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
 
         return func_df.rename(columns={'num': num_column})
     df_for_fig = prepare_df(config)
+    if config['top_n_trim_axis']:
+        df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
+    # if config['top_n_trim_legend']:
+    #     df_for_fig = pd.concat([df_for_fig['data'].iloc[:, :config['top_n_trim_legend']], df_for_fig['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
     # display(df_for_fig)
     x = df_for_fig[config['x']].values
     y = df_for_fig[config['y']].values
@@ -2081,6 +2089,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"), xaxis=dict(
             visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
@@ -2423,6 +2432,7 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white")
         , xaxis=dict(
@@ -2772,6 +2782,7 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"),
     )
@@ -2931,6 +2942,7 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
             xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
             yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
             legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_title_font_size = 14,
             legend_font_color='rgba(0, 0, 0, 0.7)',
             margin=dict(l=50, r=50, b=50, t=70),       
         ) 
@@ -3159,6 +3171,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
             yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
             legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_title_font_size = 14,
             legend_font_color='rgba(0, 0, 0, 0.7)',
             xaxis=dict(
                 visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
@@ -3383,6 +3396,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
             yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
             legend_title_font_color='rgba(0, 0, 0, 0.7)',
+            legend_title_font_size = 14,
             legend_font_color='rgba(0, 0, 0, 0.7)',
             margin=dict(l=50, r=50, b=50, t=70),       
         ) 
