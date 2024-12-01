@@ -1911,10 +1911,11 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['x'], config['y'] = config['y'], config['x']
 
     if titles_for_axis:
-        if config['func'] not in ['mean', 'median', 'sum']:
+        if config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
             raise ValueError("func must be in ['mean', 'median', 'sum']")
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
-            'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']}
+            'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']
+            , 'count': ['Общее', 'Общее', 'Общее']}
         config['x_axis_label'] = titles_for_axis[config['x']][0]
         config['y_axis_label'] = titles_for_axis[config['y']][0]
         config['category_axis_label'] = titles_for_axis[config['category']
@@ -1928,8 +1929,13 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             numeric = titles_for_axis[config["x"]][1]
             cat = titles_for_axis[config["y"]][1]
             suffix_type = titles_for_axis[config["x"]][2]
-        title = f'{func_for_title[func][suffix_type]}'
-        title += f' {numeric} в зависимости от {cat}'
+        if func == 'nunique':
+            numeric_list = numeric.split()[1:]
+            title = f'Количество уникальных {' '.join(numeric_list)}'
+            title += f' в зависимости от {cat}'
+        else:
+            title = f'{func_for_title[func][suffix_type]}'
+            title += f' {numeric} в зависимости от {cat}'
         if 'category' in config and config['category']:
             title += f' и {titles_for_axis[config["category"]][1]}'
         config['title'] = title
@@ -2117,7 +2123,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean').
+        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
         - barmode (str): The mode for displaying bars (default is 'group').
         - width (int): The width of the chart (default is None).
         - height (int): The height of the chart (default is None).
@@ -2188,7 +2194,7 @@ def line(config: dict, titles_for_axis: dict = None):
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean').
+        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
         - barmode (str): The mode for displaying bars (default is 'group').
         - width (int): The width of the chart (default is None).
         - height (int): The height of the chart (default is None).
@@ -2259,7 +2265,7 @@ def area(config: dict, titles_for_axis: dict = None):
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean').
+        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
         - barmode (str): The mode for displaying bars (default is 'group').
         - width (int): The width of the chart (default is None).
         - height (int): The height of the chart (default is None).
