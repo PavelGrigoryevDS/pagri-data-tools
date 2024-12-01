@@ -67,10 +67,10 @@ def plotly_default_settings(fig):
     # Segoe UI Light
     fig.update_layout(
         # Для подписей и меток
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -193,10 +193,10 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     if height is not None:
         fig.update_layout(height=height)
     fig.update_layout(
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -313,13 +313,13 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
         fig.update_layout(width=width)
     if height is not None:
         fig.update_layout(height=height)
-    hovertemplate = 'ось X= %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
+    hovertemplate = 'ось X = %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
     fig.update_traces(hovertemplate=hovertemplate)
     fig.update_layout(
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -457,10 +457,10 @@ def heatmap_corr_gen(df, part_size = 10, title='Тепловая карта ко
         hovertemplate = 'ось X = %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
         fig.update_traces(hovertemplate=hovertemplate)
         fig.update_layout(
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
             font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -2070,10 +2070,10 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         margin=dict(t=80),
         width=config['width'], height=config['height'],
         title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, 
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -2412,10 +2412,10 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
         width=width, height=height,
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -2735,7 +2735,7 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
         fig.update_xaxes(
             title_text=xaxes_title,
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
             row=row+1, col=col+1,
@@ -2745,7 +2745,7 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         )
         fig.update_yaxes(
             title_text=yaxes_title,
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
             row=row+1, col=col+1,
@@ -2761,10 +2761,10 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         margin=dict(l=50, r=50, t=90, b=50),
         title={'text': f'Зависимости между числовыми переменными'},
         # Для подписей и меток
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -2920,10 +2920,10 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
         return crosstab_for_figs_all
     def fig_update_layout(fig):
         fig.update_layout(          
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
             font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -3148,10 +3148,10 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     
     def fig_update_layout(fig):
         fig.update_layout(          
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
             font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -3372,10 +3372,10 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     
     def fig_update_layout(fig):
         fig.update_layout(          
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
             font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-            xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-            yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+            xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+            yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -3541,7 +3541,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
         # fig.update_coloraxes
         fig.update_xaxes(
             title_text=xaxes_title,
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
             row=row+1, col=col+1,
@@ -3551,7 +3551,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
         )
         fig.update_yaxes(
             title_text=yaxes_title,
-            title_font=dict(size=18, color="rgba(0, 0, 0, 0.5)"),
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
             tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
             linecolor="rgba(0, 0, 0, 0.5)",
             row=row+1, col=col+1,
@@ -3576,10 +3576,10 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
         margin=dict(l=50, r=50, t=90, b=50),
         title=title,
         # Для подписей и меток
-        title_font=dict(size=18, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
@@ -3587,6 +3587,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"),
     )
