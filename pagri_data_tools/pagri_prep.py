@@ -1912,6 +1912,7 @@ def check_duplicated(df):
         .value_counts(dropna=False)
         .to_frame()
         .sort_values("count", ascending=False)
+        .query("count > 1")
         # .rename(columns={0: 'Count'})
     )
 
@@ -1976,13 +1977,14 @@ def check_duplicated_combinations_gen(df, n=2):
     )
     c2 = itertools.combinations(df.columns, 2)
     dupl_df_c2 = pd.DataFrame([], index=df.columns, columns=df.columns)
+    df_size = df.shape[0]
     print(f"Group by 2 columns")
     for c in c2:
         duplicates = df_copy[list(c)].duplicated().sum()
-        dupl_df_c2.loc[c[1], c[0]] = duplicates
+        dupl_df_c2.loc[c[1], c[0]] = f'{pretty_value(duplicates)} ({(duplicates / df_size):.1%})' if duplicates / df_size >= 0.01 else f'{pretty_value(duplicates)} < 1%'
     display(
         dupl_df_c2.fillna("")
-        .style.set_caption("Duplicates")
+        .style.set_caption("Duplicates in both columns")
         .set_table_styles(
             [
                 {
@@ -2011,8 +2013,10 @@ def check_duplicated_combinations_gen(df, n=2):
     yield (
         pd.concat(
             [
-                part_df.reset_index(drop=True)
-                for part_df in np.array_split(dupl_df_c3, 3)
+                # part_df.reset_index(drop=True)
+                # for part_df in np.array_split(dupl_df_c3, 3)
+                dupl_df_c3[i:i + 10].reset_index(drop=True)
+                    for i in range(0, dupl_df_c3.shape[0], 10)
             ],
             axis=1,
         )
@@ -2035,8 +2039,8 @@ def check_duplicated_combinations_gen(df, n=2):
         yield (
             pd.concat(
                 [
-                    part_df.reset_index(drop=True)
-                    for part_df in np.array_split(dupl_df_cn, 2)
+                    dupl_df_c3[i:i + 10].reset_index(drop=True)
+                        for i in range(0, dupl_df_c3.shape[0], 10)
                 ],
                 axis=1,
             )
@@ -2117,9 +2121,11 @@ def check_na_in_both_columns(df, cols: list) -> pd.DataFrame:
     size = df.shape[0]
     mask = df[cols].isna().all(axis=1)
     na_df = df[mask]
+    cols_missings = [df[col].isna().sum() for col in cols]
     print(
-        f"{na_df.shape[0]} ({(na_df.shape[0] / size):.2%}) rows with missings simultaneously in {cols}"
+        f"{na_df.shape[0]} ({(na_df.shape[0] / size):.2%} of all) ({(na_df.shape[0] / col1_missings):.2%} of {cols[0]}) ({(na_df.shape[0] / col2_missings):.2%} of {cols[1]}) rows with missings simultaneously in {cols}"
     )
+        
     return na_df
 
 def check_zeros_in_both_columns(df, cols: list) -> pd.DataFrame:
@@ -4119,7 +4125,7 @@ def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
         if insert_index < 2 + tables_in_row * 3 and insert_index < 2 + (len(row_for_html) - 1)* 3:  # Проверка, чтобы не выйти за пределы
             res_df.insert(insert_index, f'{j}', "|")
             
-    res_df = res_df.fillna('')
+    # res_df = res_df.fillna('')
     
     # Настройка стиля таблицы
     table_style = [
@@ -4143,3 +4149,100 @@ def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
     )
     
     return styled_res_df
+
+def check_na_combinations_gen(df, n=2):
+    """
+    Функция считает пропуски между всеми возможными комбинациями между столбцами.
+    Сначала для проверки на дубли берутся пары столбцов.
+    Затем по 3 столбца. И так все возможные комибнации.
+    Можно выбрать до какого количества комбинаций двигаться.
+    n - максимальное возможное количество столбцов в комбинациях. По умолчанию беруться все столбцы
+    """
+    if n < 2:
+        return
+    c2 = itertools.combinations(df.columns, 2)
+    dupl_df_c2 = pd.DataFrame([], index=df.columns, columns=df.columns)
+    df_size = df.shape[0]
+    print(f"Group by 2 columns")
+    for c in c2:
+        missings = df[list(c)].isna().all(axis=1).sum()
+        col1_missings = df[c[0]].isna().sum()
+        col2_missings = df[c[1]].isna().sum()
+        if missings == 0:
+            dupl_df_c2.loc[c[0], c[1]] = f''
+        else:
+            dupl_df_c2.loc[c[1], c[0]] = f'< {(missings / col2_missings):.1%} / ^ {(missings / col1_missings):.1%}'
+    display(
+        dupl_df_c2.fillna("")
+        .style.set_caption("Missings in both columns")
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "18px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
+        )
+    )
+    yield
+    if n < 3:
+        return
+    c3 = itertools.combinations(df.columns, 3)
+    dupl_c3_list = []
+    print(f"Group by 3 columns")
+    for c in c3:
+        missings = df[list(c)].isna().all(axis=1).sum()
+        if missings:
+            missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
+            dupl_c3_list.append([" | ".join(c), missings])
+    dupl_df_c3 = pd.DataFrame(dupl_c3_list)
+    display(dupl_df_c3)
+    # разобьем таблицу на 3 части, чтобы удобнее читать
+    yield (
+        pd.concat(
+            [
+                # part_df.reset_index(drop=True)
+                # for part_df in np.array_split(dupl_df_c3, 3)
+                dupl_df_c3[i:i + 10].reset_index(drop=True)
+                    for i in range(0, dupl_df_c3.shape[0], 10)
+            ],
+            axis=1,
+        )
+        # .style.format({1: "{:.0f}"}, na_rep="")
+        .style.format(na_rep="")
+        .hide(axis="index")
+        .hide(axis="columns")
+    )
+    if n < 4:
+        return
+    for col_n in range(4, df.columns.size + 1):
+        print(f"Group by {col_n} columns")
+        cn = itertools.combinations(df.columns, col_n)
+        dupl_cn_list = []
+        for c in cn:
+            missings = df[list(c)].isna().all(axis=1).sum()
+            if missings:
+                missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
+                missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
+                dupl_cn_list.append([" | ".join(c), missings])
+        dupl_df_cn = pd.DataFrame(dupl_cn_list)
+        # разобьем таблицу на 3 части, чтобы удобнее читать
+        yield (
+            pd.concat(
+                [
+                    part_df.reset_index(drop=True)
+                    for part_df in np.array_split(dupl_df_cn, 2)
+                ],
+                axis=1,
+            )
+            # .style.format({1: "{:.0f}"}, na_rep="")
+            .style.format(na_rep="")
+            .hide(axis="index")
+            .hide(axis="columns")
+        )
+        if n < col_n + 1:
+            return
