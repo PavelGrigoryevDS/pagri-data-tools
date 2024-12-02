@@ -1796,8 +1796,8 @@ class info_gen:
         if fig_func:
             fig = fig_func(df[column])
             if pd.api.types.is_numeric_dtype(df[column]):
-                lower_bound = df[column].quantile(0.01)
-                upper_bound = df[column].quantile(0.99)
+                lower_bound = df[column].quantile(0.05)
+                upper_bound = df[column].quantile(0.95)
                 fig_without_outliers = fig_func(df[(df[column] >= lower_bound) & (df[column] <= upper_bound)][column])
         row_for_html = []
         for func in funcs[:-1]:
@@ -2403,7 +2403,7 @@ def get_non_matching_rows(df, col1, col2):
     pd.DataFrame: Строки DataFrame, для которых значения в col1 имеют разные значения в col2
     """
     non_unique_values = (
-        df.groupby(col1, observed=False)[col2].nunique()[lambda x: x > 1].index
+        df.groupby(col1, observed=True)[col2].nunique()[lambda x: x > 1].index
     )
     non_matching_rows = df[df[col1].isin(non_unique_values)]
     if non_matching_rows.empty:
@@ -4066,3 +4066,80 @@ def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=
     if mode == 'by_category':
         analyze_share_by_category(df, series_for_analys[col], col, category)
         
+def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
+    """
+    Генерирует таблицу с подсчетом уникальных значений и их пропорций для указанного столбца DataFrame.
+ 
+    Параметры:
+    df : pandas.DataFrame
+        Входной DataFrame, содержащий данные для анализа.
+   
+    column : str
+        Имя столбца, для которого необходимо подсчитать уникальные значения и их пропорции.
+    
+    chunk_size : int, по умолчанию 10
+        Количество строк, отображаемых в каждой отдельной таблице (чанке). Если общее количество уникальных значений 
+        превышает произведение chunk_size и tables_in_row, выводится предупреждение.
+
+    tables_in_row : int, по умолчанию 5
+        Максимальное количество таблиц, отображаемых в одной строке.
+
+    Возвращает:
+    pandas.io.formats.style.Styler
+    """
+    # Подсчет значений и пропорций
+    if chunk_size * tables_in_row < df[column].nunique():
+        print("Недостаточны размер chunk_size и tables_in_row")
+        print("Всего значений в столбце:", df[column].nunique())
+        print('Текущее значение chunk_size:', chunk_size)
+        print('Текущее значение tables_in_row:', tables_in_row)
+    result = pd.concat([df[column].value_counts(), df[column].value_counts(normalize=True)], axis=1).reset_index()
+    result.columns = ['name', 'count', 'proportion']
+    
+    # Формирование колонки 'share'
+    result['share'] = result['count'].apply(lambda x: pretty_value(x)) + ' (' + (result['proportion'] * 100).round(2).astype(str) + '%)'
+    result.drop(['count', 'proportion'], axis=1, inplace=True)
+    
+    # Разделение результата на чанки
+    row_for_html = [result[i:i + chunk_size].reset_index(drop=True).rename(columns={'name': f'name_{i}', 'share': f'share_{i}'}) 
+                    for i in range(0, result.shape[0], chunk_size)]
+    row_for_html = row_for_html[:tables_in_row]
+    # Конкатенация чанков в одну таблицу
+    res_df = pd.concat(row_for_html, axis=1)
+    
+    # Добавление пустых колонок для форматирования
+    # for j in range(2, 2*tables_in_row, 3):
+    #     res_df.insert(j, f'{j}', "|")
+    # Заполнение NaN значений пустыми строками
+    
+        # Добавление разделителей
+    for j in range(1, tables_in_row):
+        # Индекс для вставки разделителя
+        insert_index = j * 3 - 1
+        if insert_index < 2 + tables_in_row * 3 and insert_index < 2 + (len(row_for_html) - 1)* 3:  # Проверка, чтобы не выйти за пределы
+            res_df.insert(insert_index, f'{j}', "|")
+            
+    res_df = res_df.fillna('')
+    
+    # Настройка стиля таблицы
+    table_style = [
+        {
+            "selector": "caption",
+            "props": [
+                ("font-size", "16px"),
+                ("text-align", "left"),
+                ("font-weight", "bold"),
+            ],
+        }                 
+    ]
+    
+    # Применение стилей к таблице
+    styled_res_df = (res_df
+        .style.set_caption(f'value counts for "{column}"')
+        .set_table_styles(table_style)
+        .set_properties(**{"text-align": "left"})
+        .hide(axis="columns")
+        .hide(axis="index")
+    )
+    
+    return styled_res_df
