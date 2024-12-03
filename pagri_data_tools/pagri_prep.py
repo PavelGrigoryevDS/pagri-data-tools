@@ -2123,7 +2123,9 @@ def check_na_in_both_columns(df, cols: list) -> pd.DataFrame:
     na_df = df[mask]
     cols_missings = [df[col].isna().sum() for col in cols]
     print(
-        f"{na_df.shape[0]} ({(na_df.shape[0] / size):.2%} of all) ({(na_df.shape[0] / col1_missings):.2%} of {cols[0]}) ({(na_df.shape[0] / col2_missings):.2%} of {cols[1]}) rows with missings simultaneously in {cols}"
+        f"{na_df.shape[0]} ({(na_df.shape[0] / size):.2%} of all)"
+        + ' '.join([f'({(na_df.shape[0] / cols_missings[i]):.2%} of {cols[i]})' for i in range(len(cols_missings))])
+        + f' rows with missings simultaneously in {cols}'
     )
         
     return na_df
@@ -4163,7 +4165,7 @@ def check_na_combinations_gen(df, n=2):
     c2 = itertools.combinations(df.columns, 2)
     dupl_df_c2 = pd.DataFrame([], index=df.columns, columns=df.columns)
     df_size = df.shape[0]
-    print(f"Group by 2 columns")
+    # print(f"Group by 2 columns")
     for c in c2:
         missings = df[list(c)].isna().all(axis=1).sum()
         col1_missings = df[c[0]].isna().sum()
@@ -4193,14 +4195,14 @@ def check_na_combinations_gen(df, n=2):
         return
     c3 = itertools.combinations(df.columns, 3)
     dupl_c3_list = []
-    print(f"Group by 3 columns")
+    # print(f"Group by 3 columns")
     for c in c3:
         missings = df[list(c)].isna().all(axis=1).sum()
         if missings:
-            missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
+            missings = f'{pretty_value(missings)} ({(missings / df_size):.1%} of all)' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1% of all'
             dupl_c3_list.append([" | ".join(c), missings])
     dupl_df_c3 = pd.DataFrame(dupl_c3_list)
-    display(dupl_df_c3)
+    # display(dupl_df_c3)
     # разобьем таблицу на 3 части, чтобы удобнее читать
     yield (
         pd.concat(
@@ -4214,13 +4216,26 @@ def check_na_combinations_gen(df, n=2):
         )
         # .style.format({1: "{:.0f}"}, na_rep="")
         .style.format(na_rep="")
+        .set_caption("Missings simultaneously in 3 columns")
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "18px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]  
+        )      
         .hide(axis="index")
         .hide(axis="columns")
     )
     if n < 4:
         return
     for col_n in range(4, df.columns.size + 1):
-        print(f"Group by {col_n} columns")
+        # print(f"Group by {col_n} columns")
         cn = itertools.combinations(df.columns, col_n)
         dupl_cn_list = []
         for c in cn:
@@ -4241,6 +4256,19 @@ def check_na_combinations_gen(df, n=2):
             )
             # .style.format({1: "{:.0f}"}, na_rep="")
             .style.format(na_rep="")
+            .set_caption(f"Missings simultaneously in {col_n} columns")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]      
+            )      
             .hide(axis="index")
             .hide(axis="columns")
         )
