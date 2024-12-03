@@ -3436,7 +3436,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
     return fig
 
-def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3, density_mode='count'):
+def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3, density_mode='count', bins=20):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
@@ -3445,6 +3445,7 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
     pairs (dict): Dict of pairs of column names to plot.
         Each pair should be a key in the form of a tuple, and the value should be a dictionary where the keys represent the columns from the pair,  
         and the values are ranges for truncating the values (upper and lower bounds).
+    bins (int, optional): Number of bins for calculate density. Defaults to 20.
     coloring (bool, optional): Whether to color the points based on density (count elements in sector). Defaults to True.
     width (int, optional): Width of the plot. Defaults to 800.
     height (int, optional): Height of the plot. Defaults to 800.
@@ -3505,8 +3506,8 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
             else:
                 df_trim = df.copy()        
             if density_mode == 'count':
-                df_trim['x_sector'] = pd.cut(df_trim[col1], bins=20)
-                df_trim['y_sector'] = pd.cut(df_trim[col2], bins=20)
+                df_trim['x_sector'] = pd.cut(df_trim[col1], bins=bins)
+                df_trim['y_sector'] = pd.cut(df_trim[col2], bins=bins)
                 # df_trim.head()
                 df_trim['density'] = df_trim.groupby(['x_sector', 'y_sector'], observed=True)[col1].transform('size')
             elif density_mode == 'kde':
@@ -3606,4 +3607,391 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
         hoverlabel=dict(bgcolor="white"),
     )
     fig.update_layout(showlegend=False)
+    return fig
+
+def histograms_stacked(config, titles_for_axis=None):
+    """
+    Функция для построения наложенных гистограмм по категориальной переменной.
+    :param titles_for_axis: Словарь с названиями для осей
+    config (dict): A dictionary containing parameters for creating the chart.
+        :param df: DataFrame с данными
+        :param cat_var: Название категориальной переменной
+        :param num_var: Название числовой переменной
+        :param top_n: Количество топ категорий для отображения
+        :param lower_quantile: Нижний квантиль для обрезки данных
+        :param upper_quantile: Верхний квантиль для обрезки данных
+        :param bins: Количество бинов для гистограммы
+        :param line_width: Ширина линий на графике
+        :param opacity: Прозрачность линий
+        :param height: Высота графика
+        :param width: Ширина графика
+        :param mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
+        :return: Объект Figure с графиком
+    """
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
+        raise ValueError("cat_var must be a string")
+    if 'num_var' in config and not isinstance(config['num_var'], str):
+        raise ValueError("num_var must be a string")
+    if 'top_n' not in config:
+        config['top_n'] = 5
+    if 'lower_quantile' not in config:
+        config['lower_quantile'] = 0      
+    if 'upper_quantile' not in config:
+        config['upper_quantile'] = 1      
+    if 'line_width' not in config:
+        config['line_width'] = 5
+    if 'opacity' not in config:
+        config['opacity'] = 0.5
+    if 'height' not in config:
+        config['height'] = None        
+    if 'width' not in config:
+        config['width'] = None
+    if 'bins' not in config:
+        config['bins'] = 20
+    if 'mode' not in config:
+        config['mode'] = 'normal'  # По умолчанию ступенчатая гистограмма        
+    if config['top_n'] == 'all':
+        config['top_n'] = config['df'][config['cat_var']].nunique()        
+    df = config['df']
+    cat_var = config['cat_var']
+    num_var = config['num_var']
+    top_n = config['top_n']
+    lower_quantile = config['lower_quantile']
+    upper_quantile = config['upper_quantile']
+    line_width = config['line_width']
+    opacity = config['opacity']
+    height = config['height']
+    width = config['width']
+    bins = config['bins']
+    
+        
+    if not titles_for_axis:
+        title = f'Гистограмма для {num_var} в зависимости от {cat_var}'
+        xaxis_title = num_var
+        yaxis_title = 'Частота'
+        legend_title = cat_var
+    else:
+        title = f'Гистограмма для {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
+        xaxis_title = f'{titles_for_axis[num_var][0]}'
+        yaxis_title = 'Частота'    
+        legend_title = f'{titles_for_axis[cat_var][0]}'
+    # Получение топ N категорий
+    categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+
+    # Создание графика
+    fig = go.Figure()
+    colors = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)',
+              '#03A9F4', 'rgb(242, 183, 1)', 'rgb(231, 63, 116)', '#8B9467', '#FFA07A', '#005A5B', 
+              '#66CCCC', '#B690C4']
+    hist_data = []
+    # Проход по каждой категории и построение гистограммы
+    for indx, category in enumerate(categories):
+        data = df[df[cat_var] == category][num_var]
+        
+        # Обрезка данных по квантилям
+        lower_bound = data.quantile(lower_quantile)
+        upper_bound = data.quantile(upper_quantile)
+        trimmed_data = data[(data >= lower_bound) & (data <= upper_bound)]
+        hist_data.append(trimmed_data)
+        if config['mode'] == 'step':
+            # Вычисление гистограммы
+            hist_values, bin_edges = np.histogram(trimmed_data, bins=bins)
+            hist_values = np.append(hist_values, 0)
+            # Нормирование значений гистограммы в процентах
+            hist_values_percent = hist_values / hist_values.sum() * 100
+
+            # Подготовка данных для ступенчатого графика
+            x_step = []
+            y_step = []
+
+            for i in range(len(hist_values_percent)):
+                x_step.append(bin_edges[i])  # Точка на оси X
+                y_step.append(0 if i == 0 else hist_values_percent[i-1])  # Если первая точка, то 0, иначе - предыдущее значение
+                x_step.append(bin_edges[i])  # Точка на оси X для вертикального подъема
+                y_step.append(hist_values_percent[i])  # Значение гистограммы
+            # Добавление линии ступеней на график
+            fig.add_trace(go.Scatter(
+                x=x_step,
+                y=y_step,
+                mode='lines',
+                name=str(category),
+                line=dict(width=line_width, color=colors[indx % len(colors)]),
+                opacity=opacity  # Установка прозрачности
+            ))
+    if config['mode'] == 'normal':
+        group_labels = categories
+        # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
+        # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
+        colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3', "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
+                    ]
+        # Create distplot with curve_type set to 'normal'
+        fig = ff.create_distplot(hist_data, group_labels, colors=colors,
+                                show_rug=False, show_curve=False)
+    # Настройка графика
+    fig.update_traces(
+        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>')
+    # Отображение графика
+    fig.update_layout(
+        xaxis_title=xaxis_title,
+        yaxis_title=yaxis_title,
+        legend_title_text=legend_title,
+        barmode='overlay',
+        height=height,
+        width=width,
+        title=title,
+        # Для подписей и меток
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white"),
+        xaxis=dict(
+            visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        ), yaxis=dict(
+            range=[0, None], visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+        ),          
+    )
+    return fig
+
+def boxplots_stacked(config, titles_for_axis=None):
+    """
+    Функция для построения наложенных боксплотов по категориальной переменной.
+    :param titles_for_axis: Словарь с названиями для осей
+    config (dict): A dictionary containing parameters for creating the chart.
+        :param df: DataFrame с данными
+        :param cat_var: Название категориальной переменной
+        :param num_var: Название числовой переменной
+        :param top_n: Количество топ категорий для отображения
+        :param height: Высота графика
+        :param width: Ширина графика
+        :return: Объект Figure с графиком
+    """
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
+        raise ValueError("cat_var must be a string")
+    if 'num_var' not in config or not isinstance(config['num_var'], str):
+        raise ValueError("num_var must be a string")
+    if 'top_n' not in config:
+        config['top_n'] = 5
+    if 'height' not in config:
+        config['height'] = None        
+    if 'width' not in config:
+        config['width'] = None
+    if config['top_n'] == 'all':
+        config['top_n'] = config['df'][config['cat_var']].nunique()
+    if 'lower_quantile' not in config:
+        config['lower_quantile'] = 0      
+    if 'upper_quantile' not in config:
+        config['upper_quantile'] = 1           
+    if 'sort' not in config:
+        config['sort'] = False     
+        
+    df = config['df']
+    cat_var = config['cat_var']
+    num_var = config['num_var']
+    top_n = config['top_n']
+    sort = config['sort']
+    height = config['height']
+    width = config['width']
+    lower_quantile = config['lower_quantile']
+    upper_quantile = config['upper_quantile']    
+    
+    if not titles_for_axis:
+        title = f'Распределение {num_var} в зависимости от {cat_var}'
+        xaxis_title = cat_var
+        yaxis_title = num_var
+    else:
+        title = f'Распределение {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
+        xaxis_title = f'{titles_for_axis[cat_var][0]}'
+        yaxis_title = f'{titles_for_axis[num_var][0]}'
+
+    # Получение топ N категорий
+    if not sort:
+        categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+    else:
+        categories = df[cat_var].cat.categories.tolist()[:top_n]
+
+    # Создание графика
+    fig = go.Figure()
+
+    # Проход по каждой категории и построение боксплота
+    for category in categories:
+        data = df[df[cat_var] == category][num_var]
+        if data.count() == 0:
+            continue
+        lower_bound = data.quantile(lower_quantile)
+        upper_bound = data.quantile(upper_quantile)
+        data = data[(data >= lower_bound) & (data <= upper_bound)]        
+        fig.add_trace(go.Box(
+            y=data,
+            name=str(category),
+            # boxmean='sd',  # Отображение среднего и стандартного отклонения
+            orientation='v',
+            notched = True,
+        ))
+    # Настройка графика
+
+    fig.update_traces(showlegend=False, marker_color='rgba(128, 60, 170, 0.9)')
+    #     hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>')
+    # Настройка графика
+    fig.update_layout(
+        xaxis_title=xaxis_title,
+        yaxis_title=yaxis_title,
+        # legend_title_text=legend_title,
+        barmode='overlay',
+        height=height,
+        width=width,
+        title=title,
+        # Для подписей и меток
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white"),
+        xaxis=dict(
+            visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        ), yaxis=dict(
+            range=[0, None], visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+        ),          
+    )
+    return fig
+
+def violins_stacked(config, titles_for_axis=None):
+    """
+    Функция для построения наложенных violins по категориальной переменной.
+    :param titles_for_axis: Словарь с названиями для осей
+    config (dict): A dictionary containing parameters for creating the chart.
+        :param df: DataFrame с данными
+        :param cat_var: Название категориальной переменной
+        :param num_var: Название числовой переменной
+        :param top_n: Количество топ категорий для отображения
+        :param height: Высота графика
+        :param width: Ширина графика
+        :return: Объект Figure с графиком
+    """
+    if not isinstance(config, dict):
+        raise TypeError("config must be a dictionary")
+    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
+        raise ValueError("df must be a pandas DataFrame")
+    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
+        raise ValueError("cat_var must be a string")
+    if 'num_var' not in config or not isinstance(config['num_var'], str):
+        raise ValueError("num_var must be a string")
+    if 'top_n' not in config:
+        config['top_n'] = 5
+    if 'height' not in config:
+        config['height'] = None        
+    if 'width' not in config:
+        config['width'] = None
+    if config['top_n'] == 'all':
+        config['top_n'] = config['df'][config['cat_var']].nunique()
+    if 'lower_quantile' not in config:
+        config['lower_quantile'] = 0      
+    if 'upper_quantile' not in config:
+        config['upper_quantile'] = 1           
+    if 'sort' not in config:
+        config['sort'] = False     
+        
+    df = config['df']
+    cat_var = config['cat_var']
+    num_var = config['num_var']
+    top_n = config['top_n']
+    sort = config['sort']
+    height = config['height']
+    width = config['width']
+    lower_quantile = config['lower_quantile']
+    upper_quantile = config['upper_quantile']    
+    
+    if not titles_for_axis:
+        title = f'Распределение {num_var} в зависимости от {cat_var}'
+        xaxis_title = cat_var
+        yaxis_title = num_var
+    else:
+        title = f'Распределение {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
+        xaxis_title = f'{titles_for_axis[cat_var][0]}'
+        yaxis_title = f'{titles_for_axis[num_var][0]}'
+
+    # Получение топ N категорий
+    if not sort:
+        categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+    else:
+        categories = df[cat_var].cat.categories.tolist()[:top_n]
+
+    # Создание графика
+    fig = go.Figure()
+
+    # Проход по каждой категории и построение боксплота
+    for category in categories:
+        data = df[df[cat_var] == category][num_var]
+        if data.count() == 0:
+            continue
+        lower_bound = data.quantile(lower_quantile)
+        upper_bound = data.quantile(upper_quantile)
+        data = data[(data >= lower_bound) & (data <= upper_bound)]        
+        fig.add_trace(go.Violin(
+            y=data,
+            name=str(category),
+            # boxmean='sd',  # Отображение среднего и стандартного отклонения
+            orientation='v',
+            box=dict(visible=True), 
+        ))
+    # Настройка графика
+
+    fig.update_traces(showlegend=False, marker_color='rgba(128, 60, 170, 0.9)')
+    #     hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>')
+    # Настройка графика
+    fig.update_layout(
+        xaxis_title=xaxis_title,
+        yaxis_title=yaxis_title,
+        # legend_title_text=legend_title,
+        barmode='overlay',
+        height=height,
+        width=width,
+        title=title,
+        # Для подписей и меток
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size = 14,
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white"),
+        xaxis=dict(
+            visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        ), yaxis=dict(
+            range=[0, None], visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+        ),          
+    )
     return fig
