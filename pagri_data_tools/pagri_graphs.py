@@ -1914,6 +1914,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['sort_legend'] = True   
     if 'textposition' not in config:
         config['textposition'] = None   
+    if 'legend_position' not in config:
+        config['legend_position'] = 'top'          
                         
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
@@ -2081,7 +2083,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         # , margin=dict(l=50, r=50, b=50, t=70)
         margin=dict(t=80),
         width=config['width'], height=config['height'],
-        title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, legend_title_text=color_axis_label, 
+        title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, 
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -2115,6 +2117,34 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         fig.update_layout(legend={'traceorder': 'reversed'})
     if config['textposition']:
         fig.update_traces(textposition=config['textposition'])
+    if config['legend_position'] == 'top':
+        fig.update_layout(
+            legend = dict(
+                title_text=color_axis_label
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали                       
+            )     
+        )    
+    elif config['legend_position'] == 'right':
+        fig.update_layout(
+                legend = dict(
+                title_text=color_axis_label
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="v"  # Горизонтальное расположение
+                # , yanchor="bottom"    # Привязка к верхней части
+                , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                # , xanchor="center" # Привязка к центру
+                # , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    else:
+        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")         
     return fig    
             
 def bar(config: dict, titles_for_axis: dict = None):
@@ -2147,6 +2177,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - legend_position (str): Положение легенды ('top', 'right')
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
