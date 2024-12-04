@@ -100,7 +100,7 @@ def plotly_default_settings(fig):
 
 
 
-def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14, show_text=True):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
@@ -114,6 +114,7 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     - `width`: The width of the heatmap (default is None).
     - `height`: The height of the heatmap (default is None).
     - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
+    - 'show_text': Whether to show text in the annotations (default is True).
     - `font_size`: The font size for the text in the annotations (default is 14).
 
     Returns:
@@ -143,26 +144,28 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
 
     # Create annotations
     center_color_bar = (df.max().max() + df.min().min()) * 0.7
-    annotations = [
-        dict(
-            text=f"{df.values[row, col]:.{decimal_places}f}",
-            x=col,
-            y=row,
-            showarrow=False,
-            font=dict(
-                family='Segoe UI',
-                color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
-                center_color_bar else "white",
-                size=font_size
+    if show_text:
+        annotations = [
+            dict(
+                text= '' if np.isnan(df.values[row, col]) else f"{df.values[row, col]:.{decimal_places}f}",
+                x=col,
+                y=row,
+                showarrow=False,
+                font=dict(
+                    family='Segoe UI',
+                    color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
+                    center_color_bar else "white",
+                    size=font_size
+                )
             )
+            for row, col in np.ndindex(df.values.shape)
+        ]
+        fig.update_layout(
+            annotations=annotations
         )
-        for row, col in np.ndindex(df.values.shape)
-    ]
-
     # Update layout
     fig.update_layout(
         title=title,
-        annotations=annotations,
         xaxis=dict(showgrid=False),
         yaxis=dict(showgrid=False)
     )
@@ -3023,6 +3026,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - legend_position (str): Положение легенды ('top', 'right')
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
@@ -3100,7 +3104,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     if 'sort_legend' not in config:
         config['sort_legend'] = True     
     if 'column_for_legend' not in config:
-        config['column_for_legend'] = None                                    
+        config['column_for_legend'] = None      
+    if 'legend_position' not in config:
+        config['legend_position'] = 'top'                                        
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -3216,8 +3222,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         if normalized_mode == 'row':
             xaxis_title, legend_title_text = legend_title_text, xaxis_title
     fig = px.bar(
-        data_for_fig, barmode='group', orientation=orientation, title=title)
-    fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title, legend_title_text=legend_title_text)
+        data_for_fig, barmode=config['barmode'], orientation=orientation, title=title)
+    fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)
     trace_colors = [trace.marker.color for trace in reversed(fig.data)]            
     for i, trace in enumerate(fig.data):
         if orientation == 'h':
@@ -3252,6 +3258,35 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         height=config['height'],
         width=config['width'],
     )        
+    if config['legend_position'] == 'top':
+        fig.update_layout(
+            legend = dict(
+                title_text=legend_title_text
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали                       
+            )     
+        )    
+    elif config['legend_position'] == 'right':
+        fig.update_layout(
+                legend = dict(
+                title_text=legend_title_text
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="v"  # Горизонтальное расположение
+                # , yanchor="bottom"    # Привязка к верхней части
+                , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                # , xanchor="center" # Привязка к центру
+                # , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    else:
+        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")        
+            
     return fig_update_layout(fig)
 
 def heatmap(config: dict, titles_for_axis: dict = None):
@@ -3272,13 +3307,17 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - orientation (str): The orientation of the chart (default is 'v').
         - width (int): The width of the chart (default is None).
         - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
+        - show_text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-
+        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
+        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
+        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
+        - decimal_places (int): The number of decimal places to display (default is 2).
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
@@ -3335,6 +3374,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['width'] = None
     if 'height' not in config:
         config['height'] = None
+    if 'show_text' not in config:
+        config['show_text'] = True        
     if 'textsize' not in config:
         config['textsize'] = 14
     if 'xaxis_show' not in config:
@@ -3345,7 +3386,16 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['showgrid_x'] = False
     if 'showgrid_y' not in config:
         config['showgrid_y'] = False
-            
+    if 'top_n_trim_axis' not in config:
+        config['top_n_trim_axis'] = None
+    if 'top_n_trim_legend' not in config:
+        config['top_n_trim_legend'] = None    
+    if 'sort_axis' not in config:
+        config['sort_axis'] = True
+    if 'sort_legend' not in config:
+        config['sort_legend'] = True     
+    if 'decimal_places' not in config:
+        config['decimal_places'] = 2                     
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
             'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']}
@@ -3378,10 +3428,12 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         ascending_index = False
         na_position = 'last'
         sort_position = -1
-        func_df['sum'] = func_df.sum(axis=1, numeric_only=True)
-        func_df = func_df.sort_values(
-            'sum', ascending=ascending_sum).drop('sum', axis=1)
-        func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
+        if config['sort_axis']:
+            func_df['sum'] = func_df.sum(axis=1, numeric_only=True)
+            func_df = func_df.sort_values(
+                'sum', ascending=ascending_sum).drop('sum', axis=1)
+        if config['sort_legend']:
+            func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
         return func_df
     
     def fig_update_layout(fig):
@@ -3413,7 +3465,11 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     title = config['title']
     df = config['df']
     df_for_fig= make_df_for_fig(df, column_for_x, column_for_y, column_for_value, func, orientation)
-    fig = heatmap_simple(df_for_fig, font_size=config['textsize'])
+    if config['top_n_trim_axis']:
+        df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
+    if config['top_n_trim_legend']:
+        df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
+    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'])
     if titles_for_axis:
         if orientation == 'h':
             hovertemplate = f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
@@ -3428,13 +3484,13 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         trace.ygap = 3
     for annot in fig.layout.annotations:
         annot.font.color = "rgba(0, 0, 0, 0.7)"
-    fig =  fig_update_layout(fig)
     fig.update_layout(coloraxis=dict(colorscale=[
                             (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))     
     if orientation == 'h':
         fig.update_layout(title=title, xaxis_title=column_for_x_label, yaxis_title=column_for_y_label)      
     else:
         fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
+    fig =  fig_update_layout(fig)        
     return fig
 
 def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3, density_mode='count', bins=20):
@@ -3628,6 +3684,8 @@ def histograms_stacked(config, titles_for_axis=None):
         :param width: Ширина графика
         :param mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
         :param barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
+        :param legend_position: Положение легенды ('top', 'right')
+        :param box:  Отображать ли коробчатую диаграмму
         :return: Объект Figure с графиком
     """
     if not isinstance(config, dict):
@@ -3662,6 +3720,8 @@ def histograms_stacked(config, titles_for_axis=None):
         config['top_n'] = config['df'][config['cat_var']].nunique()      
     if 'box' not in config:
         config['box'] = True
+    if 'legend_position' not in config:
+        config['legend_position'] = 'top'        
     df = config['df']
     cat_var = config['cat_var']
     num_var = config['num_var']
@@ -3674,6 +3734,7 @@ def histograms_stacked(config, titles_for_axis=None):
     width = config['width']
     bins = config['bins']
     barmode = config['barmode']
+    legend_position = config['legend_position']
     
         
     if not titles_for_axis:
@@ -3686,6 +3747,8 @@ def histograms_stacked(config, titles_for_axis=None):
         xaxis_title = f'{titles_for_axis[num_var][0]}'
         yaxis_title = 'Частота'    
         legend_title = f'{titles_for_axis[cat_var][0]}'
+    # if legend_position == 'top':
+    #     legend_title = None
     # Получение топ N категорий
     categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
 
@@ -3746,12 +3809,6 @@ def histograms_stacked(config, titles_for_axis=None):
                 line=dict(width=line_width, color=colors[indx % len(colors)]),
                 opacity=opacity,  # Установка прозрачности
             ))
-        if config['mode'] == 'normal':
-            group_labels = categories
-            # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
-            # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
-            # Create distplot with curve_type set to 'normal'
-            fig = px.histogram(melted_df, x='score', color='score_type', marginal='box', barmode='overlay')
         # Настройка графика
         dist_plot.update_traces(
             hovertemplate= xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')
@@ -3797,15 +3854,28 @@ def histograms_stacked(config, titles_for_axis=None):
         #     xanchor="center",  # Привязка к центру
         #     x=0.5              # Центрирование по горизонтали                       
         # )
-    fig.update_layout(  
+    elif config['mode'] == 'normal':
+        # group_labels = categories
+        # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
+        # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
+        # Create distplot with curve_type set to 'normal'
+        if config['box']:
+            marginal = 'box'
+        else:
+            marginal = None
+        fig = px.histogram(df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode)
+        fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')        
+    else:
+        raise ValueError("Invalid mode. Please choose 'box' or 'normal'.")
+    if config['box']:
         xaxis = dict(
-            visible=False
-        )                     
-        , yaxis = dict(
-            domain=[0.85, 0.95]
-            , visible=False
-        )                    
-        , xaxis2 = dict(
+                visible=False
+            )  
+        yaxis = dict(
+                domain=[0.85, 0.95]
+                , visible=False
+            )   
+        xaxis2 = dict(
             title=xaxis_title
             , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
             , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
@@ -3813,35 +3883,94 @@ def histograms_stacked(config, titles_for_axis=None):
             , tickcolor="rgba(0, 0, 0, 0.4)"
             , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         )
-        , yaxis2 = dict(
+        yaxis2 = dict(
             domain=[0, 0.8]
-            , range=[0, max_y]
+            # , range=[0, max_y]
             , title=yaxis_title
             , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
             , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
             , linecolor="rgba(0, 0, 0, 0.4)"
             , tickcolor="rgba(0, 0, 0, 0.4)"
             , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
-        )
-        , legend = dict(
-            title_text=legend_title
-            , title_font_color='rgba(0, 0, 0, 0.7)'
-            , font_color='rgba(0, 0, 0, 0.7)'
-            , orientation="h"  # Горизонтальное расположение
-            , yanchor="top"    # Привязка к верхней части
-            , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-            , xanchor="center" # Привязка к центру
-            , x=0.5              # Центрирование по горизонтали                       
         )        
-        , barmode=barmode
-        , height=height
-        , width=width
-        , title=title
-        , margin=dict(l=50, r=50, b=10, t=50)
-        , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
-        , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
-        , hoverlabel=dict(bgcolor="white")
-    )
+        if config['mode'] == 'normal':        
+            xaxis, xaxis2 = xaxis2, xaxis
+            yaxis, yaxis2 = yaxis2, yaxis
+        fig.update_layout(  
+            xaxis = xaxis                  
+            , yaxis = yaxis                  
+            , xaxis2 = xaxis2
+            , yaxis2 = yaxis2 
+            , barmode=barmode
+            , height=height
+            , width=width
+            , title=title
+            , margin=dict(l=50, r=50, b=10, t=50)
+            , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
+            , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
+            , hoverlabel=dict(bgcolor="white")
+        )
+        if config['mode'] == 'step':
+            fig.upate_layout(
+                yaxis_range = [0, max_y]
+            )
+    else:
+        fig.update_layout(
+            xaxis = dict(
+                title=xaxis_title
+                , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+                , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+                , linecolor="rgba(0, 0, 0, 0.4)"
+                , tickcolor="rgba(0, 0, 0, 0.4)"
+                , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+            )
+            , yaxis = dict(
+                domain=[0, 0.95]
+                # , range=[0, max_y]
+                , title=yaxis_title
+                , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+                , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+                , linecolor="rgba(0, 0, 0, 0.4)"
+                , tickcolor="rgba(0, 0, 0, 0.4)"
+                , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+            )     
+            , barmode=barmode
+            , height=height
+            , width=width
+            , title=title
+            , margin=dict(l=50, r=50, b=10, t=50)
+            , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
+            , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
+            , hoverlabel=dict(bgcolor="white")
+        )
+    if legend_position == 'top':
+        fig.update_layout(
+            legend = dict(
+                title_text=legend_title
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали                       
+            )     
+        )    
+    elif legend_position == 'right':
+        fig.update_layout(
+                legend = dict(
+                title_text=legend_title
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="v"  # Горизонтальное расположение
+                # , yanchor="bottom"    # Привязка к верхней части
+                , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                # , xanchor="center" # Привязка к центру
+                # , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    else:
+        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
     # fi, g.update_xaxes(visible=False, row=1, col=1)  # Убираем ось X для верхнего графика
     # fig.update_yaxes(visible=False, row=1, col=1)  # Убираем ось Y для верхнего графика       
     return fig
