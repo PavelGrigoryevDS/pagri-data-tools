@@ -10,6 +10,7 @@ import plotly.io as pio
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from scipy.stats import gaussian_kde
+import plotly.figure_factory as ff
 
 pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -3626,6 +3627,7 @@ def histograms_stacked(config, titles_for_axis=None):
         :param height: Высота графика
         :param width: Ширина графика
         :param mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
+        :param barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
         :return: Объект Figure с графиком
     """
     if not isinstance(config, dict):
@@ -3645,17 +3647,21 @@ def histograms_stacked(config, titles_for_axis=None):
     if 'line_width' not in config:
         config['line_width'] = 5
     if 'opacity' not in config:
-        config['opacity'] = 0.5
+        config['opacity'] = 0.7
     if 'height' not in config:
         config['height'] = None        
     if 'width' not in config:
         config['width'] = None
     if 'bins' not in config:
         config['bins'] = 20
+    if 'barmode' not in config:
+        config['barmode'] = 'group'        
     if 'mode' not in config:
         config['mode'] = 'normal'  # По умолчанию ступенчатая гистограмма        
     if config['top_n'] == 'all':
-        config['top_n'] = config['df'][config['cat_var']].nunique()        
+        config['top_n'] = config['df'][config['cat_var']].nunique()      
+    if 'box' not in config:
+        config['box'] = True
     df = config['df']
     cat_var = config['cat_var']
     num_var = config['num_var']
@@ -3667,6 +3673,7 @@ def histograms_stacked(config, titles_for_axis=None):
     height = config['height']
     width = config['width']
     bins = config['bins']
+    barmode = config['barmode']
     
         
     if not titles_for_axis:
@@ -3682,28 +3689,45 @@ def histograms_stacked(config, titles_for_axis=None):
     # Получение топ N категорий
     categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
 
-    # Создание графика
-    fig = go.Figure()
-    colors = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)',
-              '#03A9F4', 'rgb(242, 183, 1)', 'rgb(231, 63, 116)', '#8B9467', '#FFA07A', '#005A5B', 
-              '#66CCCC', '#B690C4']
-    hist_data = []
-    # Проход по каждой категории и построение гистограммы
-    for indx, category in enumerate(categories):
-        data = df[df[cat_var] == category][num_var]
-        
-        # Обрезка данных по квантилям
-        lower_bound = data.quantile(lower_quantile)
-        upper_bound = data.quantile(upper_quantile)
-        trimmed_data = data[(data >= lower_bound) & (data <= upper_bound)]
-        hist_data.append(trimmed_data)
-        if config['mode'] == 'step':
+    if config['mode'] == 'step':
+        # Создание графика
+        dist_plot = go.Figure()
+        box_plot = go.Figure()
+        # colors = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)',
+        #         '#03A9F4', 'rgb(242, 183, 1)', 'rgb(231, 63, 116)', '#8B9467', '#FFA07A', '#005A5B', 
+        #         '#66CCCC', '#B690C4']
+        # colors_box = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3', "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
+        #                 ]    
+        colors = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)']
+        colors_box = colors
+        hist_data = []
+        max_y = -np.inf
+        # Проход по каждой категории и построение гистограммы
+        for indx, category in enumerate(categories):
+            data = df[df[cat_var] == category][num_var]
+            
+            # Обрезка данных по квантилям
+            lower_bound = data.quantile(lower_quantile)
+            upper_bound = data.quantile(upper_quantile)
+            trimmed_data = data[(data >= lower_bound) & (data <= upper_bound)]
+            hist_data.append(trimmed_data)
+            if config['box']:
+                box_plot.add_trace(go.Box(
+                    x=data,
+                    name=str(category),
+                    # boxmean='sd',  # Отображение среднего и стандартного отклонения
+                    orientation='h',
+                    notched = True,
+                    showlegend = False,
+                    marker_color = colors_box[indx]
+                ))
             # Вычисление гистограммы
             hist_values, bin_edges = np.histogram(trimmed_data, bins=bins)
             hist_values = np.append(hist_values, 0)
             # Нормирование значений гистограммы в процентах
             hist_values_percent = hist_values / hist_values.sum() * 100
-
+            if hist_values_percent.max() > max_y:
+                max_y = hist_values_percent.max() + 0.01 * hist_values_percent.max()
             # Подготовка данных для ступенчатого графика
             x_step = []
             y_step = []
@@ -3714,56 +3738,112 @@ def histograms_stacked(config, titles_for_axis=None):
                 x_step.append(bin_edges[i])  # Точка на оси X для вертикального подъема
                 y_step.append(hist_values_percent[i])  # Значение гистограммы
             # Добавление линии ступеней на график
-            fig.add_trace(go.Scatter(
+            dist_plot.add_trace(go.Scatter(
                 x=x_step,
                 y=y_step,
                 mode='lines',
                 name=str(category),
                 line=dict(width=line_width, color=colors[indx % len(colors)]),
-                opacity=opacity  # Установка прозрачности
+                opacity=opacity,  # Установка прозрачности
             ))
-    if config['mode'] == 'normal':
-        group_labels = categories
-        # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
-        # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
-        colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3', "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
-                    ]
-        # Create distplot with curve_type set to 'normal'
-        fig = ff.create_distplot(hist_data, group_labels, colors=colors,
-                                show_rug=False, show_curve=False)
-    # Настройка графика
-    fig.update_traces(
-        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>')
-    # Отображение графика
-    fig.update_layout(
-        xaxis_title=xaxis_title,
-        yaxis_title=yaxis_title,
-        legend_title_text=legend_title,
-        barmode='overlay',
-        height=height,
-        width=width,
-        title=title,
-        # Для подписей и меток
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
-        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
-        legend_title_font_color='rgba(0, 0, 0, 0.7)',
-        legend_title_font_size = 14,
-        legend_font_color='rgba(0, 0, 0, 0.7)',
-        hoverlabel=dict(bgcolor="white"),
-        xaxis=dict(
-            visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
-        ), yaxis=dict(
-            range=[0, None], visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
-        ),          
+        if config['mode'] == 'normal':
+            group_labels = categories
+            # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
+            # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
+            # Create distplot with curve_type set to 'normal'
+            fig = px.histogram(melted_df, x='score', color='score_type', marginal='box', barmode='overlay')
+        # Настройка графика
+        dist_plot.update_traces(
+            hovertemplate= xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')
+        # Объединяем графики
+        if config['box']:
+            fig = make_subplots(rows=2, cols=1, row_heights=[0.1, 0.9], shared_xaxes=True)        
+            # Добавляем распределительный график
+            if config['box']:
+                for trace in box_plot.data:
+                    fig.add_trace(trace, row=1, col=1)
+            for trace in dist_plot.data:    
+            # Добавляем boxplot
+                fig.add_trace(trace, row=2, col=1)
+        else:
+            fig = dist_plot
+        # Отображение графика
+        # fig.update_xaxes(
+        #     title=xaxis_title,
+        #     title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        #     tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        #     linecolor="rgba(0, 0, 0, 0.4)",
+        #     tickcolor="rgba(0, 0, 0, 0.4)",
+        #     showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        #     , row=2, col=1
+        # )
+        # fig.update_yaxes(
+        #     # domain=[0.8, 0.9],
+        #     title=yaxis_title,
+        #     title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        #     tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        #     linecolor="rgba(0, 0, 0, 0.4)",
+        #     tickcolor="rgba(0, 0, 0, 0.4)",
+        #     showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        #     , row=2, col=1
+        # )    
+        # fig.update_legends(
+        #     title_text=legend_title,
+        #     title_font_color='rgba(0, 0, 0, 0.7)',
+        #     font_color='rgba(0, 0, 0, 0.7)',
+        #     orientation="h",  # Горизонтальное расположение
+        #     yanchor="top",    # Привязка к верхней части
+        #     y=1.1,           # Положение по вертикали (отрицательное значение переместит вниз)
+        #     xanchor="center",  # Привязка к центру
+        #     x=0.5              # Центрирование по горизонтали                       
+        # )
+    fig.update_layout(  
+        xaxis = dict(
+            visible=False
+        )                     
+        , yaxis = dict(
+            domain=[0.85, 0.95]
+            , visible=False
+        )                    
+        , xaxis2 = dict(
+            title=xaxis_title
+            , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+            , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+            , linecolor="rgba(0, 0, 0, 0.4)"
+            , tickcolor="rgba(0, 0, 0, 0.4)"
+            , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        )
+        , yaxis2 = dict(
+            domain=[0, 0.8]
+            , range=[0, max_y]
+            , title=yaxis_title
+            , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+            , tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)")
+            , linecolor="rgba(0, 0, 0, 0.4)"
+            , tickcolor="rgba(0, 0, 0, 0.4)"
+            , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+        )
+        , legend = dict(
+            title_text=legend_title
+            , title_font_color='rgba(0, 0, 0, 0.7)'
+            , font_color='rgba(0, 0, 0, 0.7)'
+            , orientation="h"  # Горизонтальное расположение
+            , yanchor="top"    # Привязка к верхней части
+            , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+            , xanchor="center" # Привязка к центру
+            , x=0.5              # Центрирование по горизонтали                       
+        )        
+        , barmode=barmode
+        , height=height
+        , width=width
+        , title=title
+        , margin=dict(l=50, r=50, b=10, t=50)
+        , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
+        , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
+        , hoverlabel=dict(bgcolor="white")
     )
+    # fi, g.update_xaxes(visible=False, row=1, col=1)  # Убираем ось X для верхнего графика
+    # fig.update_yaxes(visible=False, row=1, col=1)  # Убираем ось Y для верхнего графика       
     return fig
 
 def boxplots_stacked(config, titles_for_axis=None):
