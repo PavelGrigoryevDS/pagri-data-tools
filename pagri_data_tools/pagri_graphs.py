@@ -2418,7 +2418,7 @@ def area(config: dict, titles_for_axis: dict = None):
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
 
-def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1):
+def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1, marginal: bool = 'box'):
     """
     Plot a histogram of a Pandas Series using Plotly Express.
 
@@ -2430,6 +2430,7 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
     height (int, optional): The height of the plot. Defaults to None.
     left_quantile (float, optional): The left quantile for trimming the data. Defaults to 0.
     right_quantile (float, optional): The right quantile for trimming the data. Defaults to 1.
+    box (bool): Whether to include a box plot. Defaults to True.
 
     Returns:
         fig: The Plotly Express figure.
@@ -2446,17 +2447,30 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         title = f'Гистограмма {titles_for_axis[column.name][1]}'
         xaxis_title = f'{titles_for_axis[column.name][0]}'
         yaxis_title = 'Частота'
-    fig = px.histogram(column, title=title, histnorm='percent', nbins=nbins)
+    fig = px.histogram(column, title=title, histnorm='percent', nbins=nbins, marginal=marginal)
     fig.update_layout(
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title
     )
     fig.update_traces(
         hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>', showlegend=False)
+    if marginal:
+        fig.update_layout(
+            yaxis2 = dict(
+                domain=[0.95, 1]
+            )
+            , xaxis2 = dict(
+                visible=False
+            )              
+            , yaxis = dict(
+                domain=[0, 0.9]
+            )            
+        )
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
         width=width, height=height,
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
+        title_y=0.95,
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -2469,6 +2483,7 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
         legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
+        margin=dict(l=50, r=50, b=10, t=50), 
         hoverlabel=dict(bgcolor="white")
         , xaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
