@@ -3528,10 +3528,14 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     for trace in fig.data:
         trace.xgap = 3
         trace.ygap = 3
-    for annot in fig.layout.annotations:
-        annot.font.color = "rgba(0, 0, 0, 0.7)"
-    fig.update_layout(coloraxis=dict(colorscale=[
-                            (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))     
+    # for annot in fig.layout.annotations:
+    #     annot.font.color = "rgba(0, 0, 0, 0.7)"
+    # fig.update_layout(coloraxis=dict(colorscale=[
+    #                         (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))     
+    fig.update_layout(
+        height=config['height']
+        , width=config['width']
+    )        
     if orientation == 'h':
         fig.update_layout(title=title, xaxis_title=column_for_x_label, yaxis_title=column_for_y_label)      
     else:
