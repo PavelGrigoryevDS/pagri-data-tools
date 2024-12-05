@@ -100,7 +100,7 @@ def plotly_default_settings(fig):
 
 
 
-def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14, show_text=True):
+def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
@@ -3361,6 +3361,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
         - top_n_trim_axis (int): The number of top categories axis to include in the chart.
         - top_n_trim_legend (int): The number of top categories legend to include in the chart.
+        - top_n_trim_from_axis (str): The direction to trim the categories on the axis ('start' or 'end') (default is 'start').
         - sort_axis (bool): Whether to sort the categories on the axis (default is True).
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - decimal_places (int): The number of decimal places to display (default is 2).
@@ -3441,7 +3442,12 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     if 'sort_legend' not in config:
         config['sort_legend'] = True     
     if 'decimal_places' not in config:
-        config['decimal_places'] = 2                     
+        config['decimal_places'] = 2          
+    if 'top_n_trim_from_axis' not in config:
+        config['top_n_trim_from_axis'] = 'start'
+    if 'top_n_trim_from_legend' not in config:
+        config['top_n_trim_from_legend'] = 'start'
+        
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
             'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']}
@@ -3512,9 +3518,17 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     df = config['df']
     df_for_fig= make_df_for_fig(df, column_for_x, column_for_y, column_for_value, func, orientation)
     if config['top_n_trim_axis']:
-        df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
+        if config['top_n_trim_from_axis'] == 'start':
+            x_nunique = df[column_for_x].nunique()
+            df_for_fig = df_for_fig.iloc[x_nunique-config['top_n_trim_axis']:]
+        else:
+            df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
     if config['top_n_trim_legend']:
-        df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
+        if config['top_n_trim_from_legend'] == 'start':
+            y_nunique = df[column_for_y].nunique()
+            df_for_fig = df_for_fig.iloc[:, y_nunique-config['top_n_trim_legend']:]        
+        else:
+            df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
     fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'])
     if titles_for_axis:
         if orientation == 'h':
