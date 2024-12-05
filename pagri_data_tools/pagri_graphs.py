@@ -3444,9 +3444,9 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     if 'decimal_places' not in config:
         config['decimal_places'] = 2          
     if 'top_n_trim_from_axis' not in config:
-        config['top_n_trim_from_axis'] = 'start'
+        config['top_n_trim_from_axis'] = 'end'
     if 'top_n_trim_from_legend' not in config:
-        config['top_n_trim_from_legend'] = 'start'
+        config['top_n_trim_from_legend'] = 'end'
         
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
