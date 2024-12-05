@@ -4011,7 +4011,7 @@ def histograms_stacked(config, titles_for_axis=None):
         fig.update_layout(
             legend = dict(
                 title_text=legend_title
-                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
                 , yanchor="top"    # Привязка к верхней части
@@ -4024,7 +4024,7 @@ def histograms_stacked(config, titles_for_axis=None):
         fig.update_layout(
                 legend = dict(
                 title_text=legend_title
-                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)")
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="v"  # Горизонтальное расположение
                 # , yanchor="bottom"    # Привязка к верхней части
