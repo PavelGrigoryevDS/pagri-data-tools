@@ -1623,18 +1623,18 @@ class info_gen:
         )
         fig.update_traces(
             marker_color="rgba(128, 60, 170, 0.9)",
-            text=f"*",
+            # text="*",
             # textfont=dict(color="rgba(128, 60, 170, 0.9)"),
         )
         fig.update_layout(
             xaxis2_visible=False,
-            xaxis=dict(
-                anchor='y',  # Привязываем ось X к оси Y
-                position=0,  # Устанавливаем позицию оси X
-            ),
+            # xaxis=dict(
+            #     anchor='y',  # Привязываем ось X к оси Y
+            #     position=0,  # Устанавливаем позицию оси X
+            # ),
             yaxis_domain=[0, 0.9],
             yaxis2_domain=[0.9, 1],
-            margin=dict(l=0, r=0, b=0, t=0),
+            margin=dict(l=0, r=50, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",

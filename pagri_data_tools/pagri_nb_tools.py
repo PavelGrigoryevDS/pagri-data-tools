@@ -792,22 +792,28 @@ def collect_observations(notebook_path_for_find: str, notebook_path_for_save: st
         print(f"Error: Invalid JSON format - {notebook_path_for_find}")
         return
     is_working = False
+    is_end = False
     observations = []
     for cell in nb_json["cells"]:
         source = cell["source"]
         is_obs_found = False
         for line in source:
-            if '_start_' in line:
+            if '_pagristart_' in line:
                 is_working = True
-            if '_end_' in line:
+            if '_pagriend_' in line:
                 is_working = False
+                is_end = True
+                break
             if is_working:
+                # print(line)
                 if is_obs_found and line.strip() != '':# Сбрасываем флаг
                     if not line.endswith('\n'):
                         line += '\n'
                     observations.append(line)
                 if '**Наблюдения:**' in line:
                     is_obs_found = True
+        if is_end:
+            break
              
     observations_cell = nb_v4.new_markdown_cell([''.join(observations)])
     try:

@@ -85,17 +85,18 @@ def plotly_default_settings(fig):
         # yaxis_linewidth=2
         margin=dict(l=50, r=50, b=50, t=70),
         hoverlabel=dict(bgcolor="white"),
-        # xaxis=dict(
-        #     showgrid=True
-        #     , gridwidth=1
-        #     , gridcolor="rgba(0, 0, 0, 0.1)"
-        # ),
-        # yaxis=dict(
-        #     showgrid=True
-        #     , gridwidth=1
-        #     , gridcolor="rgba(0, 0, 0, 0.07)"
-        # )
+        xaxis=dict(
+            showgrid=True
+            , gridwidth=1
+            , gridcolor="rgba(0, 0, 0, 0.1)"
+        ),
+        yaxis=dict(
+            showgrid=True
+            , gridwidth=1
+            , gridcolor="rgba(0, 0, 0, 0.07)"
+        )
     )
+    return fig
 
 
 
