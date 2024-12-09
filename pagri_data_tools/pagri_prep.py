@@ -1788,13 +1788,13 @@ class info_gen:
         )
         fig.update_traces(marker_color="rgba(128, 60, 170, 0.8)")
         fig.update_layout(
-            margin=dict(l=0, r=0, b=0, t=5),
+            margin=dict(l=0, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
             ),
-            xaxis_title="",
-            yaxis_title="",
+            xaxis_title=None,
+            yaxis_title=None,
             font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
             xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
             yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
