@@ -1097,23 +1097,28 @@ class info_gen:
         if mode == 'column' and not column:
             raise ValueError("Для режима 'column' необходимо указать столбец")
         self.hist_mode = 'simple'  # Значение по умолчанию она гистограама без обрезания по квантилям
+        self.only_summary = False
+        self.graphs=graphs
         if mode == 'gen':
             self.gen = self.info_gen(df, graphs, num, obj, date)  # Создаем генератор
         else:
             self.gen = self.info_column(df, column, graphs)  # Создаем генератор
-    def next(self, hist_mode=None):
+    def next(self, hist_mode=None, only_summary=None):
         """Возвращает следующее значение из генератора.
         
         Если new_mode равно 'dual', меняет текущий режим на 'dual' (2 гистограмы, вторая обрезанная по квантилям)
         Если new_mode равен None, возвращает к значению по умолчанию 'simple'.
         """
-        if hist_mode is not None:
+        if hist_mode:
             if hist_mode not in ['simple', 'dual']:
                 return "Invalid hist_mode. hist_mode must be 'simple' or 'dual'"  
             self.hist_mode = hist_mode  # Меняем режим
         else:
             self.hist_mode = 'simple'  # Возвращаем к значению по умолчанию
-
+        if only_summary==True:
+            self.only_summary = True
+        else:
+            self.only_summary = False
         try:
             return next(self.gen)  # Получаем следующее значение из генератора
         except StopIteration:
@@ -1124,7 +1129,6 @@ class info_gen:
         if not num and not obj and not date:
             return
         yield self.make_all_frame_for_html(df)
-
         funcs_num = [
             self.make_summary_for_html,
             self.make_pct_for_html,
@@ -1140,7 +1144,11 @@ class info_gen:
         if graphs:
             funcs_num += [self.make_hist_plotly_for_html]
             funcs_obj += [self.make_bar_obj_for_html]
-            funcs_date += [None]
+            funcs_date += [None]  
+        else:
+            funcs_num += [None]
+            funcs_obj += [None]
+            funcs_date += [None]              
         if date:
             date_columns = filter(
                 lambda x: pd.api.types.is_datetime64_any_dtype(df[x]), df.columns
@@ -1609,22 +1617,30 @@ class info_gen:
             nbins=20,
             histnorm="percent",
             template="simple_white",
+            marginal='box',
             height=220,
             width=300,
         )
         fig.update_traces(
             marker_color="rgba(128, 60, 170, 0.9)",
             text=f"*",
-            textfont=dict(color="rgba(128, 60, 170, 0.9)"),
+            # textfont=dict(color="rgba(128, 60, 170, 0.9)"),
         )
         fig.update_layout(
+            xaxis2_visible=False,
+            xaxis=dict(
+                anchor='y',  # Привязываем ось X к оси Y
+                position=0,  # Устанавливаем позицию оси X
+            ),
+            yaxis_domain=[0, 0.9],
+            yaxis2_domain=[0.9, 1],
             margin=dict(l=0, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
             ),
-            xaxis_title="",
-            yaxis_title="",
+            xaxis_title=None,
+            yaxis_title=None,
             font=dict(size=13, family="Segoe UI", color="rgba(0, 0, 0, 0.8)"),
             xaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
             yaxis_tickfont=dict(size=13, color="rgba(0, 0, 0, 0.8)"),
@@ -1792,6 +1808,8 @@ class info_gen:
         return fig
 
     def make_row_for_html(self, df, column, funcs):
+        if self.only_summary:
+            funcs = [funcs[0]] + [None]
         fig_func = funcs[-1]
         if fig_func:
             fig = fig_func(df[column])
@@ -1812,12 +1830,15 @@ class info_gen:
             pass
         # display(res_df)
         res_df = res_df.fillna('')
-        if pd.api.types.is_numeric_dtype(df[column]):
-            res_df_caption = f'Статистика и гистограмма столбца "{column}"'
-        elif pd.api.types.is_datetime64_any_dtype(df[column]):
-            res_df_caption = f'Статистика столбца "{column}"'
+        if self.only_summary:
+            res_df_caption = f'Summary for "{column}'
         else:
-            res_df_caption = f'Статистика и топ-10 значений столбца "{column}"'
+            if pd.api.types.is_numeric_dtype(df[column]):
+                res_df_caption = f'Статистика и гистограмма столбца "{column}"'
+            elif pd.api.types.is_datetime64_any_dtype(df[column]):
+                res_df_caption = f'Статистика столбца "{column}"'
+            else:
+                res_df_caption = f'Статистика и топ-10 значений столбца "{column}"'
         if not pd.api.types.is_numeric_dtype(df[column]) and not pd.api.types.is_datetime64_any_dtype(df[column]):
             table_style = [
                     {
@@ -4109,7 +4130,7 @@ def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
     result.drop(['count', 'proportion'], axis=1, inplace=True)
     
     # Разделение результата на чанки
-    row_for_html = [result[i:i + chunk_size].reset_index(drop=True).rename(columns={'name': f'name_{i}', 'share': f'share_{i}'}) 
+    row_for_html = [result[i:i + chunk_size].reset_index(drop=True).rename(columns={'name': f'name_{i}', 'share': f'share_{i}'})
                     for i in range(0, result.shape[0], chunk_size)]
     row_for_html = row_for_html[:tables_in_row]
     # Конкатенация чанков в одну таблицу
@@ -4148,6 +4169,7 @@ def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
         .set_properties(**{"text-align": "left"})
         .hide(axis="columns")
         .hide(axis="index")
+        .format(na_rep='')
     )
     
     return styled_res_df
