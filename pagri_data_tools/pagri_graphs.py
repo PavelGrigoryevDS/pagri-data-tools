@@ -3366,6 +3366,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - sort_axis (bool): Whether to sort the categories on the axis (default is True).
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - decimal_places (int): The number of decimal places to display (default is 2).
+        - is_reversed_y (bool): Whether to reverse the order of the categories on the Y-axis (default is False).
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
@@ -3448,6 +3449,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['top_n_trim_from_axis'] = 'end'
     if 'top_n_trim_from_legend' not in config:
         config['top_n_trim_from_legend'] = 'end'
+    if 'is_reversed_y' not in config:
+        config['is_reversed_y'] = False      
         
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
@@ -3487,6 +3490,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
                 'sum', ascending=ascending_sum).drop('sum', axis=1)
         if config['sort_legend']:
             func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
+        if config['is_reversed_y']:
+            func_df = func_df.iloc[::-1]
         return func_df
     
     def fig_update_layout(fig):
