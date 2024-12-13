@@ -1924,9 +1924,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     if titles_for_axis:
         if config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
             raise ValueError("func must be in ['mean', 'median', 'sum']")
-        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
-            'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']
-            , 'count': ['Общее', 'Общее', 'Общее']}
+        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+            'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
+            , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
         config['x_axis_label'] = titles_for_axis[config['x']][0]
         config['y_axis_label'] = titles_for_axis[config['y']][0]
         config['category_axis_label'] = titles_for_axis[config['category']
@@ -3780,7 +3780,7 @@ def histograms_stacked(config, titles_for_axis=None):
     if 'barmode' not in config:
         config['barmode'] = 'group'        
     if 'mode' not in config:
-        config['mode'] = 'normal'  # По умолчанию ступенчатая гистограмма        
+        config['mode'] = 'normal'      
     if config['top_n'] == 'all':
         config['top_n'] = config['df'][config['cat_var']].nunique()      
     if 'box' not in config:
@@ -3928,7 +3928,12 @@ def histograms_stacked(config, titles_for_axis=None):
             marginal = 'box'
         else:
             marginal = None
-        fig = px.histogram(df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode)
+        lower_quantile = df[num_var].quantile(lower_quantile)  # 25-й процентиль
+        upper_quantile = df[num_var].quantile(upper_quantile)  # 75-й процентиль
+        # Фильтруем DataFrame по квантилям
+        filtered_df = df[(df[num_var] >= lower_quantile) & (df[num_var] <= upper_quantile)]
+            
+        fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins)
         fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')        
     else:
         raise ValueError("Invalid mode. Please choose 'box' or 'normal'.")
@@ -3976,7 +3981,7 @@ def histograms_stacked(config, titles_for_axis=None):
             , hoverlabel=dict(bgcolor="white")
         )
         if config['mode'] == 'step':
-            fig.upate_layout(
+            fig.update_layout(
                 yaxis_range = [0, max_y]
             )
     else:
