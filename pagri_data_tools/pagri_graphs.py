@@ -101,7 +101,7 @@ def plotly_default_settings(fig):
 
 
 
-def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True):
+def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True, is_show_in_pct=False):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
@@ -117,6 +117,7 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
     - 'show_text': Whether to show text in the annotations (default is True).
     - `font_size`: The font size for the text in the annotations (default is 14).
+    - 'is_show_in_pct': Whether to show the values in percentage (default is True).
 
     Returns:
     - A Plotly figure object representing the heatmap.
@@ -149,22 +150,40 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
         center_color_bar *= 0.7
     else:
         center_color_bar *= 0.3
+        
     if show_text:
-        annotations = [
-            dict(
-                text= '' if np.isnan(df.values[row, col]) else f"{df.values[row, col]:.{decimal_places}f}",
-                x=col,
-                y=row,
-                showarrow=False,
-                font=dict(
-                    family='Segoe UI',
-                    color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
-                    center_color_bar else "white",
-                    size=font_size
+        if not is_show_in_pct:
+            annotations = [
+                dict(
+                    text= '' if np.isnan(df.values[row, col]) else f"{df.values[row, col]:.{decimal_places}f}",
+                    x=col,
+                    y=row,
+                    showarrow=False,
+                    font=dict(
+                        family='Segoe UI',
+                        color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
+                        center_color_bar else "white",
+                        size=font_size
+                    )
                 )
-            )
-            for row, col in np.ndindex(df.values.shape)
-        ]
+                for row, col in np.ndindex(df.values.shape)
+            ]
+        else:
+            annotations = [
+                dict(
+                    text= '' if np.isnan(df.values[row, col]) else f"{df.values[row, col]:.{decimal_places}%}",
+                    x=col,
+                    y=row,
+                    showarrow=False,
+                    font=dict(
+                        family='Segoe UI',
+                        color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
+                        center_color_bar else "white",
+                        size=font_size
+                    )
+                )
+                for row, col in np.ndindex(df.values.shape)
+            ]            
         fig.update_layout(
             annotations=annotations
         )
@@ -3373,6 +3392,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - is_reversed_y (bool): Whether to reverse the order of the categories on the Y-axis (default is False).
         - x_axis_position (str): The position of the X-axis ('top' or 'bottom') (default is 'bottom').
         - skip_first_col_for_cohort (bool): Whether to skip the first column for cohort (default is False).
+        - is_show_in_pct (bool): Whether to show values in percentage (default is False).
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
@@ -3461,7 +3481,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['x_axis_position'] = 'Bottom'             
     if 'skip_first_col_for_cohort' not in config:
         config['skip_first_col_for_cohort'] = False 
-         
+    if 'is_show_in_pct' not in config:
+         config['is_show_in_pct'] = False
         
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
@@ -3553,7 +3574,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             df_for_fig = df_for_fig.iloc[:, y_nunique-config['top_n_trim_legend']:]        
         else:
             df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
-    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'])
+    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'], is_show_in_pct=config['is_show_in_pct'])
     if titles_for_axis:
         if orientation == 'h':
             hovertemplate = f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
