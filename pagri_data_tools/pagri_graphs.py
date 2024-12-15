@@ -1907,7 +1907,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
     if 'func' not in config:
-        config['func'] = 'mean'
+        config['func'] = None
     if 'barmode' not in config:
         config['barmode'] = 'group'
     if 'width' not in config:
@@ -1945,15 +1945,16 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['x'], config['y'] = config['y'], config['x']
 
     if titles_for_axis:
-        if config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
-            raise ValueError("func must be in ['mean', 'median', 'sum']")
+        if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
+            raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
             'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
             , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
         config['x_axis_label'] = titles_for_axis[config['x']][0]
         config['y_axis_label'] = titles_for_axis[config['y']][0]
         config['category_axis_label'] = titles_for_axis[config['category']
-                                                        ][0] if 'category' in config else None
+                                                ][0] if 'category' in config else None
+        print('ok')
         func = config['func']
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             numeric = titles_for_axis[config["y"]][1]
@@ -1967,6 +1968,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             numeric_list = numeric.split()[1:]
             title = f'Количество уникальных {' '.join(numeric_list)}'
             title += f' в зависимости от {cat}'
+        elif func is None:
+            title = f' {numeric.capitalize()} в зависимости от {cat}'
         else:
             title = f'{func_for_title[func][suffix_type]}'
             title += f' {numeric} в зависимости от {cat}'
