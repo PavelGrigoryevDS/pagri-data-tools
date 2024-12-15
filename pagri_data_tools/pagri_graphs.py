@@ -144,7 +144,11 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     ))
 
     # Create annotations
-    center_color_bar = (df.max().max() + df.min().min()) * 0.7
+    center_color_bar = df.max().max() + df.min().min()
+    if center_color_bar > 0:
+        center_color_bar *= 0.7
+    else:
+        center_color_bar *= 0.3
     if show_text:
         annotations = [
             dict(
@@ -3367,6 +3371,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - decimal_places (int): The number of decimal places to display (default is 2).
         - is_reversed_y (bool): Whether to reverse the order of the categories on the Y-axis (default is False).
+        - x_axis_position (str): The position of the X-axis ('top' or 'bottom') (default is 'bottom').
+        - skip_first_col_for_cohort (bool): Whether to skip the first column for cohort (default is False).
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
@@ -3451,10 +3457,15 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['top_n_trim_from_legend'] = 'end'
     if 'is_reversed_y' not in config:
         config['is_reversed_y'] = False      
+    if 'x_axis_position' not in config:
+        config['x_axis_position'] = 'Bottom'             
+    if 'skip_first_col_for_cohort' not in config:
+        config['skip_first_col_for_cohort'] = False 
+         
         
     if titles_for_axis:
-        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя'], 'median': [
-            'Медианное', 'Медианный', 'Медианная'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная']}
+        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+            'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарные']}
         config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
         config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
         config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
@@ -3492,12 +3503,19 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
         if config['is_reversed_y']:
             func_df = func_df.iloc[::-1]
+        if config['skip_first_col_for_cohort']:
+            func_df = func_df.iloc[:, 1:]
+            if config['is_reversed_y']:
+                func_df = func_df.iloc[1:]
+            else:
+                func_df = func_df.iloc[:-1]
         return func_df
     
     def fig_update_layout(fig):
         fig.update_layout(          
             title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
             font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            
             xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -3556,10 +3574,17 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         height=config['height']
         , width=config['width']
     )        
+    if config['x_axis_position'] == 'top':
+        fig.update_layout(
+            xaxis=dict(
+                side='top'  # Устанавливаем ось X сверху
+            )
+            # , yaxis_domain = [0, 0.9]
+        )        
     if orientation == 'h':
-        fig.update_layout(title=title, xaxis_title=column_for_x_label, yaxis_title=column_for_y_label)      
+        fig.update_layout(title=title, yaxis_title=column_for_y_label)      
     else:
-        fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)      
+        fig.update_layout(title=title, yaxis_title=column_for_x_label)      
     fig =  fig_update_layout(fig)        
     return fig
 
