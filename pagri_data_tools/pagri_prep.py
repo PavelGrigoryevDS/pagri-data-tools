@@ -1634,7 +1634,7 @@ class info_gen:
             # ),
             yaxis_domain=[0, 0.9],
             yaxis2_domain=[0.9, 1],
-            margin=dict(l=50, r=50, b=0, t=0),
+            margin=dict(l=10, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
@@ -1788,7 +1788,7 @@ class info_gen:
         )
         fig.update_traces(marker_color="rgba(128, 60, 170, 0.8)")
         fig.update_layout(
-            margin=dict(l=50, r=50, b=0, t=0),
+            margin=dict(l=10, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
