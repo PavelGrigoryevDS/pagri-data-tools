@@ -271,7 +271,7 @@ def make_headers_link_and_toc(notebook_path: str, mode: str = 'draft', start_lev
                      start_level=start_level, indent_char=indent_char)
 
 
-def add_conclusions_and_anomalies(notebook_path: str, mode: str = 'draft', link_type: str = 'html', order: dict = None):
+def add_conclusions_and_anomalies_old(notebook_path: str, mode: str = 'draft', link_type: str = 'html', order: dict = None):
     """
     This function adds conclusions and anomalies sections to a Jupyter notebook.
 
