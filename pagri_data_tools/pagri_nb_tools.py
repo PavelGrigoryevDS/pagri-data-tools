@@ -1,4 +1,4 @@
-from nbformat import v4 as nb_v4, reads as nb_reads, write as nb_write
+from nbformat import v4 as nb_v4, reads as nb_reads, read as nb_read, write as nb_write
 import json
 import re
 from pyaspeller import YandexSpeller
@@ -839,7 +839,7 @@ def collect_observations(notebook_path_for_find: str, notebook_path_for_save: st
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {notebook_path_for_save}")            
 
-def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', link_type: str = 'html', order: dict = None):
+def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', link_type: str = 'html'):
     """
     This function adds conclusions and anomalies sections to a Jupyter notebook.
 
@@ -849,11 +849,6 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
         link_type (str): The type of link to use, either 'html' or 'markdown'. Defaults to 'html'.
         order (dict): dict of lists with ordered  conclusions and anomalie (key: conclusions and anomalies)
 
-    Examples:
-        order = dict(
-                    conclusions =[ 'Женщины чаще возвращают кредит, чем мужчины.']
-                    , anomalies = ['В датафрейме есть строки дубликаты. 54 строки. Меньше 1 % от всего датафрейма.  ']
-                )
     """
     if mode not in ['draft', 'final']:
         raise ValueError(
@@ -864,7 +859,7 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
 
     try:
         with open(notebook_path, 'r', encoding='utf-8') as in_f:
-            notebook = nbformat.read(in_f, as_version=4)
+            notebook = nb_read(in_f, as_version=4)
     except FileNotFoundError:
         print(f"Error: File not found - {notebook_path}")
         return
@@ -872,6 +867,7 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
         print(f"Error: Invalid JSON format - {notebook_path}")
         return
     regex_for_sub = re.compile(r'[^0-9a-zA-Zа-яА-Я]')
+    ordered_conclusions = [line.strip(" -.,") for line in conclusions]
     conclusions = set(line.strip(" -.,") for line in conclusions)
     conclusions_added = set()
     insertions_and_new_cells = [] 
@@ -888,9 +884,9 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
                 conclusion_for_ref = regex_for_sub.sub(
                     '-', conclusion)
                 if link_type == "html":
-                    toc_conclusion = f"- <a href='#{conclusion_for_ref}'>{conclusion}</a>  \n"
+                    toc_conclusion = f"- <a href='#{conclusion_for_ref}'>{conclusion+'.'}</a>  \n"
                 elif link_type == "markdown":
-                    toc_conclusion = f"[- {conclusion}](#{conclusion_for_ref})  \n"
+                    toc_conclusion = f"[- {conclusion+'.'}](#{conclusion_for_ref})  \n"
                 else:
                     raise ValueError(
                         "Неправильный тип ссылки. Должно быть 'markdown' или 'html'.")
@@ -902,7 +898,7 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
                     raise ValueError(
                         "Неправильный тип ссылки. Должно быть 'name' или 'id'.")
 
-                conclusions_refs.append(toc_conclusion)
+                conclusions_refs.append((toc_conclusion, conclusion))
                 if not cell_has_ref_to_toc:
                     conclusion_for_ref += '\n<a href="#ref-to-conclusions">Вернуться к выводам</a>'
                 new_cell = nb_v4.new_markdown_cell(conclusion_for_ref)            
@@ -912,7 +908,11 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
     # Вставляем ячейки в обратном порядке, чтобы не нарушить индексы
     for index, cell in reversed(insertions_and_new_cells):
         notebook.cells.insert(index, cell)    
-
+    # Отсортируем  выводы и аномалии как в переданном словаре
+    index_map = {x: i for i, x in enumerate(ordered_conclusions)}
+    conclusions_refs = sorted(
+        conclusions_refs, key=lambda x: index_map[x[1]])
+    conclusions_refs = [conclusions_ref[0] for conclusions_ref in conclusions_refs]
     # Добавим содержание выводов
     conclusions_refs = [
         '**Главные выводы:**<a name="ref-to-conclusions"></a>  \n'] + conclusions_refs
