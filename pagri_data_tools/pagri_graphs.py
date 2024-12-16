@@ -1954,7 +1954,6 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['y_axis_label'] = titles_for_axis[config['y']][0]
         config['category_axis_label'] = titles_for_axis[config['category']
                                                 ][0] if 'category' in config else None
-        print('ok')
         func = config['func']
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             numeric = titles_for_axis[config["y"]][1]
@@ -2010,7 +2009,10 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         else:
             cat_columns = [config['y']] + color
             num_column = config['x']
-        func = config.get('func', 'mean')  # default to 'mean' if not provided
+        if config['func'] is None:
+            func = 'first'
+        else:
+            func = config.get('func', 'mean')  # default to 'mean' if not provided
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             ascending = False
         else:
