@@ -838,3 +838,103 @@ def collect_observations(notebook_path_for_find: str, notebook_path_for_save: st
     with open(notebook_path_for_save, 'w', encoding='utf-8') as out_f:
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {notebook_path_for_save}")            
+
+def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', link_type: str = 'html', order: dict = None):
+    """
+    This function adds conclusions and anomalies sections to a Jupyter notebook.
+
+    Args:
+        notebook_path (str): The path to the Jupyter notebook file.
+        mode (str): The mode of the output file, either 'draft' or 'final'. Defaults to 'draft'.
+        link_type (str): The type of link to use, either 'html' or 'markdown'. Defaults to 'html'.
+        order (dict): dict of lists with ordered  conclusions and anomalie (key: conclusions and anomalies)
+
+    Examples:
+        order = dict(
+                    conclusions =[ 'Женщины чаще возвращают кредит, чем мужчины.']
+                    , anomalies = ['В датафрейме есть строки дубликаты. 54 строки. Меньше 1 % от всего датафрейма.  ']
+                )
+    """
+    if mode not in ['draft', 'final']:
+        raise ValueError(
+            "Invalid mode. Mode must be either 'draft' or 'final'.")
+    if link_type not in ['html', 'markdown']:
+        raise ValueError(
+            "Invalid link_type. link_type must be either 'html' or 'markdown'.")
+
+    try:
+        with open(notebook_path, 'r', encoding='utf-8') as in_f:
+            notebook = nbformat.read(in_f, as_version=4)
+    except FileNotFoundError:
+        print(f"Error: File not found - {notebook_path}")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format - {notebook_path}")
+        return
+    regex_for_sub = re.compile(r'[^0-9a-zA-Zа-яА-Я]')
+    conclusions = set(line.strip(" -.,") for line in conclusions)
+    conclusions_added = set()
+    insertions_and_new_cells = [] 
+    cell_has_ref_to_toc = False
+    conclusions_refs = []
+    # Проходим по ячейкам в обратном порядке
+    for i in range(len(notebook.cells)):
+        cell = notebook.cells[i]
+        source = cell["source"]
+        cell_has_ref_to_toc = False
+        for conclusion in conclusions:
+            if conclusion in source and conclusion not in conclusions_added:
+                conclusions_added.add(conclusion)
+                conclusion_for_ref = regex_for_sub.sub(
+                    '-', conclusion)
+                if link_type == "html":
+                    toc_conclusion = f"- <a href='#{conclusion_for_ref}'>{conclusion}</a>  \n"
+                elif link_type == "markdown":
+                    toc_conclusion = f"[- {conclusion}](#{conclusion_for_ref})  \n"
+                else:
+                    raise ValueError(
+                        "Неправильный тип ссылки. Должно быть 'markdown' или 'html'.")
+                if link_type == "html":
+                    conclusion_for_ref = f"<a name='{conclusion_for_ref}'></a>"
+                elif link_type == "markdown":
+                    conclusion_for_ref = f"<a class='anchor' id='{conclusion_for_ref}'></a>"
+                else:
+                    raise ValueError(
+                        "Неправильный тип ссылки. Должно быть 'name' или 'id'.")
+
+                conclusions_refs.append(toc_conclusion)
+                if not cell_has_ref_to_toc:
+                    conclusion_for_ref += '\n<a href="#ref-to-conclusions">Вернуться к выводам</a>'
+                new_cell = nb_v4.new_markdown_cell(conclusion_for_ref)            
+                cell_has_ref_to_toc = True
+                insertions_and_new_cells.append((i - 1, new_cell))
+
+    # Вставляем ячейки в обратном порядке, чтобы не нарушить индексы
+    for index, cell in reversed(insertions_and_new_cells):
+        notebook.cells.insert(index, cell)    
+
+    # Добавим содержание выводов
+    conclusions_refs = [
+        '**Главные выводы:**<a name="ref-to-conclusions"></a>  \n'] + conclusions_refs
+    # anomalies = [
+    #     '**Аномалии и особенности в данных:**<a name="ref-to-anomalies"></a>  \n'] + anomalies
+    conclusions_cell = nb_v4.new_markdown_cell([''.join(conclusions_refs)])
+    # anomalies_cell = nb_v4.new_markdown_cell([''.join(anomalies)])    
+    notebook.cells.insert(0, conclusions_cell) 
+    # Save the nbformat object to the file
+    if mode == 'draft':
+        output_filename_splited = notebook_path.split('.')
+        output_filename_splited[-2] += '_temp'
+        output_filename = '.'.join(output_filename_splited)
+    else:
+        output_filename = notebook_path
+    with open(output_filename, 'w', encoding='utf-8') as out_f:
+        nb_write(notebook, out_f, version=4)
+    print(f"Corrected notebook saved to {output_filename}")
+    residuals = conclusions.difference(conclusions_added)
+    if residuals:
+        print("Не удалось добавить все выводы. Не удалось добавить:")
+        for res in residuals:
+            print(res)
+              
+        
