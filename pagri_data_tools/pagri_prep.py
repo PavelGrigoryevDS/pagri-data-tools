@@ -74,6 +74,17 @@ def pretty_value(value):
 
     return f"-{result}" if is_negative else result
 
+def format_number(num):
+    if num < 1000:
+        return f"{num:.2f}"
+    elif num < 1_000_000:
+        return f"{num / 1000:.2f}k"
+    elif num < 1_000_000_000:
+        return f"{num / 1_000_000:.2f}m"
+    elif num < 1_000_000_000_000:
+        return f"{num / 1_000_000_000:.2f}b"
+    else:
+        return f"{num / 1_000_000_000_000:.2f}t"
 
 def make_widget_all_frame(df):
     dupl = df.duplicated().sum()
@@ -1246,7 +1257,19 @@ class info_gen:
             result += f".{fractional_str}"
 
         return f"-{result}" if is_negative else result        
-    
+
+    def format_number(num):
+        if num < 1000:
+            return f"{num:.2f}"
+        elif num < 1_000_000:
+            return f"{num / 1000:.2f}k"
+        elif num < 1_000_000_000:
+            return f"{num / 1_000_000:.2f}m"
+        elif num < 1_000_000_000_000:
+            return f"{num / 1_000_000_000:.2f}b"
+        else:
+            return f"{num / 1_000_000_000_000:.2f}t"    
+        
     def make_all_frame_for_html(self, df):
         dupl = df.duplicated().sum()
         duplicates = dupl
@@ -1254,7 +1277,7 @@ class info_gen:
             duplicates = "---"
             duplicates_sub_minis_origin = "---"
         else:
-            duplicates = pretty_value(duplicates)
+            duplicates = format_number(duplicates)
             duplicates_pct = dupl * 100 / df.shape[0]
             if 0 < duplicates_pct < 1:
                 duplicates_pct = "<1"
@@ -1277,7 +1300,7 @@ class info_gen:
                 .duplicated(keep=False)
                 .sum()
             )
-            duplicates_sub_minis_origin = pretty_value(dupl_sub - dupl_keep_false)
+            duplicates_sub_minis_origin = format_number(dupl_sub - dupl_keep_false)
             duplicates_sub_minis_origin_pct = (dupl_sub - dupl_keep_false) * 100 / dupl
             if 0 < duplicates_sub_minis_origin_pct < 1:
                 duplicates_sub_minis_origin_pct = "<1"
@@ -1290,7 +1313,7 @@ class info_gen:
             )
         all_rows = pd.DataFrame(
             {
-                "Rows": [pretty_value(df.shape[0])],
+                "Rows": [format_number(df.shape[0])],
                 "Features": [df.shape[1]],
                 "RAM (Mb)": [round(df.__sizeof__() / 1_048_576)],
                 "Duplicates": [duplicates],
@@ -1327,7 +1350,7 @@ class info_gen:
         if ram == 0:
             ram = "<1 Mb"
         values = column.count()
-        values = pretty_value(column.count())
+        values = format_number(column.count())
         values_pct = column.count() * 100 / column.size
         if 0 < values_pct < 1:
             values_pct = "<1"
@@ -1352,7 +1375,7 @@ class info_gen:
         if zeros == 0:
             zeros = "---"
         else:
-            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros = format_number(((column == 0) | (column == "")).sum())
             zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
             if zeros_pct == 0:
                 zeros_pct = "<1"
@@ -1361,12 +1384,12 @@ class info_gen:
         if missing == 0:
             missing = "---"
         else:
-            missing = pretty_value(column.isna().sum())
+            missing = format_number(column.isna().sum())
             missing_pct = round(column.isna().sum() * 100 / column.size)
             if missing_pct == 0:
                 missing_pct = "<1"
             missing = f"{missing} ({missing_pct}%)"
-        distinct = pretty_value(column.nunique())
+        distinct = format_number(column.nunique())
         distinct_pct = column.nunique() * 100 / column.size
         if distinct_pct > 99 and distinct_pct < 100:
             distinct_pct = round(distinct_pct, 1)
@@ -1381,7 +1404,7 @@ class info_gen:
         if duplicates == 0:
             duplicates = "---"
         else:
-            duplicates = pretty_value(duplicates)
+            duplicates = format_number(duplicates)
             duplicates_pct = column.duplicated().sum() * 100 / column.size
             if 0 < duplicates_pct < 1:
                 duplicates_pct = "<1"
@@ -1460,7 +1483,7 @@ class info_gen:
     def make_summary_for_html(self, column):
         column_name = column.name
         values = column.count()
-        values = pretty_value(column.count())
+        values = format_number(column.count())
         values_pct = column.count() * 100 / column.size
         if 0 < values_pct < 1:
             values_pct = "<1"
@@ -1475,12 +1498,12 @@ class info_gen:
         if missing == 0:
             missing = "---"
         else:
-            missing = pretty_value(column.isna().sum())
+            missing = format_number(column.isna().sum())
             missing_pct = round(column.isna().sum() * 100 / column.size)
             if missing_pct == 0:
                 missing_pct = "<1"
             missing = f"{missing} ({missing_pct}%)"
-        distinct = pretty_value(column.nunique())
+        distinct = format_number(column.nunique())
         distinct_pct = column.nunique() * 100 / column.size
         if distinct_pct > 99 and distinct_pct < 100:
             distinct_pct = round(distinct_pct, 1)
@@ -1495,7 +1518,7 @@ class info_gen:
         if zeros == 0:
             zeros = "---"
         else:
-            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros = format_number(((column == 0) | (column == "")).sum())
             zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
             if zeros_pct == 0:
                 zeros_pct = "<1"
@@ -1504,7 +1527,7 @@ class info_gen:
         if negative == 0:
             negative = "---"
         else:
-            negative = pretty_value(negative)
+            negative = format_number(negative)
             negative_pct = round((column < 0).sum() * 100 / column.size)
             if negative_pct == 0:
                 negative_pct = "<1"
@@ -1513,7 +1536,7 @@ class info_gen:
         if duplicates == 0:
             duplicates = "---"
         else:
-            duplicates = pretty_value(duplicates)
+            duplicates = format_number(duplicates)
             duplicates_pct = column.duplicated().sum() * 100 / column.size
             if 0 < duplicates_pct < 1:
                 duplicates_pct = "<1"
@@ -1542,19 +1565,19 @@ class info_gen:
         return column_summary.T.reset_index()
 
     def make_pct_for_html(self, column):
-        max_ = pretty_value(column.max())
-        q_95 = pretty_value(column.quantile(0.95))
-        q_75 = pretty_value(column.quantile(0.75))
-        median_ = pretty_value(column.median())
-        q_25 = pretty_value(column.quantile(0.25))
-        q_5 = pretty_value(column.quantile(0.05))
-        min_ = pretty_value(column.min())
+        max_ = format_number(column.max())
+        q_95 = format_number(column.quantile(0.95))
+        q_75 = format_number(column.quantile(0.75))
+        median_ = format_number(column.median())
+        q_25 = format_number(column.quantile(0.25))
+        q_5 = format_number(column.quantile(0.05))
+        min_ = format_number(column.min())
         column_summary = pd.DataFrame(
             {
                 "Max": [max_],
                 "95%": [q_95],
                 "75%": [q_75],
-                "Median": [median_],
+                "50%": [median_],
                 "25%": [q_25],
                 "5%": [q_5],
                 "Min": [min_],
@@ -1563,15 +1586,15 @@ class info_gen:
         return column_summary.T.reset_index()
 
     def make_std_for_html(self, column):
-        avg_ = pretty_value(column.mean())
+        avg_ = format_number(column.mean())
         mode_ = column.mode()
         if mode_.size > 1:
             mode_ = "---"
         else:
-            mode_ = pretty_value(mode_.iloc[0])
-        range_ = pretty_value(column.max() - column.min())
-        iQR = pretty_value(column.quantile(0.75) - column.quantile(0.25))
-        std = pretty_value(column.std())
+            mode_ = format_number(mode_.iloc[0])
+        range_ = format_number(column.max() - column.min())
+        iQR = format_number(column.quantile(0.75) - column.quantile(0.25))
+        std = format_number(column.std())
         kurt = f"{column.kurtosis():.2f}"
         skew = f"{column.skew():.2f}"
         column_summary = pd.DataFrame(
@@ -1600,7 +1623,7 @@ class info_gen:
             else:
                 pct_str = f"({x[column_name_pct]:.0%})"
             # return f"{x[column_name]:.0f} {pct_str}"
-            return f"{pretty_value(x[column_name])} {pct_str}"
+            return f"{format_number(x[column_name])} {pct_str}"
 
         top_5 = (
             pd.concat([val_cnt, val_cnt_norm], axis=1)
@@ -1634,7 +1657,7 @@ class info_gen:
             # ),
             yaxis_domain=[0, 0.9],
             yaxis2_domain=[0.9, 1],
-            margin=dict(l=10, r=0, b=0, t=0),
+            margin=dict(l=30, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
@@ -1655,7 +1678,7 @@ class info_gen:
     def make_summary_obj_for_html(self, column):
         column_name = column.name
         values = column.count()
-        values = pretty_value(column.count())
+        values = format_number(column.count())
         values_pct = column.count() * 100 / column.size
         if 0 < values_pct < 1:
             values_pct = "<1"
@@ -1670,12 +1693,12 @@ class info_gen:
         if missing == 0:
             missing = "---"
         else:
-            missing = pretty_value(column.isna().sum())
+            missing = format_number(column.isna().sum())
             missing_pct = round(column.isna().sum() * 100 / column.size)
             if missing_pct == 0:
                 missing_pct = "<1"
             missing = f"{missing} ({missing_pct}%)"
-        distinct = pretty_value(column.nunique())
+        distinct = format_number(column.nunique())
         distinct_pct = column.nunique() * 100 / column.size
         if distinct_pct > 99 and distinct_pct < 100:
             distinct_pct = round(distinct_pct, 1)
@@ -1690,7 +1713,7 @@ class info_gen:
         if zeros == 0:
             zeros = "---"
         else:
-            zeros = pretty_value(((column == 0) | (column == "")).sum())
+            zeros = format_number(((column == 0) | (column == "")).sum())
             zeros_pct = round(((column == 0) | (column == "")).sum() * 100 / column.size)
             if zeros_pct == 0:
                 zeros_pct = "<1"
@@ -1700,7 +1723,7 @@ class info_gen:
             duplicates = "---"
             duplicates_sub_minis_origin = "---"
         else:
-            duplicates = pretty_value(duplicates)
+            duplicates = format_number(duplicates)
             duplicates_pct = column.duplicated().sum() * 100 / column.size
             if 0 < duplicates_pct < 1:
                 duplicates_pct = "<1"
@@ -1723,7 +1746,7 @@ class info_gen:
             if duplicates_sub_minis_origin == 0:
                 duplicates_sub_minis_origin = "---"
             else:
-                duplicates_sub_minis_origin = pretty_value(duplicates_sub_minis_origin)
+                duplicates_sub_minis_origin = format_number(duplicates_sub_minis_origin)
                 duplicates_sub_minis_origin_pct = (
                     (duplicates_sub - duplicates_keep_false) * 100 / duplicates_sub
                 )
@@ -1788,7 +1811,7 @@ class info_gen:
         )
         fig.update_traces(marker_color="rgba(128, 60, 170, 0.8)")
         fig.update_layout(
-            margin=dict(l=10, r=0, b=0, t=0),
+            margin=dict(l=30, r=0, b=0, t=0),
             showlegend=False,
             hoverlabel=dict(
                 bgcolor="white",
@@ -1822,10 +1845,10 @@ class info_gen:
             row_for_html.append(func(df[column]))
             # display(func(df[column]))
         res_df = pd.concat(row_for_html, axis=1).T.reset_index(drop=True).T
-        res_df.insert(2, '', " "*30)
+        res_df.insert(2, '', " "*10)
         try:
-            res_df.insert(5, ' ', " "*30)
-            res_df.insert(8, '  ', " "*30)
+            res_df.insert(5, ' ', " "*10)
+            res_df.insert(8, '  ', " "*10)
         except:
             pass
         # display(res_df)
