@@ -1595,8 +1595,8 @@ class info_gen:
         range_ = format_number(column.max() - column.min())
         iQR = format_number(column.quantile(0.75) - column.quantile(0.25))
         std = format_number(column.std())
-        kurt = f"{column.kurtosis():.2f}"
-        skew = f"{column.skew():.2f}"
+        kurt = format_number(column.kurtosis())
+        skew = format_number(column.skew())
         column_summary = pd.DataFrame(
             {
                 "Avg": [avg_],
