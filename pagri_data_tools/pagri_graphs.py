@@ -3933,6 +3933,8 @@ def histograms_stacked(config, titles_for_axis=None):
         # Настройка графика
         dist_plot.update_traces(
             hovertemplate= xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')
+        box_plot.update_traces(
+            hovertemplate= xaxis_title + ' = %{x}<extra></extra>')
         # Объединяем графики
         if config['box']:
             fig = make_subplots(rows=2, cols=1, row_heights=[0.1, 0.9], shared_xaxes=True)        
@@ -3990,7 +3992,13 @@ def histograms_stacked(config, titles_for_axis=None):
         filtered_df = df[(df[num_var] >= lower_quantile) & (df[num_var] <= upper_quantile)]
             
         fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins)
-        fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')        
+        # fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')     
+        # Обновление hovertemplate для гистограммы
+        fig.update_traces(hovertemplate=xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>', 
+                          selector=dict(type='histogram'))        
+        # Обновление hovertemplate для боксплота
+        fig.update_traces(hovertemplate=xaxis_title + ' = %{x}<br><extra></extra>', 
+                          selector=dict(type='box'))             
     else:
         raise ValueError("Invalid mode. Please choose 'box' or 'normal'.")
     if config['box']:
