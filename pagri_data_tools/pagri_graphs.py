@@ -2148,7 +2148,10 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         fig.update_traces(textposition=config['textposition'])
     if config['legend_position'] == 'top':
         fig.update_layout(
-            legend = dict(
+            yaxis = dict(
+                domain=[0, 0.95]
+            )              
+            , legend = dict(
                 title_text=color_axis_label
                 , title_font_color='rgba(0, 0, 0, 0.7)'
                 , font_color='rgba(0, 0, 0, 0.7)'
