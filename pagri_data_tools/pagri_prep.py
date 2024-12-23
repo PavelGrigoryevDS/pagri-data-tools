@@ -2065,6 +2065,7 @@ def check_duplicated_combinations_gen(df, n=2):
             axis=1,
         )
         .style.format({1: "{:.0f}"}, na_rep="")
+        .set_caption("Duplicates in 3 columns")
         .hide(axis="index")
         .hide(axis="columns")
     )
@@ -2089,6 +2090,7 @@ def check_duplicated_combinations_gen(df, n=2):
                 axis=1,
             )
             .style.format({1: "{:.0f}"}, na_rep="")
+            .set_caption(f"Duplicates in {col_n} columns")
             .hide(axis="index")
             .hide(axis="columns")
         )
@@ -3623,14 +3625,15 @@ def check_missed_value_in_df(df):
     )
 
 
-def normalize_string_series(column: pd.Series) -> pd.Series:
+def normalize_string_series(column: pd.Series, symbols: list=None) -> pd.Series:
     """
     Normalize a pandas Series of strings by removing excess whitespace, trimming leading and trailing whitespace,
     and converting all words to lowercase.
 
     Args:
         column (pd.Series): The input Series of strings to normalize
-
+        symbols (list): List of symbols to remove from the input strings
+            Example: symbols = ['.', ',', '«', '»', '(', ')', '"', "'", "`"]
     Returns:
         pd.Series: The normalized Series of strings
     """
@@ -3638,7 +3641,11 @@ def normalize_string_series(column: pd.Series) -> pd.Series:
         raise ValueError("Input must be a pandas Series")
     if not isinstance(column.dropna().iloc[0], str):
         raise ValueError("Series must contain strings")
-    res = column.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)
+    res = column.copy()
+    if symbols:
+        for symbol in symbols:
+            res = res.str.replace(symbol, " ")
+    res = res.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)        
     if isinstance(column.dtype, pd.CategoricalDtype):
         res = res.astype('category')
     return res
@@ -3779,14 +3786,15 @@ def analyze_by_category_gen(df, series_for_analys, is_dash=False):
                     )
                 )
                 yield
-                yield series_for_analys[col].sample(10)
+                yield series_for_analys[col].sort_values(col, ascending=False).head(10)
         if is_dash:
             caption  = f"Sample in {col} ({cnt_for_display_in_sample:.2%})"
-            yield caption, 'sample', col, None, series_for_analys[col].sample(10)
+            yield caption, 'sample', col, None, series_for_analys[col].sort_values(col, ascending=False).head(10)
         else: 
             display(
                 series_for_analys[col]
-                .sample(5)
+                .sort_values(col, ascending=False)
+                .head(10)
                 .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
                 .set_table_styles(
                     [
@@ -4099,7 +4107,8 @@ def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=
     if mode == 'sample':
         display(
             series_for_analys[col]
-            .sample(5)
+            .sort_values(col, ascending=False)            
+            .head(10)
             .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
             .set_table_styles(
                 [
