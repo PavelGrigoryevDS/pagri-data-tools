@@ -4248,6 +4248,8 @@ def violins_stacked(config, titles_for_axis=None):
         raise ValueError("cat_var must be a string")
     if 'num_var' not in config or not isinstance(config['num_var'], str):
         raise ValueError("num_var must be a string")
+    if 'legend_var' not in config:
+        config['legend_var'] = None    
     if 'top_n' not in config:
         config['top_n'] = 5
     if 'height' not in config:
