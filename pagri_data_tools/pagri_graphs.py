@@ -4181,13 +4181,14 @@ def boxplots_stacked(config, titles_for_axis=None):
         yaxis_title = f'{titles_for_axis[num_var][0]}'
         if legend_var:
             legend_title_text = f'{titles_for_axis[legend_var][0]}'
+            title += f' и {titles_for_axis[legend_var][1]}'
 
     # Получение топ N категорий
     if not sort:
         categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
     else:
         categories = df[cat_var].cat.categories.tolist()[:top_n]
-
+    df = df[df[cat_var].isin(categories)]
     # Создание графика
     fig = go.Figure()
 
