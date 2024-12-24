@@ -4147,25 +4147,40 @@ def boxplots_stacked(config, titles_for_axis=None):
         config['upper_quantile'] = 1           
     if 'sort' not in config:
         config['sort'] = False     
-        
+    if 'legend_var' not in config:
+        config['legend_var'] = None            
+    if 'legend_position' not in config:
+        config['legend_position'] = 'top'
+    if 'lower_quantile' not in config:
+        config['lower_quantile'] = 0.01            
+    if 'upper_quantile' not in config:
+        config['upper_quantile'] = 0.99      
     df = config['df']
     cat_var = config['cat_var']
     num_var = config['num_var']
+    legend_var = config['legend_var']
     top_n = config['top_n']
     sort = config['sort']
     height = config['height']
     width = config['width']
     lower_quantile = config['lower_quantile']
     upper_quantile = config['upper_quantile']    
-    
+    def trim_by_quantiles(group):
+        lower_bound = group.quantile(lower_quantile)
+        upper_bound = group.quantile(upper_quantile)
+        return group[(group >= lower_bound) & (group <= upper_bound)]        
     if not titles_for_axis:
         title = f'Распределение {num_var} в зависимости от {cat_var}'
         xaxis_title = cat_var
         yaxis_title = num_var
+        if legend_var:
+            legend_title_text = legend_var
     else:
         title = f'Распределение {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
         xaxis_title = f'{titles_for_axis[cat_var][0]}'
         yaxis_title = f'{titles_for_axis[num_var][0]}'
+        if legend_var:
+            legend_title_text = f'{titles_for_axis[legend_var][0]}'
 
     # Получение топ N категорий
     if not sort:
@@ -4176,24 +4191,61 @@ def boxplots_stacked(config, titles_for_axis=None):
     # Создание графика
     fig = go.Figure()
 
-    # Проход по каждой категории и построение боксплота
-    for category in categories:
-        data = df[df[cat_var] == category][num_var]
-        if data.count() == 0:
-            continue
-        lower_bound = data.quantile(lower_quantile)
-        upper_bound = data.quantile(upper_quantile)
-        data = data[(data >= lower_bound) & (data <= upper_bound)]        
-        fig.add_trace(go.Box(
-            y=data,
-            name=str(category),
-            # boxmean='sd',  # Отображение среднего и стандартного отклонения
-            orientation='v',
-            notched = True,
-        ))
+    # Применение функции к каждой категории
+    columns_for_groupby = [cat_var]
+    if legend_var:
+        columns_for_groupby.append(legend_var)
+    trimmed_df = df.groupby(columns_for_groupby, observed=True)[num_var].apply(trim_by_quantiles).reset_index()
+    fig = px.box(trimmed_df, x=cat_var, y=num_var, color=legend_var)
+    # # Проход по каждой категории и построение боксплота
+    # for category in categories:
+    #     data = df[df[cat_var] == category][num_var]
+    #     if data.count() == 0:
+    #         continue
+    #     lower_bound = data.quantile(lower_quantile)
+    #     upper_bound = data.quantile(upper_quantile)
+    #     data = data[(data >= lower_bound) & (data <= upper_bound)]        
+    #     fig.add_trace(go.Box(
+    #         y=data,
+    #         name=str(category),
+    #         # boxmean='sd',  # Отображение среднего и стандартного отклонения
+    #         orientation='v',
+    #         notched = True,
+    #     ))
     # Настройка графика
-
-    fig.update_traces(showlegend=False, marker_color='rgba(128, 60, 170, 0.9)')
+    if legend_var:
+        showlegend = True
+        if config['legend_position'] == 'top':
+            fig.update_layout(
+                legend = dict(
+                    title_text=legend_title_text
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="h"  # Горизонтальное расположение
+                    , yanchor="top"    # Привязка к верхней части
+                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , xanchor="center" # Привязка к центру
+                    , x=0.5              # Центрирование по горизонтали                       
+                )     
+            )    
+        elif config['legend_position'] == 'right':
+            fig.update_layout(
+                    legend = dict(
+                    title_text=legend_title_text
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="v"  # Горизонтальное расположение
+                    # , yanchor="bottom"    # Привязка к верхней части
+                    , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                    # , xanchor="center" # Привязка к центру
+                    # , x=0.5              # Центрирование по горизонтали
+                )
+            )
+        else:
+            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")                   
+    else:
+        showlegend = False
+    fig.update_traces(showlegend=showlegend) #, marker_color='rgba(128, 60, 170, 0.9)')
     #     hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>')
     # Настройка графика
     fig.update_layout(
@@ -4248,8 +4300,6 @@ def violins_stacked(config, titles_for_axis=None):
         raise ValueError("cat_var must be a string")
     if 'num_var' not in config or not isinstance(config['num_var'], str):
         raise ValueError("num_var must be a string")
-    if 'legend_var' not in config:
-        config['legend_var'] = None    
     if 'top_n' not in config:
         config['top_n'] = 5
     if 'height' not in config:
