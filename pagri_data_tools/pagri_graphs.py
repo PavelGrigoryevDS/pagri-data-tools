@@ -3184,7 +3184,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     if 'column_for_legend' not in config:
         config['column_for_legend'] = None      
     if 'legend_position' not in config:
-        config['legend_position'] = 'top'                                        
+        config['legend_position'] = 'top'   
+    if 'swap_axis_legend' not in config:
+        config['swap_axis_legend'] = True                                              
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
@@ -3193,15 +3195,15 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
         if config['column_for_legend']:
             config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
-            column_for_legend_label_for_title= titles_for_axis[config['column_for_legend']][1]
+            column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
             temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
         else:
             config['column_for_legend_label'] = None
             temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
         if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f" c нормализацией по {titles_for_axis[config['column_for_legend']][2]}"
+            config['title'] = temp_title + f" c нормализацией"
         elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f" c нормализацией по {titles_for_axis[config['column_for_axis']][2]}"
+            config['title'] = temp_title + f" c нормализацией"
         else:
             config['title'] = temp_title        
     else:
@@ -3223,9 +3225,14 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             crosstab_for_figs = crosstab_for_figs.T
             sum_for_normolized = crosstab_for_figs.sum()           
         crosstab_for_figs_all = crosstab_for_figs * 100 / sum_for_normolized
+        if config['normalized_mode'] in ['row', 'col']:
+            crosstab_for_figs_all = crosstab_for_figs_all.T
+            crosstab_for_figs = crosstab_for_figs.T
         crosstab_for_figs_all = pd.concat(
-            [crosstab_for_figs_all, crosstab_for_figs], axis=1, keys=['data', 'customdata'])
-        crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all.sum(axis=1)
+            [crosstab_for_figs_all, crosstab_for_figs], axis=1, keys=['data', 'customdata'])      
+        crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all['data'].max(axis=1)
+        # display(crosstab_for_figs_all)        
+        # display(crosstab_for_figs_all)  
         if config['sort_axis'] :
             max_sum_index = 0        
             crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
@@ -3291,14 +3298,18 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         xaxis_title = 'Доля'
         yaxis_title = column_for_axis_label
         legend_title_text = column_for_legend_label    
-        if normalized_mode == 'row':
+        if config['column_for_legend'] and config['normalized_mode'] in ['col']:
             legend_title_text, yaxis_title = yaxis_title, legend_title_text    
     else:
         xaxis_title = column_for_axis_label
         yaxis_title = 'Доля'
         legend_title_text = column_for_legend_label
-        if normalized_mode == 'row':
+        if config['column_for_legend'] and config['normalized_mode'] in ['col']:
             xaxis_title, legend_title_text = legend_title_text, xaxis_title
+    if config['column_for_legend'] and config['normalized_mode'] in ['col']:
+        column_for_axis_label, column_for_legend_label = column_for_legend_label, column_for_axis_label
+        # if orientation == 'h':
+            
     fig = px.bar(
         data_for_fig, barmode=config['barmode'], orientation=orientation, title=title)
     fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)
