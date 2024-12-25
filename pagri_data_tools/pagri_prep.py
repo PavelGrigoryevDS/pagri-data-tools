@@ -1790,11 +1790,10 @@ class info_gen:
 
         def make_value_counts_row(x):
             if x[column_name_pct] < 0.01:
-                pct_str = "<1%"
+                pct_str = "(<1%)"
             else:
                 pct_str = f"({x[column_name_pct]:.0%})"
-            return f"{x[column_name]} {pct_str}"
-
+            return f"{x[column_name][:30]} {pct_str}"
         top_5 = (
             pd.concat([val_cnt, val_cnt_norm], axis=1)
             .reset_index()
