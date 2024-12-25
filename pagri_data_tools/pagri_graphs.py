@@ -2769,7 +2769,7 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
         yield fig
             
             
-def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None):
+def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None, category=None, legend_position='top'):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
@@ -2782,6 +2782,8 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
     vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
     rows (int, optional): Number of rows in the subplot grid. Defaults to None.
     cols (int, optional): Number of columns in the subplot grid. Defaults to None.
+    category (str, optional): Category column for coloring the scatter plots. Defaults to None.
+    legend_position (str, optional): Position of the legend. Defaults to 'top'.
 
     Returns:
     fig (plotly.graph_objs.Figure): The resulting pairplot figure
@@ -2807,10 +2809,11 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
                 "The number of rows and columns is not enough to accommodate all combinations")
         rows = rows
         cols = cols
-
     fig = make_subplots(
         rows=rows, cols=cols, horizontal_spacing=horizontal_spacing, vertical_spacing=vertical_spacing)
-
+    colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
+                        '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
+                        '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4']
     for i, (col1, col2) in enumerate(combinations):
         row, col = divmod(i, cols)
         if titles_for_axis:
@@ -2819,12 +2822,14 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         else:
             xaxes_title = col1
             yaxes_title = col2
-        fig_scatter = px.scatter(df, x=col1, y=col2)
+        fig_scatter = px.scatter(df, x=col1, y=col2, color=category)
         fig_scatter.update_traces(marker=dict(
             line=dict(color='white', width=0.5)))
         fig_scatter.update_traces(
             hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}')
-        fig.add_trace(fig_scatter.data[0], row=row+1, col=col+1)
+        for trace, color in  zip(fig_scatter.data, colorway_for_line):    
+            trace.marker.color = color
+            fig.add_trace(trace, row=row+1, col=col+1)
         fig.update_xaxes(
             title_text=xaxes_title,
             title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
@@ -2868,7 +2873,34 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"),
     )
-
+    if legend_position == 'top':
+        fig.update_layout(
+            legend = dict(
+                title_text=titles_for_axis[category]
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали                       
+            )     
+        )    
+    elif legend_position == 'right':
+        fig.update_layout(
+                legend = dict(
+                title_text=titles_for_axis[category]
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="v"  # Горизонтальное расположение
+                # , yanchor="bottom"    # Привязка к верхней части
+                , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                # , xanchor="center" # Привязка к центру
+                # , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    else:
+        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")        
     return fig
             
 def heatmap_categories(config: dict, titles_for_axis: dict = None):
