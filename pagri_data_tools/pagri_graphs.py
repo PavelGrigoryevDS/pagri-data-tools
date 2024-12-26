@@ -1939,8 +1939,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     if 'textposition' not in config:
         config['textposition'] = None   
     if 'legend_position' not in config:
-        config['legend_position'] = 'top'          
-                        
+        config['legend_position'] = 'right'          
+    if 'decimal_places' not in config:                        
+        config['decimal_places'] = 1
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
@@ -1990,13 +1991,15 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     if not isinstance(config['category'], str) and config['category'] is not None:
         raise ValueError("category must be a string")
 
-    def human_readable_number(x):
+    def human_readable_number(x, decimal_places):
+        format_string = f"{{:.{decimal_places}f}}"
+        
         if x >= 1e6 or x <= -1e6:
-            return f"{x/1e6:.1f} M"
+            return f"{format_string.format(x / 1e6)} M"
         elif x >= 1e3 or x <= -1e3:
-            return f"{x/1e3:.1f} k"
+            return f"{format_string.format(x / 1e3)} k"
         else:
-            return f"{x:.1f}"
+            return format_string.format(x)
 
     def prepare_df(config: dict):
         df = config['df']
@@ -2052,9 +2055,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     custom_data = [df_for_fig['count']]
     if 'text' in config and config['text']:
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            text = [human_readable_number(el) for el in y]
+            text = [human_readable_number(el, config['decimal_places']) for el in y]
         else:
-            text = [human_readable_number(el) for el in x]
+            text = [human_readable_number(el, config['decimal_places']) for el in x]
     else:
         text = None
     # display(df_for_fig)
@@ -2210,6 +2213,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
         - legend_position (str): Положение легенды ('top', 'right')
+        - decimal_places (int): The number of decimal places to display (default is 2).
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
