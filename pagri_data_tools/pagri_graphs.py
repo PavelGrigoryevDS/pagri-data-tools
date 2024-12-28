@@ -1942,6 +1942,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['legend_position'] = 'right'          
     if 'decimal_places' not in config:                        
         config['decimal_places'] = 1
+    if 'show_group_size' not in config:
+        config['show_group_size'] = False
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
@@ -2094,8 +2096,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             '%{x:.4s}<br>' + hovertemplate_y + '%{y}'
     if config['category']:
         hovertemplate += hovertemplate_color + '%{data.name}'
-    hovertemplate += f'<br>Размер группы '
-    hovertemplate += '%{customdata[0]}'
+    if config['show_group_size']:
+        hovertemplate += f'<br>Размер группы '
+        hovertemplate += '%{customdata[0]}'
     # hovertemplate += f'<br>cnt_in_sum_pct = '
     # hovertemplate += '%{customdata[1]}'
     hovertemplate += '<extra></extra>'
@@ -2214,6 +2217,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
         - legend_position (str): Положение легенды ('top', 'right')
         - decimal_places (int): The number of decimal places to display (default is 2).
+        - show_group_size (bool):  Whether to show the group size (default is False).
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
@@ -2285,6 +2289,7 @@ def line(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - show_group_size (bool):  Whether to show the group size (default is False).
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
@@ -2356,6 +2361,7 @@ def area(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - show_group_size (bool):  Whether to show the group size (default is False).
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
