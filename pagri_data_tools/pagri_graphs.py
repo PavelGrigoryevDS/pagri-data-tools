@@ -4443,7 +4443,7 @@ def violins_stacked(config, titles_for_axis=None):
         xaxis=dict(
             visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         ), yaxis=dict(
-            range=[0, None], visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+            visible=True, showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
         ),          
     )
     return fig
