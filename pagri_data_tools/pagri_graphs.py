@@ -11,6 +11,7 @@ from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 from scipy.stats import gaussian_kde
 import plotly.figure_factory as ff
+from scipy.stats import t
 
 pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -4447,3 +4448,69 @@ def violins_stacked(config, titles_for_axis=None):
         ),          
     )
     return fig
+
+def plot_confidence_intervals(df, categorical_col, numerical_col, confidence_level=0.95, orientation='vertical', height=600, width=800, titles_for_axis=None):
+    """
+    Функция для построения графика с средними значениями и доверительными интервалами с использованием t-статистики.
+
+    Параметры:
+    df (pd.DataFrame): Входной DataFrame.
+    categorical_col (str): Название категориальной переменной.
+    numerical_col (str): Название числовой переменной.
+    confidence_level (float): Уровень доверия для доверительного интервала (по умолчанию 0.95).
+    orientation (str): Ориентация графика ('vertical' или 'horizontal').
+    
+    Пример словаря для подписей осей и заголовка:
+    titles_for_axis = dict(
+        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
+        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
+        # для функций count и nunique пишем - Количество <чего / кого количество> - и также с маленькой буквы, цифра 0 в качестве рода
+        body_mass_g = ['Вес', 'вес', 1]
+        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
+        # Распределение долей по городу и тарифу с нормализацией по городу
+        , island = ['Остров', 'острова', 'острову']
+    )
+    """
+    func_for_title = ['Среднее', 'Средний', 'Средняя', 'Средние']
+    suffix_type = titles_for_axis[numerical_col][2]
+    if not titles_for_axis:
+        title = f'Среднее {numerical_col} в зависимости от {categorical_col} с {int(confidence_level*100)}% доверительными интервалами'
+        xaxis_title = categorical_col
+        yaxis_title = numerical_col
+    else:
+        title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
+        xaxis_title = f'{titles_for_axis[categorical_col][0]}'
+        yaxis_title = f'{titles_for_axis[numerical_col][0]}'
+    # Группируем данные и вычисляем среднее, стандартное отклонение и количество наблюдений
+    summary_df = df.groupby(categorical_col)[numerical_col].agg(["mean", "std", "count"]).reset_index()
+    # Вычисляем t-статистику для заданного уровня доверия
+    degrees_of_freedom = summary_df["count"] - 1  # Степени свободы
+    alpha = 1 - confidence_level  # Уровень значимости
+    t_score = t.ppf(1 - alpha / 2, degrees_of_freedom)  # t-статистика
+    
+    # Вычисляем доверительный интервал
+    summary_df["ci"] = t_score * summary_df["std"] / (summary_df["count"] ** 0.5)
+    
+    # Определяем ориентацию графика
+    if orientation == 'v':
+        x_col = categorical_col
+        y_col = "mean"
+        if titles_for_axis:
+            hovertemplate = 'Среднее = %{y}<br>' + f'{titles_for_axis[categorical_col][0]} = ' + '%{x}'
+    elif orientation == 'h':
+        x_col = "mean"
+        y_col = categorical_col
+        xaxis_title, yaxis_title = yaxis_title, xaxis_title
+        if titles_for_axis:
+            hovertemplate = 'Среднее = %{x}<br>' + f'{titles_for_axis[categorical_col][0]} = ' + '%{y}'
+    else:
+        raise ValueError("Ориентация должна быть 'vertical' или 'horizontal'.")
+    # error_y в scatter-графике (точечном графике) вы указываете значение, которое определяет длину отрезка (ошибки) вокруг каждой точки по оси Y.
+    # Создаем график
+    fig = px.scatter(summary_df, x=x_col, y=y_col, 
+                     error_y="ci" if orientation == 'v' else None,
+                     error_x="ci" if orientation == 'h' else None
+    )
+    fig.update_traces(hovertemplate=hovertemplate)
+    fig.update_layout(height=height, width=width, title_text=title, xaxis_title=xaxis_title, yaxis_title=yaxis_title)
+    return plotly_default_settings(fig)
