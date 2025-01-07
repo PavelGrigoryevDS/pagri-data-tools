@@ -1194,6 +1194,41 @@ def tukey_hsd_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
     tukey = pairwise_tukeyhsd(endog=values, groups=labels, alpha=alpha)
     print(tukey)
 
+def games_howell_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
+    """
+    Perform a Games-Howell test for pairwise comparisons.
+    This test is used to identify significant differences between groups when variances are unequal.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing two columns,
+        where the first column contains labels and
+        the second column contains corresponding values
+    - alpha (float, optional): Significance level (default: 0.05)
+
+    Returns:
+    - None
+    """
+    # Input validation
+    if alpha < 0 or alpha > 1:
+        raise Exception(f"alpha must be between 0 and 1, but got {alpha}")
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input df must be pd.DataFrame")
+    if df.shape[1] != 2:
+        raise ValueError("Input DataFrame must have exactly two columns")
+    labels = df.iloc[:, 0]
+    values = df.iloc[:, 1]
+    if not pd.api.types.is_numeric_dtype(values):
+        raise ValueError("Value column must contain numeric values")
+    if labels.isna().sum() or values.isna().sum():
+        raise ValueError(
+            f'labels and values must not have missing values.\nlabels have {labels.isna().sum()} missing values\nvalues have {values.isna().sum()} missing values')
+    unique_labels = labels.unique()
+    if len(unique_labels) < 2:
+        raise ValueError("Labels must contain at least two unique values")
+
+    # Perform Games-Howell test
+    gh_test = pg.pairwise_gameshowell(data=df, dv=df.columns[1], between=df.columns[0], alpha=alpha)
+    print(gh_test)
 
 def anova_oneway_welch_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = False) -> None:
     """
