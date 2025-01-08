@@ -247,6 +247,8 @@ def linear_regression_with_vif(df: pd.DataFrame, target_column: str) -> None:
     y = df_tmp[target_column]
 
     # Add a constant term to the independent variables
+    # This operation is necessary to allow the OLS model to capture the effect of the constant term on the dependent variable, 
+    # as assuming it is zero when all independent variables are zero may not always be accurate.
     X = sm.add_constant(X)
 
     # Fit OLS model with HC1 standard errors
