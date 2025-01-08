@@ -2325,7 +2325,7 @@ def confint_proportion_coluns_2sample_statsmodels(column: pd.Series, alpha: floa
 def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
                            stat_func: callable = np.mean,
                            bootstrap_conf_level: float = 0.95,
-                           num_boot: int = 1000,
+                           num_boot: int = 10000,
                            alpha: float = 0.05,
                            p_value_method: str = 'normal_approx',
                            plot: bool = True,
@@ -2339,7 +2339,7 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
     - sample1, sample2: pd.Series, two samples to compare
     - stat_func: callable, statistical function to apply to each bootstrap sample (default: np.mean)
     - bootstrap_conf_level: float, significance level for confidence interval (must be between 0 and 1 inclusive) (default: 0.95)
-    - num_boot: int, number of bootstrap iterations (default: 1000)
+    - num_boot: int, number of bootstrap iterations (default: 10000)
     - alpha (float, optional): Significance level (default: 0.05)
     - p_value_method: str, method for calculating the p-value (default: 'normal_approx', options: 'normal_approx', 'kde')
     - plot: bool, whether to show the plot of the bootstrap distribution (default: True)
