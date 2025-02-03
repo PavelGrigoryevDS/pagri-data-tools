@@ -12,7 +12,7 @@ from tqdm.auto import tqdm
 import itertools
 from pymystem3 import Mystem
 import io
-import base64
+import base64 
 
 def count_share(series: pd.Series) -> str:
     """
@@ -1853,7 +1853,7 @@ class info_gen:
         # display(res_df)
         res_df = res_df.fillna('')
         if self.only_summary:
-            res_df_caption = f'Summary for "{column}'
+            res_df_caption = f'Summary for "{column}"'
         else:
             if pd.api.types.is_numeric_dtype(df[column]):
                 res_df_caption = f'Статистика и гистограмма столбца "{column}"'
@@ -1933,7 +1933,7 @@ class info_gen:
         return final_html
 
 
-def check_duplicated(df):
+def check_duplicated(df, is_return_df=True):
     """
     Функция проверяет датафрейм на дубли.
     Если дубли есть, то возвращает датафрейм с дублями.
@@ -1942,6 +1942,9 @@ def check_duplicated(df):
     size = df.shape[0]
     if dupl == 0:
         return "no duplicates"
+    if not is_return_df:
+        return f"Duplicated is {dupl} ({(dupl / size):.1%}) rows"
+
     print(f"Duplicated is {dupl} ({(dupl / size):.1%}) rows")
     # приводим строки к нижнему регистру, удаляем пробелы
     return (
@@ -2097,7 +2100,7 @@ def check_duplicated_combinations_gen(df, n=2):
             return
 
 
-def find_columns_with_missing_values(df) -> pd.Series:
+def find_columns_with_missing_values(df, is_display=True) -> pd.Series:
     """
     Фукнция проверяет каждый столбец в таблице,
     если есть пропуски, то помещает строки исходного
@@ -2114,6 +2117,11 @@ def find_columns_with_missing_values(df) -> pd.Series:
         if is_na.any():
             dfs_na[col] = df[is_na]
             cnt_missing[col] = dfs_na[col].shape[0]
+    if not is_display:
+        if cnt_missing.empty:
+            return 'no missings'
+        else:
+            return 'there are missings'
     if cnt_missing.empty:
         print('There are no missing values')
     else:            
@@ -2839,7 +2847,7 @@ def get_outlier_proportion_by_category_modified_z_score(
     )
 
 
-def find_columns_with_negative_values(df) -> pd.Series:
+def find_columns_with_negative_values(df, df_name=None) -> pd.Series:
     """
     Фукнция проверяет каждый столбец в таблице,
     если есть отрицательные значения, то помещает строки исходного
@@ -2858,12 +2866,17 @@ def find_columns_with_negative_values(df) -> pd.Series:
             dfs_na[col] = df[is_negative]
             cnt_negative[col] = dfs_na[col].shape[0]
     if cnt_negative.empty:
+        if df_name:
+            return
         print('There are no negative values')
     else:
-        display(
-            cnt_negative.apply(lambda x: f"{x} ({(x / size):.2%})")
+        if df_name:
+            caption = f'Negative in "{df_name}"'
+        else:
+            caption = 'Negative'
+        display(cnt_negative.apply(lambda x: f"{x} ({(x / size):.2%})")
             .to_frame()
-            .style.set_caption("Negative")
+            .style.set_caption(caption)
             .set_table_styles(
                 [
                     {
@@ -2876,9 +2889,10 @@ def find_columns_with_negative_values(df) -> pd.Series:
                     }
                 ]
             )
-            .hide(axis="columns")
-        )
-    return dfs_na
+            .hide(axis="columns"))
+    if not df_name:
+        return dfs_na
+
 
 
 def get_negative_proportion_by_category(
@@ -3061,7 +3075,7 @@ def negative_by_category_gen(df, series_negative):
             yield
 
 
-def find_columns_with_zeros_values(df) -> pd.Series:
+def find_columns_with_zeros_values(df, df_name=None) -> pd.Series:
     """
     Фукнция проверяет каждый столбец в таблице,
     если есть нулевые значения, то помещает строки исходного
@@ -3080,12 +3094,18 @@ def find_columns_with_zeros_values(df) -> pd.Series:
             dfs_na[col] = df[is_zeros]
             cnt_zeros[col] = dfs_na[col].shape[0]
     if cnt_zeros.empty:
+        if df_name:
+            return
         print('There are no zeros values')
-    else:            
+    else:
+        if df_name:
+            caption = f'Zeros in "{df_name}"'
+        else:
+            caption = 'Zeros'
         display(
             cnt_zeros.apply(lambda x: f"{x} ({(x / size):.2%})")
             .to_frame()
-            .style.set_caption("Zeros")
+            .style.set_caption(caption)
             .set_table_styles(
                 [
                     {
@@ -3100,7 +3120,8 @@ def find_columns_with_zeros_values(df) -> pd.Series:
             )
             .hide(axis="columns")
         )
-    return dfs_na
+    if not df_name:
+        return dfs_na
 
 
 def get_zeros_proportion_by_category(

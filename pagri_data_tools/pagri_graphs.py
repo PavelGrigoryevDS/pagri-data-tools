@@ -12,7 +12,7 @@ from dash.dependencies import Input, Output
 from scipy.stats import gaussian_kde
 import plotly.figure_factory as ff
 from scipy.stats import t
-
+ 
 pio.renderers.default = "notebook"
 colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -1907,6 +1907,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         raise ValueError("func must be a string")
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
+    if 'is_resample' in config and 'resample_freq' not in config:
+        raise ValueError("resample_freq must be define")
     if 'func' not in config:
         config['func'] = None
     if 'barmode' not in config:
@@ -1945,40 +1947,43 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['decimal_places'] = 1
     if 'show_group_size' not in config:
         config['show_group_size'] = False
+    if 'is_resample' not in config:
+        config['is_resample'] = False
+    if 'title' not in config:
+        config['title'] = None
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
     if titles_for_axis:
-        if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
-            raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
-        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
-            'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
-            , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
-        config['x_axis_label'] = titles_for_axis[config['x']][0]
-        config['y_axis_label'] = titles_for_axis[config['y']][0]
+        # if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
+        #     raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
+        # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+        #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
+        #     , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
+        config['x_axis_label'] = titles_for_axis[config['x']]
+        config['y_axis_label'] = titles_for_axis[config['y']]
         config['category_axis_label'] = titles_for_axis[config['category']
-                                                ][0] if 'category' in config else None
-        func = config['func']
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            numeric = titles_for_axis[config["y"]][1]
-            cat = titles_for_axis[config["x"]][1]
-            suffix_type = titles_for_axis[config["y"]][2]
-        else:
-            numeric = titles_for_axis[config["x"]][1]
-            cat = titles_for_axis[config["y"]][1]
-            suffix_type = titles_for_axis[config["x"]][2]
-        if func == 'nunique':
-            numeric_list = numeric.split()[1:]
-            title = f'Количество уникальных {' '.join(numeric_list)}'
-            title += f' в зависимости от {cat}'
-        elif func is None:
-            title = f' {numeric.capitalize()} в зависимости от {cat}'
-        else:
-            title = f'{func_for_title[func][suffix_type]}'
-            title += f' {numeric} в зависимости от {cat}'
-        if 'category' in config and config['category']:
-            title += f' и {titles_for_axis[config["category"]][1]}'
-        config['title'] = title
+                                                ] if 'category' in config else None
+        # func = config['func']
+        # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+        #     numeric = titles_for_axis[config["y"]][1]
+        #     cat = titles_for_axis[config["x"]][1]
+        #     suffix_type = titles_for_axis[config["y"]][2]
+        # else:
+        #     numeric = titles_for_axis[config["x"]][1]
+        #     cat = titles_for_axis[config["y"]][1]
+        #     suffix_type = titles_for_axis[config["x"]][2]
+        # if func == 'nunique':
+        #     numeric_list = numeric.split()[1:]
+        #     title = f'Количество уникальных {' '.join(numeric_list)}'
+        #     title += f' в зависимости от {cat}'
+        # elif func is None:
+        #     title = f' {numeric.capitalize()} в зависимости от {cat}'
+        # else:
+        #     title = f'{func_for_title[func][suffix_type]}'
+        #     title += f' {numeric} в зависимости от {cat}'
+        # if 'category' in config and config['category']:
+        #     title += f' и {titles_for_axis[config["category"]][1]}'
     else:
         if 'x_axis_label' not in config:
             config['x_axis_label'] = None
@@ -2042,41 +2047,108 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
 
 
         return func_df.rename(columns={'num': num_column})
-    df_for_fig = prepare_df(config)
-    if config['top_n_trim_axis']:
-        df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
-    # if config['top_n_trim_legend']:
-    #     df_for_fig = pd.concat([df_for_fig['data'].iloc[:, :config['top_n_trim_legend']], df_for_fig['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
-    # display(df_for_fig)
-    x = df_for_fig[config['x']].values
-    y = df_for_fig[config['y']].values
     x_axis_label = config['x_axis_label']
     y_axis_label = config['y_axis_label']
     color_axis_label = config['category_axis_label']
-    color = df_for_fig[config['category']
-                       ].values if config['category'] else None
-    custom_data = [df_for_fig['count']]
-    if 'text' in config and config['text']:
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            text = [human_readable_number(el, config['decimal_places']) for el in y]
+    if config['is_resample']:
+        if config['func'] is None:
+            func = 'first'
         else:
-            text = [human_readable_number(el, config['decimal_places']) for el in x]
+            func = config['func']
+        columns = [config['x'], config['y']]
+        if config['category']:
+            columns.append(config['category'])
+        df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
+        # x = config['df'][config['x']].values
+        # y = config['df'][config['y']].values
+        if graph_type == 'bar':
+            fig = px.bar(df_for_fig, x=config['x'], y=config['y'], color=config['category'],
+                        barmode=config['barmode'])
+        elif graph_type == 'line':
+            fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
+        elif graph_type == 'area':
+            fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
     else:
-        text = None
-    # display(df_for_fig)
-    # display(custom_data)
-    if graph_type == 'bar':
-        fig = px.bar(x=x, y=y, color=color,
-                    barmode=config['barmode'], text=text, custom_data=custom_data)
-    elif graph_type == 'line':
-        fig = px.line(x=x, y=y, color=color,
-                    text=text, custom_data=custom_data)   
-    elif graph_type == 'area':
-        fig = px.area(x=x, y=y, color=color,
-                    text=text, custom_data=custom_data)               
-    color = []
-    for trace in fig.data:
-        color.append(trace.marker.color)
+        df_for_fig = prepare_df(config)
+        if config['top_n_trim_axis']:
+            df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
+        # if config['top_n_trim_legend']:
+        #     df_for_fig = pd.concat([df_for_fig['data'].iloc[:, :config['top_n_trim_legend']], df_for_fig['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
+        # display(df_for_fig)
+        x = df_for_fig[config['x']].values
+        y = df_for_fig[config['y']].values
+        color = df_for_fig[config['category']
+                        ].values if config['category'] else None
+        custom_data = [df_for_fig['count']]
+        if 'text' in config and config['text']:
+            if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+                text = [human_readable_number(el, config['decimal_places']) for el in y]
+            else:
+                text = [human_readable_number(el, config['decimal_places']) for el in x]
+        else:
+            text = None
+        # display(df_for_fig)
+        # display(custom_data)
+        if graph_type == 'bar':
+            fig = px.bar(x=x, y=y, color=color,
+                        barmode=config['barmode'], text=text, custom_data=custom_data)
+        elif graph_type == 'line':
+            fig = px.line(x=x, y=y, color=color,
+                        text=text, custom_data=custom_data)   
+        elif graph_type == 'area':
+            fig = px.area(x=x, y=y, color=color,
+                        text=text, custom_data=custom_data)               
+        color = []
+        for trace in fig.data:
+            color.append(trace.marker.color)
+        if graph_type == 'bar':
+            fig.update_traces(textposition='auto')
+        elif graph_type == 'line':
+            fig.update_traces(textposition='top center')
+        elif graph_type == 'area':
+            fig.update_traces(textposition='top center')   
+        if pd.api.types.is_numeric_dtype(config['df'][config['x']]):
+            # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
+            traces = list(fig.data)
+            traces.sort(key=lambda x: x.x[-1])
+            fig.data = traces
+            color = color[::-1]
+            for i, trace in enumerate(fig.data):
+                trace.marker.color = color[i]
+            fig.update_layout(legend={'traceorder': 'reversed'})
+        if config['textposition']:
+            fig.update_traces(textposition=config['textposition'])
+        if config['legend_position'] == 'top':
+            fig.update_layout(
+                yaxis = dict(
+                    domain=[0, 0.95]
+                )              
+                , legend = dict(
+                    title_text=color_axis_label
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="h"  # Горизонтальное расположение
+                    , yanchor="top"    # Привязка к верхней части
+                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , xanchor="center" # Привязка к центру
+                    , x=0.5              # Центрирование по горизонтали                       
+                )     
+            )    
+        elif config['legend_position'] == 'right':
+            fig.update_layout(
+                    legend = dict(
+                    title_text=color_axis_label
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="v"  # Горизонтальное расположение
+                    # , yanchor="bottom"    # Привязка к верхней части
+                    , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
+                    # , xanchor="center" # Привязка к центру
+                    # , x=0.5              # Центрирование по горизонтали
+                )
+            )
+        else:
+            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")       
     if x_axis_label:
         hovertemplate_x = f'{x_axis_label} = '
     else:
@@ -2107,13 +2179,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         family='Segoe UI', size=config['textsize']  # Размер шрифта
         # color='black'  # Цвет текста
     ) # Положение текстовых меток (outside или inside))
-    )
-    if graph_type == 'bar':
-        fig.update_traces(textposition='auto')
-    elif graph_type == 'line':
-        fig.update_traces(textposition='top center')
-    elif graph_type == 'area':
-        fig.update_traces(textposition='top center')   
+    )        
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
         # , margin=dict(l=50, r=50, b=50, t=70)
@@ -2141,49 +2207,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         legend=dict(
             title_font_color="rgba(0, 0, 0, 0.5)", font_color="rgba(0, 0, 0, 0.5)"
         )
-    )
-    if pd.api.types.is_numeric_dtype(config['df'][config['x']]):
-        # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
-        traces = list(fig.data)
-        traces.sort(key=lambda x: x.x[-1])
-        fig.data = traces
-        color = color[::-1]
-        for i, trace in enumerate(fig.data):
-            trace.marker.color = color[i]
-        fig.update_layout(legend={'traceorder': 'reversed'})
-    if config['textposition']:
-        fig.update_traces(textposition=config['textposition'])
-    if config['legend_position'] == 'top':
-        fig.update_layout(
-            yaxis = dict(
-                domain=[0, 0.95]
-            )              
-            , legend = dict(
-                title_text=color_axis_label
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="h"  # Горизонтальное расположение
-                , yanchor="top"    # Привязка к верхней части
-                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-                , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали                       
-            )     
-        )    
-    elif config['legend_position'] == 'right':
-        fig.update_layout(
-                legend = dict(
-                title_text=color_axis_label
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="v"  # Горизонтальное расположение
-                # , yanchor="bottom"    # Привязка к верхней части
-                , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
-                # , xanchor="center" # Привязка к центру
-                # , x=0.5              # Центрирование по горизонтали
-            )
-        )
-    else:
-        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")         
+    )      
     return fig    
             
 def bar(config: dict, titles_for_axis: dict = None):
