@@ -937,4 +937,55 @@ def add_conclusions(notebook_path: str, conclusions: list, mode: str = 'draft', 
         for res in residuals:
             print(res)
               
-        
+def split_text_to_cells(notebook_path_for_find: str, notebook_path_for_save: str): #, mode: str = 'draft'):
+    try:
+        with open(notebook_path_for_find, 'r', encoding='utf-8') as in_f:
+            nb_json = json.load(in_f)
+    except FileNotFoundError:
+        print(f"Error: File not found - {notebook_path_for_find}")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format - {notebook_path_for_find}")
+        return
+    is_working = False
+    is_end = False
+    split_lines = []
+    for cell in nb_json["cells"]:
+        source = cell["source"]
+        for line in source:
+            if '_pagristart_' in line:
+                is_working = True
+            if '_pagriend_' in line:
+                is_working = False
+                is_end = True
+                break
+            if is_working:
+                # print(line)
+                split_lines.append(line)
+        if is_end:
+            break
+    new_cells = []
+    for line in split_lines:         
+        new_cells.append(nb_v4.new_markdown_cell([line]))
+    try:
+        with open(notebook_path_for_save, 'r', encoding='utf-8') as in_f:
+            nb_json = json.load(in_f)
+    except FileNotFoundError:
+        return f"Error: File not found - {notebook_path_for_save}"
+    except json.JSONDecodeError:
+        return f"Error: Invalid JSON format - {notebook_path_for_save}"    
+    cell_number = next((i for i, cell in enumerate(nb_json["cells"])
+                        if any("_gen_" in line for line in cell["source"])), None)
+    nb_json['cells'][cell_number:cell_number] = new_cells    
+    
+    nb = nb_reads(json.dumps(nb_json), as_version=4)
+    # Save the nbformat object to the file
+    # if mode == 'draft':
+    #     output_filename_splited = notebook_path.split('.')
+    #     output_filename_splited[-2] += '_temp'
+    #     output_filename = '.'.join(output_filename_splited)
+    # else:
+    #     output_filename = notebook_path
+    with open(notebook_path_for_save, 'w', encoding='utf-8') as out_f:
+        nb_write(nb, out_f, version=4)
+    print(f"Corrected notebook saved to {notebook_path_for_save}")                   

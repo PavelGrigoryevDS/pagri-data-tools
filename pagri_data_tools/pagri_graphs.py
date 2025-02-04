@@ -2058,7 +2058,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         columns = [config['x'], config['y']]
         if config['category']:
             columns.append(config['category'])
-        df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
+            df_for_fig = config['df'][columns].set_index(config['x']).groupby(config['category'], observed=True ).resample(config['resample_freq'])[config['y']].agg(func).reset_index()
+        else:
+            df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
         # x = config['df'][config['x']].values
         # y = config['df'][config['y']].values
         if graph_type == 'bar':
@@ -2118,37 +2120,37 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_layout(legend={'traceorder': 'reversed'})
         if config['textposition']:
             fig.update_traces(textposition=config['textposition'])
-        if config['legend_position'] == 'top':
-            fig.update_layout(
-                yaxis = dict(
-                    domain=[0, 0.95]
-                )              
-                , legend = dict(
-                    title_text=color_axis_label
-                    , title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , orientation="h"  # Горизонтальное расположение
-                    , yanchor="top"    # Привязка к верхней части
-                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-                    , xanchor="center" # Привязка к центру
-                    , x=0.5              # Центрирование по горизонтали                       
-                )     
-            )    
-        elif config['legend_position'] == 'right':
-            fig.update_layout(
-                    legend = dict(
-                    title_text=color_axis_label
-                    , title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , orientation="v"  # Горизонтальное расположение
-                    # , yanchor="bottom"    # Привязка к верхней части
-                    , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
-                    # , xanchor="center" # Привязка к центру
-                    # , x=0.5              # Центрирование по горизонтали
-                )
+    if config['legend_position'] == 'top':
+        fig.update_layout(
+            yaxis = dict(
+                domain=[0, 0.9]
             )
-        else:
-            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")       
+            , legend = dict(
+                title_text=color_axis_label
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    elif config['legend_position'] == 'right':
+        fig.update_layout(
+                legend = dict(
+                title_text=color_axis_label
+                , title_font_color='rgba(0, 0, 0, 0.7)'
+                , font_color='rgba(0, 0, 0, 0.7)'
+                , orientation="v"  # Горизонтальное расположение
+                # , yanchor="bottom"    # Привязка к верхней части
+                , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
+                # , xanchor="center" # Привязка к центру
+                # , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    else:
+        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
     if x_axis_label:
         hovertemplate_x = f'{x_axis_label} = '
     else:
@@ -2161,12 +2163,16 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         hovertemplate_color = f'<br>{color_axis_label} = '
     else:
         hovertemplate_color = f'color = '
-    if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-        hovertemplate = hovertemplate_x + \
-            '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
+    if not config['is_resample']:
+        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            hovertemplate = hovertemplate_x + \
+                '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
+        else:
+            hovertemplate = hovertemplate_x + \
+                '%{x:.4s}<br>' + hovertemplate_y + '%{y}'
     else:
         hovertemplate = hovertemplate_x + \
-            '%{x:.4s}<br>' + hovertemplate_y + '%{y}'
+            '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
     if config['category']:
         hovertemplate += hovertemplate_color + '%{data.name}'
     if config['show_group_size']:
