@@ -2513,11 +2513,11 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         left_quantile), column.quantile(right_quantile))
     column = column[trimmed_column]
     if not titles_for_axis:
-        title = f'Гистограмма для {column.name}'
+        title = f'Распределенеие {column.name}'
         xaxis_title = 'Значение'
         yaxis_title = 'Частота'
     else:
-        title = f'Гистограмма {titles_for_axis[column.name][1]}'
+        title = f'Распределенеие {titles_for_axis[column.name][1]}'
         xaxis_title = f'{titles_for_axis[column.name][0]}'
         yaxis_title = 'Частота'
     fig = px.histogram(column, title=title, histnorm='percent', nbins=nbins, marginal=marginal)
@@ -2531,7 +2531,7 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         , selector=dict(type='histogram')
     )
     fig.update_traces(
-        hovertemplate='Значение = %{x}<br><extra></extra>'
+        hovertemplate='Значение = %{x:.2f}<br><extra></extra>'
         , selector=dict(type='box')
     )
     if marginal:
@@ -2817,7 +2817,7 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
         yield fig
             
             
-def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=None, cols=None, category=None, legend_position='top'):
+def pairplot(config: dict, titles_for_axis: dict = None):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
@@ -2836,6 +2836,47 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
     Returns:
     fig (plotly.graph_objs.Figure): The resulting pairplot figure
     """
+    if 'width' in config:
+        width = config['width']
+    else:
+        width = 800
+    if 'height' in config:
+        height = config['height']
+    else:
+        height = 800
+    if 'horizontal_spacing' in config:
+        horizontal_spacing = config['horizontal_spacing']
+    else:
+        horizontal_spacing = None
+    if 'vertical_spacing' in config:
+        vertical_spacing = config['vertical_spacing']
+    else:
+        vertical_spacing = None
+    if 'rows' in config:
+        rows = config['rows']
+    else:
+        rows = None
+    if 'cols' in config:
+        cols = config['cols']
+    else:
+        cols = None
+    if 'category' in config:
+        category = config['category']
+    else:
+        category = None
+    if 'legend_position' in config:
+        legend_position = config['legend_position']
+    else:
+        legend_position = 'top'
+    if 'title' in config:
+        title = config['title']
+    else:
+        title = None
+    if not config:
+        raise ValueError("config must be defined")
+    if 'df' not in config:
+        raise ValueError("df must be defined")
+    df = config['df']
     if df.empty:
         raise ValueError("Input dataframe is empty")
     num_columns = list(
@@ -2845,7 +2886,6 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
             "Input dataframe must contain at least 2 numerical columns")
     combinations = list(itertools.combinations(df[num_columns].columns, 2))
     len_comb = len(combinations)
-
     # Определить размер сетки
     if rows is None or cols is None:
         size = int(np.ceil(np.sqrt(len_comb)))
@@ -2904,7 +2944,7 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         height=height,
         width=width,
         margin=dict(l=50, r=50, t=90, b=50),
-        title={'text': f'Зависимости между числовыми переменными'},
+        title={'text': title if title else 'Зависимости между числовыми переменными'},
         # Для подписей и меток
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
@@ -2921,34 +2961,35 @@ def pairplot(df, width=800, height=800, titles_for_axis: dict = None, horizontal
         legend_font_color='rgba(0, 0, 0, 0.7)',
         hoverlabel=dict(bgcolor="white"),
     )
-    if legend_position == 'top':
-        fig.update_layout(
-            legend = dict(
-                title_text=titles_for_axis[category]
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="h"  # Горизонтальное расположение
-                , yanchor="top"    # Привязка к верхней части
-                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-                , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали                       
-            )     
-        )    
-    elif legend_position == 'right':
-        fig.update_layout(
+    if category:
+        if legend_position == 'top':
+            fig.update_layout(
                 legend = dict(
-                title_text=titles_for_axis[category]
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="v"  # Горизонтальное расположение
-                # , yanchor="bottom"    # Привязка к верхней части
-                , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
-                # , xanchor="center" # Привязка к центру
-                # , x=0.5              # Центрирование по горизонтали
+                    title_text=titles_for_axis[category]
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="h"  # Горизонтальное расположение
+                    , yanchor="top"    # Привязка к верхней части
+                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , xanchor="center" # Привязка к центру
+                    , x=0.5              # Центрирование по горизонтали
+                )
             )
-        )
-    else:
-        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")        
+        elif legend_position == 'right':
+            fig.update_layout(
+                    legend = dict(
+                    title_text=titles_for_axis[category]
+                    , title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , orientation="v"  # Горизонтальное расположение
+                    # , yanchor="bottom"    # Привязка к верхней части
+                    , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+                    # , xanchor="center" # Привязка к центру
+                    # , x=0.5              # Центрирование по горизонтали
+                )
+            )
+        else:
+            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
     return fig
             
 def heatmap_categories(config: dict, titles_for_axis: dict = None):
@@ -3271,21 +3312,28 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     #     config['x'], config['y'] = config['y'], config['x']
 
     if titles_for_axis:
-        config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
-        column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
-        if config['column_for_legend']:
-            config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
-            column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
-            temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+        if not config['title']:
+            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
+            column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
+            if config['column_for_legend']:
+                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+                column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
+                temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+            else:
+                config['column_for_legend_label'] = None
+                temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
+            if config['normalized_mode'] == 'col':
+                config['title'] = temp_title + f" c нормализацией"
+            elif config['normalized_mode'] == 'row':
+                config['title'] = temp_title + f" c нормализацией"
+            else:
+                config['title'] = temp_title
         else:
-            config['column_for_legend_label'] = None
-            temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
-        if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f" c нормализацией"
-        elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f" c нормализацией"
-        else:
-            config['title'] = temp_title        
+            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
+            if config['column_for_legend']:
+                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+            else:
+                config['column_for_legend_label'] = None
     else:
         if 'column_for_axis_label' not in config:
             config['column_for_axis_label'] = None
