@@ -2525,8 +2525,15 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title
     )
+    fig.update_traces(showlegend=False)
     fig.update_traces(
-        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>', showlegend=False)
+        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>'
+        , selector=dict(type='histogram')
+    )
+    fig.update_traces(
+        hovertemplate='Значение = %{x}<br><extra></extra>'
+        , selector=dict(type='box')
+    )
     if marginal:
         fig.update_layout(
             yaxis2 = dict(
