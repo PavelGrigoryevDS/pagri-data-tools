@@ -2050,7 +2050,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     x_axis_label = config['x_axis_label']
     y_axis_label = config['y_axis_label']
     color_axis_label = config['category_axis_label']
-    if config['is_resample']:
+    if config['is_resample ']:
         if config['func'] is None:
             func = 'first'
         else:
