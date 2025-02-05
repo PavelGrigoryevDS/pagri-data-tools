@@ -1907,7 +1907,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         raise ValueError("func must be a string")
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
-    if 'is_resample' in config and 'resample_freq' not in config:
+    if 'agg_mode' in config and 'resample_freq' not in config:
         raise ValueError("resample_freq must be define")
     if 'func' not in config:
         config['func'] = None
@@ -1947,8 +1947,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['decimal_places'] = 1
     if 'show_group_size' not in config:
         config['show_group_size'] = False
-    if 'is_resample' not in config:
-        config['is_resample'] = False
+    if 'agg_mode' not in config:
+        config['agg_mode'] = None
     if 'title' not in config:
         config['title'] = None
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
@@ -2050,7 +2050,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     x_axis_label = config['x_axis_label']
     y_axis_label = config['y_axis_label']
     color_axis_label = config['category_axis_label']
-    if config['is_resample']:
+    if config['agg_mode'] == 'resample':
         if config['func'] is None:
             func = 'first'
         else:
@@ -2070,7 +2070,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
         elif graph_type == 'area':
             fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
-    else:
+    elif config['agg_mode'] == 'groupby':
         df_for_fig = prepare_df(config)
         if config['top_n_trim_axis']:
             df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
@@ -2120,6 +2120,14 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_layout(legend={'traceorder': 'reversed'})
         if config['textposition']:
             fig.update_traces(textposition=config['textposition'])
+    else:
+        if graph_type == 'bar':
+            fig = px.bar(config['df'], x=config['x'], y=config['y'], color=config['category'],
+                        barmode=config['barmode'])
+        elif graph_type == 'line':
+            fig = px.line(config['df'], x=config['x'], y=config['y'], color=config['category'])
+        elif graph_type == 'area':
+            fig = px.area(config['df'], x=config['x'], y=config['y'], color=config['category'])
     if config['legend_position'] == 'top':
         fig.update_layout(
             yaxis = dict(
@@ -2163,7 +2171,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         hovertemplate_color = f'<br>{color_axis_label} = '
     else:
         hovertemplate_color = f'color = '
-    if not config['is_resample']:
+    if config['agg_mode'] == 'groupby':
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             hovertemplate = hovertemplate_x + \
                 '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
@@ -2249,6 +2257,8 @@ def bar(config: dict, titles_for_axis: dict = None):
         - legend_position (str): Положение легенды ('top', 'right')
         - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
+        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
@@ -2321,6 +2331,8 @@ def line(config: dict, titles_for_axis: dict = None):
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
         - show_group_size (bool):  Whether to show the group size (default is False).
+        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
@@ -2393,6 +2405,8 @@ def area(config: dict, titles_for_axis: dict = None):
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
         - show_group_size (bool):  Whether to show the group size (default is False).
+        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
