@@ -3644,6 +3644,8 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['skip_first_col_for_cohort'] = False 
     if 'is_show_in_pct' not in config:
          config['is_show_in_pct'] = False
+    if 'orientation' not in config:
+         config['orientation'] = 'v'
         
     if titles_for_axis:
         func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
