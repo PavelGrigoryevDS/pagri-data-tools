@@ -22,8 +22,8 @@ Change into the newly created project directory.
 cd my_new_project
 ```
 
-#### 5. Add Your Module as a Dependency:  
-This command adds your module from GitHub as a dependency to the project.
+#### 5. Add Module as a Dependency:  
+This command adds module from GitHub as a dependency to the project.
 ```bash
 poetry add git+https://github.com/PAGriAnalytics/pagri-data-tools.git
 ```
@@ -34,7 +34,7 @@ This command installs all dependencies listed in the pyproject.toml file.
 poetry install
 ```
 #### 7. Import Module:  
-You can now import and use your module in your Python scripts.
+You can now import and use module in your Python scripts.
 ```python
 import pagri_data_tools
 ```
