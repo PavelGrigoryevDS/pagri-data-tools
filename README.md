@@ -3,7 +3,7 @@ This repository contains data analysis modules, including tools for data preproc
 
 ***
 
-### Quick Steps to Use Your Module with Poetry
+#### Quick Steps to Use Module with Poetry
 1. Install Poetry:
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
