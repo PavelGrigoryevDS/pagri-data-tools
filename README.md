@@ -3,7 +3,7 @@ This repository contains data analysis modules, including tools for data preproc
 
 ***
 
-poetry add git+https://github.com/PAGriAnalytics/pagri_analytics_modules.git
+poetry add git+https://github.com/PAGriAnalytics/pagri-data-tools.git
 
 import pagri_data_tools
 
