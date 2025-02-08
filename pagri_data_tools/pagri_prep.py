@@ -4348,3 +4348,49 @@ def check_na_combinations_gen(df, n=2):
         )
         if n < col_n + 1:
             return
+
+def detect_df_relationship(left_df, right_df, on=None, left_on=None, right_on=None):
+    """
+    Detects the relationship between two DataFrames based on specified columns.
+
+    Parameters:
+    left_df (pd.DataFrame): The left DataFrame.
+    right_df (pd.DataFrame): The right DataFrame.
+    on (str): The column name to check for relationships in both DataFrames.
+    left_on (str): The column name in left_df to check for relationships.
+    right_on (str): The column name in right_df to check for relationships.
+
+    Returns:
+    str: A description of the relationship type.
+    """
+
+    # Check if DataFrames are empty
+    if left_df.empty or right_df.empty:
+        return "One or both DataFrames are empty."
+
+    # Determine the columns to use for counting
+    if on is not None:
+        left_on = on
+        right_on = on
+
+    # Check if left_on and right_on are provided
+    if left_on is None or right_on is None:
+        return "Please provide either 'on' or both 'left_on' and 'right_on'."
+
+    # Count occurrences of each value in the specified columns
+    left_counts = left_df[left_on].value_counts()
+    right_counts = right_df[right_on].value_counts()
+
+    # Determine the maximum counts
+    max_left = left_counts.max()
+    max_right = right_counts.max()
+
+    # Determine the relationship type
+    if max_left == 1 and max_right == 1:
+        return "one-to-one"
+    elif max_left == 1:
+        return "one-to-many"
+    elif max_right == 1:
+        return "many-to-one"
+    else:
+        return "many-to-many"
