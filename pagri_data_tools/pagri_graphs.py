@@ -100,9 +100,7 @@ def plotly_default_settings(fig):
     return fig
 
 
-
-
-def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True, is_show_in_pct=False):
+def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True, is_show_in_pct=False, do_pretty_value=False):
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
@@ -128,6 +126,12 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     - The heatmap is created with a custom colorscale and hover labels.
     - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
     """
+    def format_number(num):
+        magnitude = 0
+        while abs(num) >= 1000:
+            magnitude += 1
+            num /= 1000
+        return f'{num:.1f}{["", "k", "M", "B"][magnitude]}'
     # Create figure
     fig = go.Figure(data=go.Heatmap(
         z=df.values,
@@ -146,17 +150,18 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     ))
 
     # Create annotations
-    center_color_bar = df.max().max() + df.min().min()
-    if center_color_bar > 0:
-        center_color_bar *= 0.7
+    vmax = df.max().max()
+    vmin = df.min().min()
+    val = vmax - vmin
+    if val > 0:
+        center_color_bar =  vmin + (vmax - vmin) * 0.7
     else:
-        center_color_bar *= 0.3
-        
+        center_color_bar = vmin + (vmax - vmin) * 0.3
     if show_text:
         if not is_show_in_pct:
             annotations = [
                 dict(
-                    text= '' if np.isnan(df.values[row, col]) else f"{df.values[row, col]:.{decimal_places}f}",
+                    text= '' if np.isnan(df.values[row, col]) else format_number(df.values[row, col]) if do_pretty_value else f"{df.values[row, col]:.{decimal_places}f}" ,
                     x=col,
                     y=row,
                     showarrow=False,
@@ -2228,8 +2233,7 @@ def bar(config: dict, titles_for_axis: dict = None):
     """
     Creates a bar chart using the Plotly Express library.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
+    Parameters (key in config):
         - df (DataFrame): A DataFrame containing data for creating the chart.
         - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
         - x_axis_label (str): The label for the X-axis.
@@ -2264,39 +2268,6 @@ def bar(config: dict, titles_for_axis: dict = None):
 
     Returns:
     fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    titles_for_axis = dict(
-        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
-        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
-        age = ['Возраст', 'возраст', 1]
-        , using_duration = ['Длительность использования', 'длительность использования', 2]
-        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
-        , revenue = ['Выручка', 'выручка', 2]
-        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
-        # Распределение долей по городу и тарифу с нормализацией по городу
-        , city = ['Город', 'города', 'городу']
-        , tariff = ['Тариф', 'тарифа', 'тарифу']
-        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
-    )
-    config = dict(
-        df = df
-        , x = 'education'  
-        , x_axis_label = 'Образование'
-        , y = 'total_income'
-        , y_axis_label = 'Доход'
-        , category = 'gender'
-        , category_axis_label = 'Пол'
-        , title = 'Доход в зависимости от пола и уровня образования'
-        , func = 'mean'
-        , barmode = 'group'
-        , width = None
-        , height = None
-        , orientation = 'v'
-        , text = False
-        , textsize = 14
-    )
-    bar(config)
     """
     return base_graph_for_bar_line_area(config, titles_for_axis, 'bar')
 
@@ -2304,19 +2275,18 @@ def line(config: dict, titles_for_axis: dict = None):
     """
     Creates a line chart using the Plotly Express library.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
+    Parameters (key in config):
         - df (DataFrame): A DataFrame containing data for creating the chart.
         - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
         - x_axis_label (str): The label for the X-axis.
         - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
         - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.  
+        - category (str): The name of the column in the DataFrame to be used for creating categories.
         If None or an empty string, the chart will be created without category.
         - top_n_trim_axis (int): The number of top categories axis to include in the chart.
         - top_n_trim_legend (int): The number of top categories legend to include in the chart.
         - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
         - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
@@ -2330,6 +2300,8 @@ def line(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - legend_position (str): Положение легенды ('top', 'right')
+        - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
         - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
         - resample_freq (str): Resample frequency for resample
@@ -2338,39 +2310,6 @@ def line(config: dict, titles_for_axis: dict = None):
 
     Returns:
     fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    titles_for_axis = dict(
-        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
-        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
-        age = ['Возраст', 'возраст', 1]
-        , using_duration = ['Длительность использования', 'длительность использования', 2]
-        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
-        , revenue = ['Выручка', 'выручка', 2]
-        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
-        # Распределение долей по городу и тарифу с нормализацией по городу
-        , city = ['Город', 'города', 'городу']
-        , tariff = ['Тариф', 'тарифа', 'тарифу']
-        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
-    )
-    config = dict(
-        df = df
-        , x = 'education'  
-        , x_axis_label = 'Образование'
-        , y = 'total_income'
-        , y_axis_label = 'Доход'
-        , category = 'gender'
-        , category_axis_label = 'Пол'
-        , title = 'Доход в зависимости от пола и уровня образования'
-        , func = 'mean'
-        , barmode = 'group'
-        , width = None
-        , height = None
-        , orientation = 'v'
-        , text = False
-        , textsize = 14
-    )
-    line(config)
     """
     return base_graph_for_bar_line_area(config, titles_for_axis, 'line')
 
@@ -2378,19 +2317,18 @@ def area(config: dict, titles_for_axis: dict = None):
     """
     Creates a area chart using the Plotly Express library.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
+    Parameters (key in config):
         - df (DataFrame): A DataFrame containing data for creating the chart.
         - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
         - x_axis_label (str): The label for the X-axis.
         - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
         - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.  
+        - category (str): The name of the column in the DataFrame to be used for creating categories.
         If None or an empty string, the chart will be created without category.
         - top_n_trim_axis (int): The number of top categories axis to include in the chart.
         - top_n_trim_legend (int): The number of top categories legend to include in the chart.
         - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).        
+        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
         - category_axis_label (str): The label for the categories.
         - title (str): The title of the chart.
         - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
@@ -2404,6 +2342,8 @@ def area(config: dict, titles_for_axis: dict = None):
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
         - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+        - legend_position (str): Положение легенды ('top', 'right')
+        - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
         - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
         - resample_freq (str): Resample frequency for resample
@@ -2412,39 +2352,6 @@ def area(config: dict, titles_for_axis: dict = None):
 
     Returns:
     fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    titles_for_axis = dict(
-        # numeric column ['Именительный падеж', 'мменительный падеж с маленькой буквы', 'род цифорой']
-        # (0 - средний род, 1 - мужской род, 2 - женский род[) (Середнее образовние, средний доход, средняя температура) )
-        age = ['Возраст', 'возраст', 1]
-        , using_duration = ['Длительность использования', 'длительность использования', 2]
-        , mb_used = ['Объем интернет трафика', 'объем интернет трафика', 1]
-        , revenue = ['Выручка', 'выручка', 2]
-        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
-        # Распределение долей по городу и тарифу с нормализацией по городу
-        , city = ['Город', 'города', 'городу']
-        , tariff = ['Тариф', 'тарифа', 'тарифу']
-        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
-    )
-    config = dict(
-        df = df
-        , x = 'education'  
-        , x_axis_label = 'Образование'
-        , y = 'total_income'
-        , y_axis_label = 'Доход'
-        , category = 'gender'
-        , category_axis_label = 'Пол'
-        , title = 'Доход в зависимости от пола и уровня образования'
-        , func = 'mean'
-        , barmode = 'group'
-        , width = None
-        , height = None
-        , orientation = 'v'
-        , text = False
-        , textsize = 14
-    )
-    bar(config)
     """
     return base_graph_for_bar_line_area(config, titles_for_axis, 'area')
 
@@ -3547,13 +3454,14 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         - top_n_trim_axis (int): The number of top categories axis to include in the chart.
         - top_n_trim_legend (int): The number of top categories legend to include in the chart.
         - top_n_trim_from_axis (str): The direction to trim the categories on the axis ('start' or 'end') (default is 'start').
-        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
+        - sort_y (bool): Whether to sort the categories on the x axis (default is True).
+        - sort_y (bool): Whether to sort the categories in the y axis (default is True).
         - decimal_places (int): The number of decimal places to display (default is 2).
         - is_reversed_y (bool): Whether to reverse the order of the categories on the Y-axis (default is False).
         - x_axis_position (str): The position of the X-axis ('top' or 'bottom') (default is 'bottom').
         - skip_first_col_for_cohort (bool): Whether to skip the first column for cohort (default is False).
         - is_show_in_pct (bool): Whether to show values in percentage (default is False).
+        - do_pretty_value (bool): Whether to show values in pretty (thousands as k) (default is False).
     titles_for_axis (dict):  A dictionary containing titles for the axes.
 
     Returns:
@@ -3600,8 +3508,6 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         raise ValueError("column_for_value must be a string")    
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
-    if config['func'] and config['func'] not in ['mean', 'median', 'sum']:
-        raise ValueError("func must be in ['mean', 'median', 'sum']")    
     if 'barmode' not in config:
         config['barmode'] = 'group'
     if 'func' not in config:
@@ -3626,10 +3532,10 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         config['top_n_trim_axis'] = None
     if 'top_n_trim_legend' not in config:
         config['top_n_trim_legend'] = None    
-    if 'sort_axis' not in config:
-        config['sort_axis'] = True
-    if 'sort_legend' not in config:
-        config['sort_legend'] = True     
+    if 'sort_x' not in config:
+        config['sort_x'] = True
+    if 'sort_y' not in config:
+        config['sort_y'] = True
     if 'decimal_places' not in config:
         config['decimal_places'] = 2          
     if 'top_n_trim_from_axis' not in config:
@@ -3646,21 +3552,29 @@ def heatmap(config: dict, titles_for_axis: dict = None):
          config['is_show_in_pct'] = False
     if 'orientation' not in config:
          config['orientation'] = 'v'
-        
+    if 'do_pretty_value' not in config:
+        config['do_pretty_value'] = False
+    if 'title' not in config:
+         config['title'] = None
+    if config['func'] and config['func'] not in ['mean', 'median', 'sum']:
+        raise ValueError("func must be in ['mean', 'median', 'sum']")
     if titles_for_axis:
-        func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
-            'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарные']}
-        config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
-        config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
-        config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
-        func = config['func']
-        numeric = titles_for_axis[config["column_for_value"]][1]
-        cat = titles_for_axis[config["column_for_x"]][1]
-        suffix_type = titles_for_axis[config["column_for_value"]][2]
-        title = f'{func_for_title[func][suffix_type]}'
-        title += f' {numeric} в зависимости от {cat}'
-        title += f' и {titles_for_axis[config["column_for_y"]][1]}'
-        config['title'] = title            
+        # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+        #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарные']}
+        # config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
+        # config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
+        # config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
+        # func = config['func']
+        # numeric = titles_for_axis[config["column_for_value"]][1]
+        # cat = titles_for_axis[config["column_for_x"]][1]
+        # suffix_type = titles_for_axis[config["column_for_value"]][2]
+        # title = f'{func_for_title[func][suffix_type]}'
+        # title += f' {numeric} в зависимости от {cat}'
+        # title += f' и {titles_for_axis[config["column_for_y"]][1]}'
+        # config['title'] = title
+        config['column_for_x_label'] = titles_for_axis[config['column_for_x']]
+        config['column_for_y_label'] = titles_for_axis[config['column_for_y']]
+        config['column_for_value_label'] = titles_for_axis[config['column_for_value']]
     else:
         if 'column_for_x_label' not in config:
             config['column_for_x_label'] = None
@@ -3679,11 +3593,11 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         ascending_index = False
         na_position = 'last'
         sort_position = -1
-        if config['sort_axis']:
+        if config['sort_x']:
             func_df['sum'] = func_df.sum(axis=1, numeric_only=True)
             func_df = func_df.sort_values(
                 'sum', ascending=ascending_sum).drop('sum', axis=1)
-        if config['sort_legend']:
+        if config['sort_y']:
             func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
         if config['is_reversed_y']:
             func_df = func_df.iloc[::-1]
@@ -3737,7 +3651,7 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             df_for_fig = df_for_fig.iloc[:, y_nunique-config['top_n_trim_legend']:]        
         else:
             df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
-    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'], is_show_in_pct=config['is_show_in_pct'])
+    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'], is_show_in_pct=config['is_show_in_pct'], do_pretty_value=config['do_pretty_value'])
     if titles_for_axis:
         if orientation == 'h':
             hovertemplate = f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
@@ -3766,9 +3680,9 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             # , yaxis_domain = [0, 0.9]
         )        
     if orientation == 'h':
-        fig.update_layout(title=title, yaxis_title=column_for_y_label)      
+        fig.update_layout(title=title, xaxis_title=column_for_x_label, yaxis_title=column_for_y_label)
     else:
-        fig.update_layout(title=title, yaxis_title=column_for_x_label)      
+        fig.update_layout(title=title, xaxis_title=column_for_y_label, yaxis_title=column_for_x_label)
     fig =  fig_update_layout(fig)        
     return fig
 

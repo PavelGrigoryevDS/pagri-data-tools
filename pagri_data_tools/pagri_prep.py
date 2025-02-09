@@ -4394,3 +4394,43 @@ def detect_df_relationship(left_df, right_df, on=None, left_on=None, right_on=No
         return "many-to-one"
     else:
         return "many-to-many"
+
+def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_on=None):
+    """
+    Compares values in the specified field of two DataFrames and returns the count
+    of mismatched values.
+
+    Parameters:
+    left_df (pd.DataFrame): The left DataFrame for comparison.
+    right_df (pd.DataFrame): The right DataFrame for comparison.
+    on (str): The column name to check for relationships in both DataFrames.
+    left_on (str): The column name in left_df to check for relationships.
+    right_on (str): The column name in right_df to check for relationships.
+
+    Returns:
+    tuple: A tuple containing two values:
+        - The count of rows that are in the left DataFrame but not in the right.
+        - The count of rows that are in the right DataFrame but not in the left.
+    """
+    # Check if DataFrames are empty
+    if left_df.empty or right_df.empty:
+        return "One or both DataFrames are empty."
+
+    # Determine the columns to use for counting
+    if on is not None:
+        left_on = on
+        right_on = on
+
+    # Check if left_on and right_on are provided
+    if left_on is None or right_on is None:
+        return "Please provide either 'on' or both 'left_on' and 'right_on'."
+
+    left_values = set(left_df[left_on])
+    right_values = set(right_df[right_on])
+
+    mismatches_left_dif_right = left_values - right_values
+    mismatches_right_dif_left = right_values - left_values
+    count_left_dif_right_mismatches = len(mismatches_left_dif_right)
+    count_right_dif_left_mismatches = len(mismatches_right_dif_left)
+    print('Строки в левой таблице, отсутствующие в правой: ', count_left_dif_right_mismatches)
+    print('Строки в правой таблице, отсутствующие в левой: ', count_right_dif_left_mismatches)
