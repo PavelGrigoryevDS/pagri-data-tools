@@ -1912,7 +1912,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         raise ValueError("func must be a string")
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
-    if 'agg_mode' in config and 'resample_freq' not in config:
+    if 'agg_mode' in config and config['agg_mode'] != 'groupby' and 'resample_freq' not in config:
         raise ValueError("resample_freq must be define")
     if 'func' not in config:
         config['func'] = None
@@ -2008,9 +2008,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         format_string = f"{{:.{decimal_places}f}}"
         
         if x >= 1e6 or x <= -1e6:
-            return f"{format_string.format(x / 1e6)} M"
+            return f"{format_string.format(x / 1e6)}M"
         elif x >= 1e3 or x <= -1e3:
-            return f"{format_string.format(x / 1e3)} k"
+            return f"{format_string.format(x / 1e3)}k"
         else:
             return format_string.format(x)
 
@@ -2049,13 +2049,17 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                         )            
         func_df['count'] = func_df['count'].apply(
             lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
-
+        func_df['pretty_value'] = func_df['num'].apply(human_readable_number, args = [config['decimal_places']])
 
         return func_df.rename(columns={'num': num_column})
     x_axis_label = config['x_axis_label']
     y_axis_label = config['y_axis_label']
     color_axis_label = config['category_axis_label']
     if config['agg_mode'] == 'resample':
+        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            custom_data = [config['df'][config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+        else:
+            custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if config['func'] is None:
             func = 'first'
         else:
@@ -2070,11 +2074,11 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         # y = config['df'][config['y']].values
         if graph_type == 'bar':
             fig = px.bar(df_for_fig, x=config['x'], y=config['y'], color=config['category'],
-                        barmode=config['barmode'])
+                        barmode=config['barmode'], custom_data=custom_data)
         elif graph_type == 'line':
-            fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
+            fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
         elif graph_type == 'area':
-            fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'])
+            fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
     elif config['agg_mode'] == 'groupby':
         df_for_fig = prepare_df(config)
         if config['top_n_trim_axis']:
@@ -2086,7 +2090,8 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         y = df_for_fig[config['y']].values
         color = df_for_fig[config['category']
                         ].values if config['category'] else None
-        custom_data = [df_for_fig['count']]
+        custom_data = [df_for_fig['count'], df_for_fig['pretty_value']]
+        # display(df_for_fig)
         if 'text' in config and config['text']:
             if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
                 text = [human_readable_number(el, config['decimal_places']) for el in y]
@@ -2126,13 +2131,17 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         if config['textposition']:
             fig.update_traces(textposition=config['textposition'])
     else:
+        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            custom_data = [config['df'][config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+        else:
+            custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
             fig = px.bar(config['df'], x=config['x'], y=config['y'], color=config['category'],
-                        barmode=config['barmode'])
+                        barmode=config['barmode'], custom_data=custom_data)
         elif graph_type == 'line':
-            fig = px.line(config['df'], x=config['x'], y=config['y'], color=config['category'])
+            fig = px.line(config['df'], x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
         elif graph_type == 'area':
-            fig = px.area(config['df'], x=config['x'], y=config['y'], color=config['category'])
+            fig = px.area(config['df'], x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
     if config['legend_position'] == 'top':
         fig.update_layout(
             yaxis = dict(
@@ -2179,13 +2188,17 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     if config['agg_mode'] == 'groupby':
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             hovertemplate = hovertemplate_x + \
-                '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
+                '%{x}<br>' + hovertemplate_y + '%{customdata[1]}'
         else:
             hovertemplate = hovertemplate_x + \
-                '%{x:.4s}<br>' + hovertemplate_y + '%{y}'
+                '%{customdata[1]}<br>' + hovertemplate_y + '%{y}'
     else:
-        hovertemplate = hovertemplate_x + \
-            '%{x}<br>' + hovertemplate_y + '%{y:.4s}'
+        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            hovertemplate = hovertemplate_x + \
+                '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
+        else:
+            hovertemplate = hovertemplate_x + \
+                '%{customdata[0]}<br>' + hovertemplate_y + '%{y}'
     if config['category']:
         hovertemplate += hovertemplate_color + '%{data.name}'
     if config['show_group_size']:
