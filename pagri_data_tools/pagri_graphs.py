@@ -2434,14 +2434,14 @@ def histogram(config: dict, titles_for_axis: dict = None, nbins: int = 30, width
     Plot a histogram of a Pandas Series using Plotly Express.
 
     Args (keys in config):
-    column (pd.Series): The input Pandas Series.
-    titles_for_axis (dict, optional): A dictionary containing the titles for the x-axis and y-axis. Defaults to None.
-    nbins (int, optional): The number of bins in the histogram. Defaults to 30.
-    width (int, optional): The width of the plot. Defaults to 800.
-    height (int, optional): The height of the plot. Defaults to None.
-    left_quantile (float, optional): The left quantile for trimming the data. Defaults to 0.
-    right_quantile (float, optional): The right quantile for trimming the data. Defaults to 1.
-    box (bool): Whether to include a box plot. Defaults to True.
+        - column (pd.Series): The input Pandas Series.
+        - titles_for_axis (dict, optional): A dictionary containing the titles for the x-axis and y-axis. Defaults to None.
+        - nbins (int, optional): The number of bins in the histogram. Defaults to 30.
+        - width (int, optional): The width of the plot. Defaults to 800.
+        - height (int, optional): The height of the plot. Defaults to None.
+        - left_quantile (float, optional): The left quantile for trimming the data. Defaults to 0.
+        - right_quantile (float, optional): The right quantile for trimming the data. Defaults to 1.
+        - box (bool): Whether to include a box plot. Defaults to True.
 
     Returns:
         fig: The Plotly Express figure.
@@ -3896,24 +3896,24 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
 def histograms_stacked(config, titles_for_axis=None):
     """
     Функция для построения наложенных гистограмм по категориальной переменной.
-    :param titles_for_axis: Словарь с названиями для осей
-    config (dict): A dictionary containing parameters for creating the chart.
-        :param df: DataFrame с данными
-        :param cat_var: Название категориальной переменной
-        :param num_var: Название числовой переменной
-        :param top_n: Количество топ категорий для отображения
-        :param lower_quantile: Нижний квантиль для обрезки данных
-        :param upper_quantile: Верхний квантиль для обрезки данных
-        :param bins: Количество бинов для гистограммы
-        :param line_width: Ширина линий на графике
-        :param opacity: Прозрачность линий
-        :param height: Высота графика
-        :param width: Ширина графика
-        :param mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
-        :param barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
-        :param legend_position: Положение легенды ('top', 'right')
-        :param box:  Отображать ли коробчатую диаграмму
-        :return: Объект Figure с графиком
+    Parameters (key in config):
+        - df: DataFrame с данными
+        - cat_var: Название категориальной переменной
+        - num_var: Название числовой переменной
+        - top_n: Количество топ категорий для отображения
+        - lower_quantile: Нижний квантиль для обрезки данных
+        - upper_quantile: Верхний квантиль для обрезки данных
+        - bins: Количество бинов для гистограммы
+        - line_width: Ширина линий на графике
+        - opacity: Прозрачность линий
+        - height: Высота графика
+        - width: Ширина графика
+        - mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
+        - barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
+        - legend_position: Положение легенды ('top', 'right')
+        - box:  Отображать ли коробчатую диаграмму
+        -  Объект Figure с графиком
+    titles_for_axis: Словарь с названиями для осей
     """
     if not isinstance(config, dict):
         raise TypeError("config must be a dictionary")
@@ -3948,7 +3948,9 @@ def histograms_stacked(config, titles_for_axis=None):
     if 'box' not in config:
         config['box'] = True
     if 'legend_position' not in config:
-        config['legend_position'] = 'top'        
+        config['legend_position'] = 'top'
+    if 'title' not in config:
+        config['title'] = None
     df = config['df']
     cat_var = config['cat_var']
     num_var = config['num_var']
@@ -3970,10 +3972,10 @@ def histograms_stacked(config, titles_for_axis=None):
         yaxis_title = 'Частота'
         legend_title = cat_var
     else:
-        title = f'Гистограмма для {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
-        xaxis_title = f'{titles_for_axis[num_var][0]}'
+        title = config['title']
+        xaxis_title = f'{titles_for_axis[num_var]}'
         yaxis_title = 'Частота'    
-        legend_title = f'{titles_for_axis[cat_var][0]}'
+        legend_title = f'{titles_for_axis[cat_var]}'
     # if legend_position == 'top':
     #     legend_title = None
     # Получение топ N категорий
@@ -4257,7 +4259,10 @@ def boxplots_stacked(config, titles_for_axis=None):
     if 'lower_quantile' not in config:
         config['lower_quantile'] = 0.01            
     if 'upper_quantile' not in config:
-        config['upper_quantile'] = 0.99      
+        config['upper_quantile'] = 0.99
+    if 'title' not in config:
+        config['title'] = None
+
     df = config['df']
     cat_var = config['cat_var']
     num_var = config['num_var']
@@ -4279,12 +4284,11 @@ def boxplots_stacked(config, titles_for_axis=None):
         if legend_var:
             legend_title_text = legend_var
     else:
-        title = f'Распределение {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
-        xaxis_title = f'{titles_for_axis[cat_var][0]}'
-        yaxis_title = f'{titles_for_axis[num_var][0]}'
+        title = config['title']
+        xaxis_title = f'{titles_for_axis[cat_var]}'
+        yaxis_title = f'{titles_for_axis[num_var]}'
         if legend_var:
-            legend_title_text = f'{titles_for_axis[legend_var][0]}'
-            title += f' и {titles_for_axis[legend_var][1]}'
+            legend_title_text = f'{titles_for_axis[legend_var]}'
 
     # Получение топ N категорий
     if not sort:
@@ -4417,7 +4421,9 @@ def violins_stacked(config, titles_for_axis=None):
     if 'upper_quantile' not in config:
         config['upper_quantile'] = 1           
     if 'sort' not in config:
-        config['sort'] = False     
+        config['sort'] = False
+    if 'title' not in config:
+        config['title'] = None
         
     df = config['df']
     cat_var = config['cat_var']
@@ -4434,16 +4440,20 @@ def violins_stacked(config, titles_for_axis=None):
         xaxis_title = cat_var
         yaxis_title = num_var
     else:
-        title = f'Распределение {titles_for_axis[num_var][1]} в зависимости от {titles_for_axis[cat_var][1]}'
-        xaxis_title = f'{titles_for_axis[cat_var][0]}'
-        yaxis_title = f'{titles_for_axis[num_var][0]}'
+        title = config['title']
+        xaxis_title = f'{titles_for_axis[cat_var]}'
+        yaxis_title = f'{titles_for_axis[num_var]}'
 
     # Получение топ N категорий
     if not sort:
         categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
     else:
-        categories = df[cat_var].cat.categories.tolist()[:top_n]
-
+        if pd.api.types.is_categorical_dtype(df[cat_var]):
+            categories = df[cat_var].cat.categories.tolist()[:top_n]
+        elif pd.api.types.is_numeric_dtype(df[cat_var]):
+            categories = sorted(df[cat_var].unique().tolist())[:top_n]
+        else:
+            categories = df[cat_var].unique().tolist()[:top_n]
     # Создание графика
     fig = go.Figure()
 
