@@ -2056,10 +2056,6 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     y_axis_label = config['y_axis_label']
     color_axis_label = config['category_axis_label']
     if config['agg_mode'] == 'resample':
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            custom_data = [config['df'][config['y']].apply(human_readable_number, args = [config['decimal_places']])]
-        else:
-            custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if config['func'] is None:
             func = 'first'
         else:
@@ -2072,6 +2068,11 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
         # x = config['df'][config['x']].values
         # y = config['df'][config['y']].values
+        custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+        # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+        #     custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+        # else:
+        #     custom_data = [df_for_fig[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
             fig = px.bar(df_for_fig, x=config['x'], y=config['y'], color=config['category'],
                         barmode=config['barmode'], custom_data=custom_data)
@@ -2192,6 +2193,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         else:
             hovertemplate = hovertemplate_x + \
                 '%{customdata[1]}<br>' + hovertemplate_y + '%{y}'
+    elif config['agg_mode'] == 'resample':
+        hovertemplate = hovertemplate_x + \
+                '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
     else:
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
             hovertemplate = hovertemplate_x + \
@@ -2425,11 +2429,11 @@ def area(config: dict, titles_for_axis: dict = None):
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
 
-def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1, marginal: bool = 'box'):
+def histogram(config: dict, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1, marginal: bool = 'box'):
     """
     Plot a histogram of a Pandas Series using Plotly Express.
 
-    Args:
+    Args (keys in config):
     column (pd.Series): The input Pandas Series.
     titles_for_axis (dict, optional): A dictionary containing the titles for the x-axis and y-axis. Defaults to None.
     nbins (int, optional): The number of bins in the histogram. Defaults to 30.
@@ -2442,30 +2446,47 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
     Returns:
         fig: The Plotly Express figure.
     """
+    if 'column' not in config:
+        raise ValueError("Column must be in config")
+    if 'nbins' not in config:
+        config['nbins'] = 30
+    if 'width' not in config:
+        config['width'] = 600
+    if 'height' not in config:
+        config['height'] = 400
+    if 'left_quantile' not in config:
+        config['left_quantile'] = 0
+    if 'right_quantile' not in config:
+        config['right_quantile'] = 1
+    if 'marginal' not in config:
+        config['marginal'] = 'box'
     # Обрезаем данные между квантилями
+    column = config['column']
     trimmed_column = column.between(column.quantile(
         left_quantile), column.quantile(right_quantile))
     column = column[trimmed_column]
     if not titles_for_axis:
-        title = f'Распределенеие {column.name}'
+        if 'title' not in config:
+            config['title'] = f'Распределенеие {column.name}'
         xaxis_title = 'Значение'
         yaxis_title = 'Частота'
     else:
-        title = f'Распределенеие {titles_for_axis[column.name][1]}'
-        xaxis_title = f'{titles_for_axis[column.name][0]}'
+        if 'title' not in config:
+            config['title'] = f'Распределенеие {column.name}'
+        xaxis_title = f'{titles_for_axis[column.name]}'
         yaxis_title = 'Частота'
-    fig = px.histogram(column, title=title, histnorm='percent', nbins=nbins, marginal=marginal)
+    fig = px.histogram(column, title=config['title'], histnorm='percent', nbins=config['nbins'], marginal=config['marginal'])
     fig.update_layout(
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title
     )
     fig.update_traces(showlegend=False)
     fig.update_traces(
-        hovertemplate='Значение = %{x}<br>Частота = %{y:.2f}<extra></extra>'
+        hovertemplate=f'{titles_for_axis[column.name]} = ' + '%{x}<br>Частота = %{y:.2f}<extra></extra>'
         , selector=dict(type='histogram')
     )
     fig.update_traces(
-        hovertemplate='Значение = %{x:.2f}<br><extra></extra>'
+        hovertemplate= f'{titles_for_axis[column.name]} = ' + '%{x:.2f}<br><extra></extra>'
         , selector=dict(type='box')
     )
     if marginal:
@@ -2482,7 +2503,7 @@ def histogram(column: pd.Series, titles_for_axis: dict = None, nbins: int = 30, 
         )
     fig.update_layout(
         # , title={'text': f'<b>{title}</b>'}
-        width=width, height=height,
+        width=config['width'], height=config['height'],
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         title_y=0.95,
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
