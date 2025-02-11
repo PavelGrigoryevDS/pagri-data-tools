@@ -3924,7 +3924,7 @@ def histograms_stacked(config, titles_for_axis=None):
     if 'num_var' in config and not isinstance(config['num_var'], str):
         raise ValueError("num_var must be a string")
     if 'top_n' not in config:
-        config['top_n'] = 5
+        config['top_n'] = 20
     if 'lower_quantile' not in config:
         config['lower_quantile'] = 0      
     if 'upper_quantile' not in config:
@@ -4239,7 +4239,7 @@ def boxplots_stacked(config, titles_for_axis=None):
     if 'num_var' not in config or not isinstance(config['num_var'], str):
         raise ValueError("num_var must be a string")
     if 'top_n' not in config:
-        config['top_n'] = 5
+        config['top_n'] = 20
     if 'height' not in config:
         config['height'] = None        
     if 'width' not in config:
@@ -4409,7 +4409,7 @@ def violins_stacked(config, titles_for_axis=None):
     if 'num_var' not in config or not isinstance(config['num_var'], str):
         raise ValueError("num_var must be a string")
     if 'top_n' not in config:
-        config['top_n'] = 5
+        config['top_n'] = 20
     if 'height' not in config:
         config['height'] = None        
     if 'width' not in config:
