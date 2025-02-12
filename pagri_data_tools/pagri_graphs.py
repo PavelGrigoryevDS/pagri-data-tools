@@ -2143,20 +2143,25 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_traces(textposition=config['textposition'])
     else:
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            num_for_sort = config['y']
-            ascending_for_sort = False
-            custom_data = [config['df'][config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+            if pd.api.types.is_datetime64_any_dtype(config['df'][config['x']]):
+                df = config['df']
+            else:
+                num_for_sort = config['y']
+                ascending_for_sort = False
+                df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+            custom_data = [df[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
         else:
             num_for_sort = config['x']
             ascending_for_sort = True
-            custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
+            df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+            custom_data = [df[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
-            fig = px.bar(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'],
+            fig = px.bar(df, x=config['x'], y=config['y'], color=config['category'],
                         barmode=config['barmode'], custom_data=custom_data)
         elif graph_type == 'line':
-            fig = px.line(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+            fig = px.line(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
         elif graph_type == 'area':
-            fig = px.area(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+            fig = px.area(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
     if config['legend_position'] == 'top':
         fig.update_layout(
             yaxis = dict(
@@ -2168,7 +2173,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
                 , yanchor="top"    # Привязка к верхней части
-                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
                 , xanchor="center" # Привязка к центру
                 , x=0.5              # Центрирование по горизонтали
             )
@@ -3458,7 +3463,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
                 , yanchor="top"    # Привязка к верхней части
-                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
                 , xanchor="center" # Привязка к центру
                 , x=0.5              # Центрирование по горизонтали                       
             )     
@@ -4356,7 +4361,7 @@ def boxplots_stacked(config, titles_for_axis=None):
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="h"  # Горизонтальное расположение
                     , yanchor="top"    # Привязка к верхней части
-                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
                     , xanchor="center" # Привязка к центру
                     , x=0.5              # Центрирование по горизонтали                       
                 )     
