@@ -2143,7 +2143,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_traces(textposition=config['textposition'])
     else:
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            if pd.api.types.is_datetime64_any_dtype(config['df'][config['x']]):
+            if not config['sort_axis'] or pd.api.types.is_datetime64_any_dtype(config['df'][config['x']]):
                 df = config['df']
             else:
                 num_for_sort = config['y']
@@ -2151,9 +2151,12 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                 df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
             custom_data = [df[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
         else:
-            num_for_sort = config['x']
-            ascending_for_sort = True
-            df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+            if config['sort_axis']:
+                num_for_sort = config['x']
+                ascending_for_sort = True
+                df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+            else:
+                df = config['df']
             custom_data = [df[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
             fig = px.bar(df, x=config['x'], y=config['y'], color=config['category'],
@@ -2803,6 +2806,7 @@ def pairplot(config: dict, titles_for_axis: dict = None):
     - width (int, optional): Width of the plot. Defaults to 800.
     - height (int, optional): Height of the plot. Defaults to 800.
     - titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
+    - title (str): Title for figure
     - horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
     - vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
     - rows (int, optional): Number of rows in the subplot grid. Defaults to None.
@@ -3922,22 +3926,22 @@ def histograms_stacked(config, titles_for_axis=None):
     """
     Функция для построения наложенных гистограмм по категориальной переменной.
     Parameters (key in config):
-        - df: DataFrame с данными
-        - cat_var: Название категориальной переменной
-        - num_var: Название числовой переменной
-        - top_n: Количество топ категорий для отображения
-        - lower_quantile: Нижний квантиль для обрезки данных
-        - upper_quantile: Верхний квантиль для обрезки данных
-        - bins: Количество бинов для гистограммы
-        - line_width: Ширина линий на графике
-        - opacity: Прозрачность линий
-        - height: Высота графика
-        - width: Ширина графика
-        - mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
-        - barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
-        - legend_position: Положение легенды ('top', 'right')
-        - box:  Отображать ли коробчатую диаграмму
-        -  Объект Figure с графиком
+    df: DataFrame с данными
+    cat_var: Название категориальной переменной
+    num_var: Название числовой переменной
+    top_n: Количество топ категорий для отображения
+    lower_quantile: Нижний квантиль для обрезки данных
+    upper_quantile: Верхний квантиль для обрезки данных
+    bins: Количество бинов для гистограммы
+    line_width: Ширина линий на графике
+    opacity: Прозрачность линий
+    height: Высота графика
+    width: Ширина графика
+    mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
+    barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
+    legend_position: Положение легенды ('top', 'right')
+    box:  Отображать ли коробчатую диаграмму
+    Объект Figure с графиком
     titles_for_axis: Словарь с названиями для осей
     """
     if not isinstance(config, dict):
@@ -4124,7 +4128,7 @@ def histograms_stacked(config, titles_for_axis=None):
         # Фильтруем DataFrame по квантилям
         filtered_df = df[(df[num_var] >= lower_quantile) & (df[num_var] <= upper_quantile)]
             
-        fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins)
+        fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins, histnorm='percent')
         # fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')     
         # Обновление hovertemplate для гистограммы
         fig.update_traces(hovertemplate=xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>', 
@@ -4246,14 +4250,13 @@ def boxplots_stacked(config, titles_for_axis=None):
     """
     Функция для построения наложенных боксплотов по категориальной переменной.
     :param titles_for_axis: Словарь с названиями для осей
-    config (dict): A dictionary containing parameters for creating the chart.
-        :param df: DataFrame с данными
-        :param cat_var: Название категориальной переменной
-        :param num_var: Название числовой переменной
-        :param top_n: Количество топ категорий для отображения
-        :param height: Высота графика
-        :param width: Ширина графика
-        :return: Объект Figure с графиком
+    :param df: DataFrame с данными
+    :param cat_var: Название категориальной переменной
+    :param num_var: Название числовой переменной
+    :param top_n: Количество топ категорий для отображения
+    :param height: Высота графика
+    :param width: Ширина графика
+    :return: Объект Figure с графиком
     """
     if not isinstance(config, dict):
         raise TypeError("config must be a dictionary")
