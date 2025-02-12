@@ -1956,6 +1956,9 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         config['agg_mode'] = None
     if 'title' not in config:
         config['title'] = None
+    if 'groupby_col' not in config:
+        config['groupby_col'] = None
+
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
@@ -2017,19 +2020,26 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     def prepare_df(config: dict):
         df = config['df']
         color = [config['category']] if config['category'] else []
-        if not (pd.api.types.is_numeric_dtype(df[config['x']]) or pd.api.types.is_numeric_dtype(df[config['y']])):
-            raise ValueError("At least one of x or y must be numeric.")
-        elif pd.api.types.is_numeric_dtype(df[config['y']]):
-            cat_columns = [config['x']] + color
-            num_column = config['y']
+        if config['groupby_cols']:
+            num_column =  set([config['x'], config['y']]) - set(config['groupby_cols'])
+            if len(num_column) != 1:
+                raise ValueError("Set([x,y]) - Set(groupby_cols) must have result with one element")
+            num_column = num_column.pop()
+            cat_columns = config['groupby_cols']
         else:
-            cat_columns = [config['y']] + color
-            num_column = config['x']
+            if not (pd.api.types.is_numeric_dtype(df[config['x']]) or pd.api.types.is_numeric_dtype(df[config['y']])):
+                raise ValueError("At least one of x or y must be numeric.")
+            elif pd.api.types.is_numeric_dtype(df[config['y']]):
+                cat_columns = [config['x']] + color
+                num_column = config['y']
+            else:
+                cat_columns = [config['y']] + color
+                num_column = config['x']
         if config['func'] is None:
             func = 'first'
         else:
             func = config.get('func', 'mean')  # default to 'mean' if not provided
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+        if config['y'] == num_column:
             ascending = False
         else:
             ascending = True
@@ -2050,7 +2060,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         func_df['count'] = func_df['count'].apply(
             lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
         func_df['pretty_value'] = func_df['num'].apply(human_readable_number, args = [config['decimal_places']])
-
+        func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num': num_column})
     x_axis_label = config['x_axis_label']
     y_axis_label = config['y_axis_label']
@@ -2094,7 +2104,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         custom_data = [df_for_fig['count'], df_for_fig['pretty_value']]
         # display(df_for_fig)
         if 'text' in config and config['text']:
-            if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
                 text = [human_readable_number(el, config['decimal_places']) for el in y]
             else:
                 text = [human_readable_number(el, config['decimal_places']) for el in x]
@@ -2120,7 +2130,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_traces(textposition='top center')
         elif graph_type == 'area':
             fig.update_traces(textposition='top center')   
-        if pd.api.types.is_numeric_dtype(config['df'][config['x']]):
+        if pd.api.types.is_numeric_dtype(df_for_fig[config['x']]):
             # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
             traces = list(fig.data)
             traces.sort(key=lambda x: x.x[-1])
@@ -2137,7 +2147,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         else:
             custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
-            fig = px.bar(config['df'], x=config['x'], y=config['y'], color=config['category'],
+            fig = px.bar(config['df'].iloc[::-1], x=config['x'], y=config['y'], color=config['category'],
                         barmode=config['barmode'], custom_data=custom_data)
         elif graph_type == 'line':
             fig = px.line(config['df'], x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
@@ -2187,7 +2197,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     else:
         hovertemplate_color = f'color = '
     if config['agg_mode'] == 'groupby':
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+        if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
             hovertemplate = hovertemplate_x + \
                 '%{x}<br>' + hovertemplate_y + '%{customdata[1]}'
         else:
@@ -2279,6 +2289,7 @@ def bar(config: dict, titles_for_axis: dict = None):
         - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
         - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - groupby_cols(list): Columns for groupby
         - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
@@ -2321,6 +2332,7 @@ def line(config: dict, titles_for_axis: dict = None):
         - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
         - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - groupby_cols(list): Columns for groupby
         - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
@@ -2363,6 +2375,7 @@ def area(config: dict, titles_for_axis: dict = None):
         - decimal_places (int): The number of decimal places to display (default is 2).
         - show_group_size (bool):  Whether to show the group size (default is False).
         - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
+        - groupby_cols(list): Columns for groupby
         - resample_freq (str): Resample frequency for resample
 
     titles_for_axis (dict):  A dictionary containing titles for the axes.
@@ -2776,20 +2789,20 @@ def pairplot(config: dict, titles_for_axis: dict = None):
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
-    Parameters:
-    df (pandas.DataFrame): Input dataframe
-    width (int, optional): Width of the plot. Defaults to 800.
-    height (int, optional): Height of the plot. Defaults to 800.
-    titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
-    horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
-    vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
-    rows (int, optional): Number of rows in the subplot grid. Defaults to None.
-    cols (int, optional): Number of columns in the subplot grid. Defaults to None.
-    category (str, optional): Category column for coloring the scatter plots. Defaults to None.
-    legend_position (str, optional): Position of the legend. Defaults to 'top'.
+    Parameters (key in config):
+    - df (pandas.DataFrame): Input dataframe
+    - width (int, optional): Width of the plot. Defaults to 800.
+    - height (int, optional): Height of the plot. Defaults to 800.
+    - titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
+    - horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
+    - vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
+    - rows (int, optional): Number of rows in the subplot grid. Defaults to None.
+    - cols (int, optional): Number of columns in the subplot grid. Defaults to None.
+    - category (str, optional): Category column for coloring the scatter plots. Defaults to None.
+    - legend_position (str, optional): Position of the legend. Defaults to 'top'.
 
     Returns:
-    fig (plotly.graph_objs.Figure): The resulting pairplot figure
+    - fig (plotly.graph_objs.Figure): The resulting pairplot figure
     """
     if 'width' in config:
         width = config['width']
@@ -3158,8 +3171,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
     """
     Creates a bar chart for categorical columns using the Plotly Express library.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
+    Parameters (key in config):
         - df (DataFrame): A DataFrame containing data for creating the chart.
         - column_for_axis (str): The name of the column in the DataFrame to be used for creating the axis.
         - column_for_axis_label (str): The label for the axis.
@@ -3284,9 +3296,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             else:
                 config['title'] = temp_title
         else:
-            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
+            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']]
             if config['column_for_legend']:
-                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']]
             else:
                 config['column_for_legend_label'] = None
     else:
@@ -4294,7 +4306,12 @@ def boxplots_stacked(config, titles_for_axis=None):
     if not sort:
         categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
     else:
-        categories = df[cat_var].cat.categories.tolist()[:top_n]
+        if pd.api.types.is_categorical_dtype(df[cat_var]):
+            categories = df[cat_var].cat.categories.tolist()[:top_n]
+        elif pd.api.types.is_numeric_dtype(df[cat_var]):
+            categories = sorted(df[cat_var].unique().tolist())[:top_n]
+        else:
+            categories = df[cat_var].unique().tolist()[:top_n]
     df = df[df[cat_var].isin(categories)]
     # Создание графика
     fig = go.Figure()
