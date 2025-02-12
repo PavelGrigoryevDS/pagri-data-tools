@@ -2143,16 +2143,20 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             fig.update_traces(textposition=config['textposition'])
     else:
         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+            num_for_sort = config['y']
+            ascending_for_sort = False
             custom_data = [config['df'][config['y']].apply(human_readable_number, args = [config['decimal_places']])]
         else:
+            num_for_sort = config['x']
+            ascending_for_sort = True
             custom_data = [config['df'][config['x']].apply(human_readable_number, args = [config['decimal_places']])]
         if graph_type == 'bar':
-            fig = px.bar(config['df'].iloc[::-1], x=config['x'], y=config['y'], color=config['category'],
+            fig = px.bar(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'],
                         barmode=config['barmode'], custom_data=custom_data)
         elif graph_type == 'line':
-            fig = px.line(config['df'], x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+            fig = px.line(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
         elif graph_type == 'area':
-            fig = px.area(config['df'], x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+            fig = px.area(config['df'].sort_values(num_for_sort, ascending=ascending_for_sort), x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
     if config['legend_position'] == 'top':
         fig.update_layout(
             yaxis = dict(
@@ -3188,6 +3192,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         - text (bool):  Whether to display text on the chart (default is False).
         - textsize (int): Text size (default 14)
         - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
+        - text_decimal_places (int): The number of decimal places to display in text (default is 0).
         - xaxis_show (bool):  Whether to show the X-axis (default is True).
         - yaxis_show (bool):  Whether to show the Y-axis (default is True).
         - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
@@ -3253,6 +3258,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         config['textsize'] = 14
     if 'textposition' not in config:
         config['textposition'] = None   
+    if 'text_decimal_places' not in config:
+        config['text_decimal_places'] = 0
     if 'xaxis_show' not in config:
         config['xaxis_show'] = True
     if 'yaxis_show' not in config:
@@ -3415,7 +3422,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             trace.marker.color = trace_colors[i]
             trace.textangle=0
             if 'text' in config and config['text']:
-                trace.text = [f'{x:.0f}' if x > 0.5 else '' for x in trace.x]
+                trace.text = [f'{x:.{config['text_decimal_places']}f}' if x >= 0.1 else '<0.1' for x in trace.x]
             if config['column_for_legend']:
                 hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
@@ -3423,7 +3430,8 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                 hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
         else:
             if 'text' in config and config['text']:
-                trace.text = [f'{y:.0f}' if y > 0.5 else '' for y in trace.y]
+                trace.text = [f'{y:.{config['text_decimal_places']}f}' if y >= 0.1 else '<0.1' for y in trace.y]
+
             if config['column_for_legend']:
                 hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'       
