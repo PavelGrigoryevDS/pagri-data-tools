@@ -4434,3 +4434,71 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     count_right_dif_left_mismatches = len(mismatches_right_dif_left)
     print('Строки в левой таблице, отсутствующие в правой: ', count_left_dif_right_mismatches)
     print('Строки в правой таблице, отсутствующие в левой: ', count_right_dif_left_mismatches)
+
+def haversine(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great-circle distance between two points
+    on the Earth's surface given their latitude and longitude in decimal degrees.
+
+    Parameters:
+    lat1 : float
+        Latitude of the first point in decimal degrees.
+    lon1 : float
+        Longitude of the first point in decimal degrees.
+    lat2 : float
+        Latitude of the second point in decimal degrees.
+    lon2 : float
+        Longitude of the second point in decimal degrees.
+
+    Returns:
+    distance : float
+        The great-circle distance between the two points in kilometers.
+    """
+
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula components
+    dlat = lat2 - lat1  # Difference in latitude
+    dlon = lon2 - lon1  # Difference in longitude
+
+    # Haversine formula calculation
+    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.asin(math.sqrt(a))  # Central angle in radians
+
+    r = 6371  # Radius of Earth in kilometers
+    return c * r  # Distance in kilometers
+
+def haversine_vectorized(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great-circle distance between two points
+    on the Earth's surface given their latitude and longitude in decimal degrees.
+
+    Parameters:
+    lat1 : array-like
+        Latitude of the first point in decimal degrees.
+    lon1 : array-like
+        Longitude of the first point in decimal degrees.
+    lat2 : array-like
+        Latitude of the second point in decimal degrees.
+    lon2 : array-like
+        Longitude of the second point in decimal degrees.
+
+    Returns:
+    distance : array-like
+        The great-circle distance between the two points in kilometers.
+    """
+
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula components
+    dlat = lat2 - lat1  # Difference in latitude
+    dlon = lon2 - lon1  # Difference in longitude
+
+    # Haversine formula calculation
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arcsin(np.sqrt(a))  # Central angle in radians
+
+    r = 6371  # Radius of Earth in kilometers
+    return c * r  # Distance in kilometers

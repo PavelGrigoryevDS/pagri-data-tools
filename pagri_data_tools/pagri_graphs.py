@@ -2953,7 +2953,7 @@ def pairplot(config: dict, titles_for_axis: dict = None):
                     , yanchor="top"    # Привязка к верхней части
                     , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
                     , xanchor="center" # Привязка к центру
-                    , x=0.5              # Центрирование по горизонтали
+                    , x=0.1              # Центрирование по горизонтали
                 )
             )
         elif legend_position == 'right':
@@ -4224,7 +4224,7 @@ def histograms_stacked(config, titles_for_axis=None):
                 , yanchor="top"    # Привязка к верхней части
                 , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
                 , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали                       
+                , x=0.1              # Центрирование по горизонтали
             )     
         )    
     elif legend_position == 'right':
@@ -4726,7 +4726,7 @@ def plot_confidence_intervals(df, categorical_col, numerical_col, second_categor
                     , yanchor="top"    # Привязка к верхней части
                     , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
                     , xanchor="center" # Привязка к центру
-                    , x=0.5              # Центрирование по горизонтали                       
+                    , x=0.1              # Центрирование по горизонтали
                 )     
             )    
         elif legend_position == 'right':
