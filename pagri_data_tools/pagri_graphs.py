@@ -2176,7 +2176,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
                 , yanchor="top"    # Привязка к верхней части
-                , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
+                , y=1.09         # Положение по вертикали (отрицательное значение переместит вниз)
                 , xanchor="center" # Привязка к центру
                 , x=0.5              # Центрирование по горизонтали
             )
@@ -2454,7 +2454,7 @@ def area(config: dict, titles_for_axis: dict = None):
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
 
-def histogram(config: dict, titles_for_axis: dict = None, nbins: int = 30, width: int = 800, height: int = None, left_quantile: float = 0, right_quantile: float = 1, marginal: bool = 'box'):
+def histogram(config: dict, titles_for_axis: dict = None):
     """
     Plot a histogram of a Pandas Series using Plotly Express.
 
@@ -2488,7 +2488,7 @@ def histogram(config: dict, titles_for_axis: dict = None, nbins: int = 30, width
     # Обрезаем данные между квантилями
     column = config['column']
     trimmed_column = column.between(column.quantile(
-        left_quantile), column.quantile(right_quantile))
+        config['left_quantile']), column.quantile(config['right_quantile']))
     column = column[trimmed_column]
     if not titles_for_axis:
         if 'title' not in config:
@@ -2514,7 +2514,7 @@ def histogram(config: dict, titles_for_axis: dict = None, nbins: int = 30, width
         hovertemplate= f'{titles_for_axis[column.name]} = ' + '%{x:.2f}<br><extra></extra>'
         , selector=dict(type='box')
     )
-    if marginal:
+    if config['marginal']:
         fig.update_layout(
             yaxis2 = dict(
                 domain=[0.95, 1]
@@ -3467,9 +3467,9 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
                 , yanchor="top"    # Привязка к верхней части
-                , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
+                , y=1.09         # Положение по вертикали (отрицательное значение переместит вниз)
                 , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали                       
+                , x=0.5              # Центрирование по горизонтали
             )     
         )    
     elif config['legend_position'] == 'right':
@@ -4364,9 +4364,9 @@ def boxplots_stacked(config, titles_for_axis=None):
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="h"  # Горизонтальное расположение
                     , yanchor="top"    # Привязка к верхней части
-                    , y=1.07         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , y=1.09         # Положение по вертикали (отрицательное значение переместит вниз)
                     , xanchor="center" # Привязка к центру
-                    , x=0.5              # Центрирование по горизонтали                       
+                    , x=0.5              # Центрирование по горизонтали
                 )     
             )    
         elif config['legend_position'] == 'right':
