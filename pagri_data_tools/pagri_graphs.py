@@ -19,6 +19,7 @@ colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116
                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4']
 colorway_for_bar = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
                     ]
+colorway_for_stacked_histogram =['#2ecc71', '#e74c3c', '#3498db', '#f1c40f', '#9b59b6']
 # colorway_for_bar = ['rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
 #                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2', 'rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
 #                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2', 'rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
@@ -100,31 +101,62 @@ def plotly_default_settings(fig):
     return fig
 
 
-def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=1, font_size=14, show_text=True, is_show_in_pct=False, do_pretty_value=False):
+def heatmap_simple(
+    df: pd.DataFrame,
+    title: str = '',
+    xtick_text: list = None,
+    ytick_text: list = None,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    width: int = None,
+    height: int = None,
+    decimal_places: int = 1,
+    font_size: int = 14,
+    show_text: bool = True,
+    is_show_in_pct: bool = False,
+    do_pretty_value: bool = False
+) -> go.Figure:
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
-    Parameters:
-    - `df`: The Pandas DataFrame to create the heatmap from.
-    - `title`: The title of the heatmap (default is an empty string).
-    - `xtick_text`: The custom tick labels for the x-axis (default is None).
-    - `ytick_text`: The custom tick labels for the y-axis (default is None).
-    - `xaxis_label`: The label for the x-axis (default is None).
-    - `yaxis_label`: The label for the y-axis (default is None).
-    - `width`: The width of the heatmap (default is None).
-    - `height`: The height of the heatmap (default is None).
-    - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
-    - 'show_text': Whether to show text in the annotations (default is True).
-    - `font_size`: The font size for the text in the annotations (default is 14).
-    - 'is_show_in_pct': Whether to show the values in percentage (default is True).
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The Pandas DataFrame to create the heatmap from
+    title : str, optional
+        The title of the heatmap. Default is ''
+    xtick_text : array-like, optional
+        The custom tick labels for the x-axis. Default is None
+    ytick_text : array-like, optional
+        The custom tick labels for the y-axis. Default is None
+    xaxis_title : str, optional
+        The title for the x-axis. Default is None
+    yaxis_title : str, optional
+        The title for the y-axis. Default is None
+    width : int, optional
+        The width of the heatmap. Default is None
+    height : int, optional
+        The height of the heatmap. Default is None
+    decimal_places : int, optional
+        The number of decimal places to display in the annotations. Default is 2
+    show_text : bool, optional
+        Whether to show text in the annotations. Default is True
+    font_size : int, optional
+        The font size for the text in the annotations. Default is 14
+    is_show_in_pct : bool, optional
+        Whether to show the values in percentage. Default is True
 
-    Returns:
-    - A Plotly figure object representing the heatmap.
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        A Plotly figure object representing the heatmap
 
-    Notes:
-    - If `xtick_text` or `ytick_text` is provided, it must have the same length as the number of columns or rows in the DataFrame, respectively.
-    - The heatmap is created with a custom colorscale and hover labels.
-    - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
+    Notes
+    -----
+    - If `xtick_text` or `ytick_text` is provided, it must have the same length as
+      the number of columns or rows in the DataFrame, respectively
+    - The heatmap is created with a custom colorscale and hover labels
+    - The function returns a Plotly figure object, which can be displayed using `fig.show()`
     """
     def format_number(num):
         magnitude = 0
@@ -216,11 +248,11 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
             len(ytick_text)), ticktext=ytick_text))
 
     # Update axis labels if custom labels are provided
-    if xaxis_label is not None:
-        fig.update_layout(xaxis=dict(title=xaxis_label))
+    if xaxis_title is not None:
+        fig.update_layout(xaxis=dict(title=xaxis_title))
 
-    if yaxis_label is not None:
-        fig.update_layout(yaxis=dict(title=yaxis_label))
+    if yaxis_title is not None:
+        fig.update_layout(yaxis=dict(title=yaxis_title))
 
     # Update figure size if custom size is provided
     if width is not None:
@@ -248,31 +280,61 @@ def heatmap_simple(df, title='', xtick_text=None, ytick_text=None, xaxis_label=N
     return fig
 
 
-def heatmap_corr(df, title='Тепловая карта корреляционных связей между числовыми столбцами', titles_for_axis: dict = None, xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+def heatmap_corr(
+    df: pd.DataFrame,
+    title: str = None,
+    titles_for_axis: dict = None,
+    xtick_text: list = None, 
+    ytick_text: list = None,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    width: int = None,
+    height: int = None,
+    decimal_places: int = 2,
+    font_size: int = 14
+) -> go.Figure:
     """
-    Creates a heatmap from a Pandas DataFrame using Plotly.
+    Creates a correlation heatmap from a Pandas DataFrame using Plotly.
 
-    Parameters:
-    - `df`: The Pandas DataFrame to create the heatmap from.
-    - `title`: The title of the heatmap (default is an empty string).
-    - `titles_for_axis` (dict):  A dictionary containing titles for the axes.
-    - `xtick_text`: The custom tick labels for the x-axis (default is None).
-    - `ytick_text`: The custom tick labels for the y-axis (default is None).
-    - `xaxis_label`: The label for the x-axis (default is None).
-    - `yaxis_label`: The label for the y-axis (default is None).
-    - `width`: The width of the heatmap (default is None).
-    - `height`: The height of the heatmap (default is None).
-    - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
-    - `font_size`: The font size for the text in the annotations (default is 14).
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The Pandas DataFrame to create the heatmap from
+    title : str, optional
+        The title of the heatmap. Default is None
+    titles_for_axis : dict, optional
+        A dictionary containing titles for the axes. Default is None
+    xtick_text : list, optional
+        The custom tick labels for the x-axis. Default is None
+    ytick_text : list, optional
+        The custom tick labels for the y-axis. Default is None
+    xaxis_label : str, optional
+        The label for the x-axis. Default is None
+    yaxis_label : str, optional
+        The label for the y-axis. Default is None
+    width : int, optional
+        The width of the heatmap. Default is None
+    height : int, optional
+        The height of the heatmap. Default is None
+    decimal_places : int, optional
+        The number of decimal places to display in the annotations. Default is 2
+    font_size : int, optional
+        The font size for the text in the annotations. Default is 14
 
-    Returns:
-    - A Plotly figure object representing the heatmap.
+    Returns
+    -------
+    go.Figure
+        A Plotly figure object representing the heatmap
 
-    Notes:
-    - If `xtick_text` or `ytick_text` is provided, it must have the same length as the number of columns or rows in the DataFrame, respectively.
-    - The heatmap is created with a custom colorscale and hover labels.
-    - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
+    Notes
+    -----
+    - If `xtick_text` or `ytick_text` is provided, it must have the same length as 
+      the number of columns or rows in the DataFrame, respectively
+    - The heatmap is created with a custom colorscale and hover labels
+    - The function returns a Plotly figure object, which can be displayed using `fig.show()`
     """
+    if not title:
+        title = 'Тепловая карта корреляционных связей между числовыми столбцами'
     num_columns = filter(
         lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
     df_corr = df[num_columns].corr()
@@ -338,11 +400,11 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
             len(ytick_text)), ticktext=ytick_text))
 
     # Update axis labels if custom labels are provided
-    if xaxis_label is not None:
-        fig.update_layout(xaxis=dict(title=xaxis_label))
+    if xaxis_title is not None:
+        fig.update_layout(xaxis=dict(title=xaxis_title))
 
-    if yaxis_label is not None:
-        fig.update_layout(yaxis=dict(title=yaxis_label))
+    if yaxis_title is not None:
+        fig.update_layout(yaxis=dict(title=yaxis_title))
 
     # Update figure size if custom size is provided
     if width is not None:
@@ -371,32 +433,65 @@ def heatmap_corr(df, title='Тепловая карта корреляционн
     )
     return fig
 
-def heatmap_corr_gen(df, part_size = 10, title='Тепловая карта корреляционных связей между числовыми столбцами', titles_for_axis: dict = None, xtick_text=None, ytick_text=None, xaxis_label=None, yaxis_label=None, width=None, height=None, decimal_places=2, font_size=14):
+def heatmap_corr_gen(
+    df: pd.DataFrame,
+    part_size: int = 10,
+    title: str = None,
+    titles_for_axis: dict = None,
+    xtick_text: list = None,
+    ytick_text: list = None,
+    xaxis_label: str = None,
+    yaxis_label: str = None,
+    width: int = None,
+    height: int = None,
+    decimal_places: int = 2,
+    font_size: int = 14
+) -> go.Figure:
     """
     Creates a heatmap from a Pandas DataFrame using Plotly.
 
-    Parameters:
-    - `df`: The Pandas DataFrame to create the heatmap from.
-    - 'part_size': max rows in corr matrix
-    - `title`: The title of the heatmap (default is an empty string).
-    - `titles_for_axis` (dict):  A dictionary containing titles for the axes.
-    - `xtick_text`: The custom tick labels for the x-axis (default is None).
-    - `ytick_text`: The custom tick labels for the y-axis (default is None).
-    - `xaxis_label`: The label for the x-axis (default is None).
-    - `yaxis_label`: The label for the y-axis (default is None).
-    - `width`: The width of the heatmap (default is None).
-    - `height`: The height of the heatmap (default is None).
-    - `decimal_places`: The number of decimal places to display in the annotations (default is 2).
-    - `font_size`: The font size for the text in the annotations (default is 14).
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The Pandas DataFrame to create the heatmap from
+    part_size : int, optional
+        Max rows in corr matrix. Default is 10
+    title : str, optional
+        The title of the heatmap. Default is None
+    titles_for_axis : dict, optional
+        A dictionary containing titles for the axes. Default is None
+    xtick_text : list, optional
+        The custom tick labels for the x-axis. Default is None
+    ytick_text : list, optional
+        The custom tick labels for the y-axis. Default is None
+    xaxis_label : str, optional
+        The label for the x-axis. Default is None
+    yaxis_label : str, optional
+        The label for the y-axis. Default is None
+    width : int, optional
+        The width of the heatmap. Default is None
+    height : int, optional
+        The height of the heatmap. Default is None
+    decimal_places : int, optional
+        The number of decimal places to display in the annotations. Default is 2
+    font_size : int, optional
+        The font size for the text in the annotations. Default is 14
 
-    Returns:
-    - A Plotly figure object representing the heatmap.
+    Returns
+    -------
+    go.Figure
+        A Plotly figure object representing the heatmap
 
-    Notes:
-    - If `xtick_text` or `ytick_text` is provided, it must have the same length as the number of columns or rows in the DataFrame, respectively.
-    - The heatmap is created with a custom colorscale and hover labels.
-    - The function returns a Plotly figure object, which can be displayed using `fig.show()`.
+    Notes
+    -----
+    - If `xtick_text` or `ytick_text` is provided, it must have the same length as 
+      the number of columns or rows in the DataFrame, respectively
+    - The heatmap is created with a custom colorscale and hover labels
+    - The function returns a Plotly figure object, which can be displayed using `fig.show()`
     """
+
+    if not title:
+        title = 'Тепловая карта корреляционных связей между числовыми столбцами'
     num_columns = filter(
         lambda x: pd.api.types.is_numeric_dtype(df[x]), df.columns)
     df_corr = df[num_columns].corr()
@@ -513,20 +608,38 @@ def heatmap_corr_gen(df, part_size = 10, title='Тепловая карта ко
         )
         yield fig
 
-def categorical_heatmap_matrix(df, col1, col2, titles_for_axis: dict = None, width=None, height=None):
+def categorical_heatmap_matrix(
+    df: pd.DataFrame,
+    col1: str,
+    col2: str,
+    titles_for_axis: dict = None,
+    width: int = None,
+    height: int = None
+) -> go.Figure:
     """
     Generate a heatmap matrix for all possible combinations of categorical variables in a dataframe.
 
-    This function takes a pandas DataFrame as input and generates a heatmap matrix for each pair of categorical variables.
-    The heatmap matrix is a visual representation of the cross-tabulation of two categorical variables, which can help identify patterns and relationships between them.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame containing categorical variables
+    col1 : str
+        Name of the first categorical column
+    col2 : str
+        Name of the second categorical column
+    titles_for_axis : dict, optional
+        A dictionary containing titles for the axes. Default is None
+    width : int, optional
+        Width of the heatmap. Default is None
+    height : int, optional
+        Height of the heatmap. Default is None
 
-    Parameters:
-    df (pandas DataFrame): Input DataFrame containing categorical variables.
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    None
+    Returns
+    -------
+    go.Figure
+        A Plotly figure object representing the heatmap matrix
     """
+
     def human_readable_number(x):
         if x >= 1e6 or x <= -1e6:
             return f"{x/1e6:.1f} M"
@@ -581,21 +694,32 @@ def categorical_heatmap_matrix(df, col1, col2, titles_for_axis: dict = None, wid
     plotly_default_settings(fig)
     return fig
 
-
-def categorical_heatmap_matrix_gen(df, titles_for_axis: dict = None, width=None, height=None):
+def categorical_heatmap_matrix_gen(
+    df: pd.DataFrame,
+    titles_for_axis: dict = None,
+    width: int = None,
+    height: int = None
+) -> go.Figure:
     """
     Generate a heatmap matrix for all possible combinations of categorical variables in a dataframe.
 
-    This function takes a pandas DataFrame as input and generates a heatmap matrix for each pair of categorical variables.
-    The heatmap matrix is a visual representation of the cross-tabulation of two categorical variables, which can help identify patterns and relationships between them.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame containing categorical variables
+    titles_for_axis : dict, optional
+        A dictionary containing titles for the axes. Default is None
+    width : int, optional
+        Width of the heatmap. Default is None
+    height : int, optional
+        Height of the heatmap. Default is None
 
-    Parameters:
-    df (pandas DataFrame): Input DataFrame containing categorical variables.
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
+    Returns
+    -------
     None
+        This function displays the heatmap matrix but does not return any value
     """
+
     def human_readable_number(x):
         if x >= 1e6 or x <= -1e6:
             return f"{x/1e6:.1f} M"
@@ -704,17 +828,29 @@ def treemap_dash(df, columns):
     return app
 
 
-def treemap(df, columns, values=None):
+def treemap(
+    df: pd.DataFrame,
+    columns: list,
+    values: str = None
+) -> go.Figure:
     """
     Creates an interactive treemap using Plotly.
 
-    Parameters:
-    df (pandas.DataFrame): dataframe with data for the treemap.
-    columns (list): list of columns to use for the treemap.
-    values (str): column for values, if None - values  will be calculated as count.
-    Returns:
-    fig (plotly.graph_objs.Figure): interactive treemap figure.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe with data for the treemap
+    columns : list
+        List of columns to use for the treemap
+    values : str, optional
+        Column for values, if None - values will be calculated as count. Default is None
+
+    Returns
+    -------
+    go.Figure
+        Interactive treemap figure
     """
+
     fig = px.treemap(df, path=[px.Constant('All')] + columns, values=values, color_discrete_sequence=[
         'rgba(148, 100, 170, 1)',
         'rgba(50, 156, 179, 1)',
@@ -1898,7 +2034,10 @@ def graph_analysis_gen(df):
             graph_analysis(df, list(cat_pair), num_column)
             yield [num_column] + list(cat_pair)
             
-def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, graph_type: str = 'bar'):
+def _create_base_fig_for_bar_line_area(config: dict, graph_type: str = 'bar'):
+    """
+    Creates a figure for bar, line or area function using the Plotly Express library.
+    """    
     # Проверка входных данных
     if not isinstance(config, dict):
         raise TypeError("config must be a dictionary")
@@ -1908,102 +2047,102 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         raise ValueError("x must be a string")
     if 'y' not in config or not isinstance(config['y'], str):
         raise ValueError("y must be a string")
-    if 'func' in config and not isinstance(config['func'], str):
-        raise ValueError("func must be a string")
+    if not config['agg_func'] or not isinstance(config['agg_func'], str):
+        raise ValueError("agg_func must be a string")
     if 'barmode' in config and not isinstance(config['barmode'], str):
         raise ValueError("barmode must be a string")
     if 'agg_mode' in config and config['agg_mode'] != 'groupby' and 'resample_freq' not in config:
         raise ValueError("resample_freq must be define")
-    if 'func' not in config:
-        config['func'] = None
-    if 'barmode' not in config:
-        config['barmode'] = 'group'
-    if 'width' not in config:
-        config['width'] = None
-    if 'height' not in config:
-        config['height'] = None
-    if 'text' not in config:
-        config['text'] = False            
-    if 'textsize' not in config:
-        config['textsize'] = 14
-    if 'xaxis_show' not in config:
-        config['xaxis_show'] = True
-    if 'yaxis_show' not in config:
-        config['yaxis_show'] = True
-    if 'showgrid_x' not in config:
-        config['showgrid_x'] = True
-    if 'showgrid_y' not in config:
-        config['showgrid_y'] = True
-    if 'sort' not in config:
-        config['sort'] = True        
-    if 'top_n_trim_axis' not in config:
-        config['top_n_trim_axis'] = None
-    if 'top_n_trim_legend' not in config:
-        config['top_n_trim_legend'] = None    
-    if 'sort_axis' not in config:
-        config['sort_axis'] = True
-    if 'sort_legend' not in config:
-        config['sort_legend'] = True   
-    if 'textposition' not in config:
-        config['textposition'] = None   
-    if 'legend_position' not in config:
-        config['legend_position'] = 'right'          
-    if 'decimal_places' not in config:                        
-        config['decimal_places'] = 1
-    if 'show_group_size' not in config:
-        config['show_group_size'] = False
-    if 'agg_mode' not in config:
-        config['agg_mode'] = None
-    if 'title' not in config:
-        config['title'] = None
-    if 'groupby_col' not in config:
-        config['groupby_col'] = None
+    # if 'agg_func' not in config:
+    #     config['agg_func'] = None
+    # if 'barmode' not in config:
+    #     config['barmode'] = 'group'
+    # if 'width' not in config:
+    #     config['width'] = None
+    # if 'height' not in config:
+    #     config['height'] = None
+    # if 'show_text' not in config:
+    #     config['show_text'] = False            
+    # if 'textsize' not in config:
+    #     config['textsize'] = 14
+    # if 'xaxis_show' not in config:
+    #     config['xaxis_show'] = True
+    # if 'yaxis_show' not in config:
+    #     config['yaxis_show'] = True
+    # if 'showgrid_x' not in config:
+    #     config['showgrid_x'] = True
+    # if 'showgrid_y' not in config:
+    #     config['showgrid_y'] = True
+    # if 'sort' not in config:
+    #     config['sort'] = True        
+    # if 'top_n_trim_axis' not in config:
+    #     config['top_n_trim_axis'] = None
+    # if 'top_n_trim_legend' not in config:
+    #     config['top_n_trim_legend'] = None    
+    # if 'sort_axis' not in config:
+    #     config['sort_axis'] = True
+    # if 'sort_legend' not in config:
+    #     config['sort_legend'] = True   
+    # if 'textposition' not in config:
+    #     config['textposition'] = None   
+    # if 'legend_position' not in config:
+    #     config['legend_position'] = 'right'          
+    # if 'decimal_places' not in config:                        
+    #     config['decimal_places'] = 1
+    # if 'show_group_size' not in config:
+    #     config['show_group_size'] = False
+    # if 'agg_mode' not in config:
+    #     config['agg_mode'] = None
+    # if 'title' not in config:
+    #     config['title'] = None
+    # if 'groupby_col' not in config:
+    #     config['groupby_col'] = None
 
     if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
         config['x'], config['y'] = config['y'], config['x']
 
-    if titles_for_axis:
-        # if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
-        #     raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
-        # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
-        #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
-        #     , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
-        config['x_axis_label'] = titles_for_axis[config['x']]
-        config['y_axis_label'] = titles_for_axis[config['y']]
-        config['category_axis_label'] = titles_for_axis[config['category']
-                                                ] if 'category' in config else None
-        # func = config['func']
-        # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-        #     numeric = titles_for_axis[config["y"]][1]
-        #     cat = titles_for_axis[config["x"]][1]
-        #     suffix_type = titles_for_axis[config["y"]][2]
-        # else:
-        #     numeric = titles_for_axis[config["x"]][1]
-        #     cat = titles_for_axis[config["y"]][1]
-        #     suffix_type = titles_for_axis[config["x"]][2]
-        # if func == 'nunique':
-        #     numeric_list = numeric.split()[1:]
-        #     title = f'Количество уникальных {' '.join(numeric_list)}'
-        #     title += f' в зависимости от {cat}'
-        # elif func is None:
-        #     title = f' {numeric.capitalize()} в зависимости от {cat}'
-        # else:
-        #     title = f'{func_for_title[func][suffix_type]}'
-        #     title += f' {numeric} в зависимости от {cat}'
-        # if 'category' in config and config['category']:
-        #     title += f' и {titles_for_axis[config["category"]][1]}'
-    else:
-        if 'x_axis_label' not in config:
-            config['x_axis_label'] = None
-        if 'y_axis_label' not in config:
-            config['y_axis_label'] = None
-        if 'category_axis_label' not in config:
-            config['category_axis_label'] = None
-        if 'title' not in config:
-            config['title'] = None
-    if 'category' not in config:
-        config['category'] = None
-        config['category_axis_label'] = None
+    # if titles_for_axis:
+    #     # if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
+    #     #     raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
+    #     # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+    #     #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
+    #     #     , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
+    #     config['x_axis_label'] = titles_for_axis[config['x']]
+    #     config['y_axis_label'] = titles_for_axis[config['y']]
+    #     config['category_axis_label'] = titles_for_axis[config['category']
+    #                                             ] if 'category' in config else None
+    #     # func = config['func']
+    #     # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+    #     #     numeric = titles_for_axis[config["y"]][1]
+    #     #     cat = titles_for_axis[config["x"]][1]
+    #     #     suffix_type = titles_for_axis[config["y"]][2]
+    #     # else:
+    #     #     numeric = titles_for_axis[config["x"]][1]
+    #     #     cat = titles_for_axis[config["y"]][1]
+    #     #     suffix_type = titles_for_axis[config["x"]][2]
+    #     # if func == 'nunique':
+    #     #     numeric_list = numeric.split()[1:]
+    #     #     title = f'Количество уникальных {' '.join(numeric_list)}'
+    #     #     title += f' в зависимости от {cat}'
+    #     # elif func is None:
+    #     #     title = f' {numeric.capitalize()} в зависимости от {cat}'
+    #     # else:
+    #     #     title = f'{func_for_title[func][suffix_type]}'
+    #     #     title += f' {numeric} в зависимости от {cat}'
+    #     # if 'category' in config and config['category']:
+    #     #     title += f' и {titles_for_axis[config["category"]][1]}'
+    # else:
+    #     if 'x_axis_label' not in config:
+    #         config['x_axis_label'] = None
+    #     if 'y_axis_label' not in config:
+    #         config['y_axis_label'] = None
+    #     if 'category_axis_label' not in config:
+    #         config['category_axis_label'] = None
+    #     if 'title' not in config:
+    #         config['title'] = None
+    # if 'category' not in config:
+    #     config['category'] = None
+    #     config['category_axis_label'] = None
     if not isinstance(config['category'], str) and config['category'] is not None:
         raise ValueError("category must be a string")
 
@@ -2035,10 +2174,10 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
             else:
                 cat_columns = [config['y']] + color
                 num_column = config['x']
-        if config['func'] is None:
+        if config['agg_func'] is None:
             func = 'first'
         else:
-            func = config.get('func', 'mean')  # default to 'mean' if not provided
+            func = config.get('agg_func', 'mean')  # default to 'mean' if not provided
         if config['y'] == num_column:
             ascending = False
         else:
@@ -2062,14 +2201,14 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         func_df['pretty_value'] = func_df['num'].apply(human_readable_number, args = [config['decimal_places']])
         func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num': num_column})
-    x_axis_label = config['x_axis_label']
-    y_axis_label = config['y_axis_label']
-    color_axis_label = config['category_axis_label']
+    xaxis_title = config['xaxis_title']
+    yaxis_title = config['yaxis_title']
+    category_axis_title = config['category_axis_title']
     if config['agg_mode'] == 'resample':
-        if config['func'] is None:
+        if config['agg_func'] is None:
             func = 'first'
         else:
-            func = config['func']
+            func = config['agg_func']
         columns = [config['x'], config['y']]
         if config['category']:
             columns.append(config['category'])
@@ -2103,7 +2242,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                         ].values if config['category'] else None
         custom_data = [df_for_fig['count'], df_for_fig['pretty_value']]
         # display(df_for_fig)
-        if 'text' in config and config['text']:
+        if 'show_text' in config and config['show_text']:
             if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
                 text = [human_readable_number(el, config['decimal_places']) for el in y]
             else:
@@ -2171,7 +2310,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
                 domain=[0, 0.9]
             )
             , legend = dict(
-                title_text=color_axis_label
+                title_text=category_axis_title
                 , title_font_color='rgba(0, 0, 0, 0.7)'
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="h"  # Горизонтальное расположение
@@ -2184,7 +2323,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     elif config['legend_position'] == 'right':
         fig.update_layout(
                 legend = dict(
-                title_text=color_axis_label
+                title_text=category_axis_title
                 , title_font_color='rgba(0, 0, 0, 0.7)'
                 , font_color='rgba(0, 0, 0, 0.7)'
                 , orientation="v"  # Горизонтальное расположение
@@ -2196,16 +2335,16 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         )
     else:
         raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
-    if x_axis_label:
-        hovertemplate_x = f'{x_axis_label} = '
+    if xaxis_title:
+        hovertemplate_x = f'{xaxis_title} = '
     else:
         hovertemplate_x = f'x = '
-    if x_axis_label:
-        hovertemplate_y = f'{y_axis_label} = '
+    if yaxis_title:
+        hovertemplate_y = f'{yaxis_title} = '
     else:
         hovertemplate_y = f'y = '
-    if x_axis_label:
-        hovertemplate_color = f'<br>{color_axis_label} = '
+    if category_axis_title:
+        hovertemplate_color = f'<br>{category_axis_title} = '
     else:
         hovertemplate_color = f'color = '
     if config['agg_mode'] == 'groupby':
@@ -2243,7 +2382,7 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
         # , margin=dict(l=50, r=50, b=50, t=70)
         margin=dict(t=80),
         width=config['width'], height=config['height'],
-        title={'text': config["title"]}, xaxis_title=x_axis_label, yaxis_title=y_axis_label, 
+        title={'text': config["title"]}, xaxis_title=xaxis_title, yaxis_title=yaxis_title, 
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -2268,134 +2407,404 @@ def base_graph_for_bar_line_area(config: dict, titles_for_axis: dict = None, gra
     )      
     return fig    
             
-def bar(config: dict, titles_for_axis: dict = None):
+def bar(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    category: str = None,
+    agg_mode: str = None,
+    agg_func: str = None,    
+    groupby_cols: list = None,
+    resample_freq: str = None,     
+    barmode: str = 'group',
+    width: int = None,
+    height: int = None,    
+    title: str = None,    
+    xaxis_title: str = None,
+    yaxis_title: str = None,        
+    category_axis_title: str = None,    
+    showgrid_x: bool = True,
+    showgrid_y: bool = True,
+    legend_position: str = 'top',    
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    sort_axis: bool = True,
+    sort_legend: bool = True,
+    show_text: bool = False,
+    textsize: int = 14,
+    textposition: str = 'auto',
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    decimal_places: int = 0,
+    show_group_size: bool = False,
+) -> go.Figure:
     """
     Creates a bar chart using the Plotly Express library.
 
-    Parameters (key in config):
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
-        - x_axis_label (str): The label for the X-axis.
-        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
-        - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.  
-        If None or an empty string, the chart will be created without category.
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
-        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
-        - category_axis_label (str): The label for the categories.
-        - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-        - legend_position (str): Положение легенды ('top', 'right')
-        - decimal_places (int): The number of decimal places to display (default is 2).
-        - show_group_size (bool):  Whether to show the group size (default is False).
-        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
-        - groupby_cols(list): Columns for groupby
-        - resample_freq (str): Resample frequency for resample
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing data for creating the chart
+    x : str
+        The name of the column in the DataFrame to be used for creating the X-axis
+    y : str
+        The name of the column in the DataFrame to be used for creating the Y-axis
+    xaxis_title : str, optional
+        The title for the X-axis
+    yaxis_title : str, optional
+        The title for the Y-axis
+    category : str, optional
+        The name of the column in the DataFrame to be used for creating categories
+    top_n_trim_axis : int, optional
+        The number of top categories axis to include in the chart
+    top_n_trim_legend : int, optional
+        The number of top categories legend to include in the chart
+    sort_axis : bool, optional
+        Whether to sort the categories on the axis. Default is True
+    sort_legend : bool, optional
+        Whether to sort the categories in the legend. Default is True
+    category_axis_title : str, optional
+        The title for the categories
+    title : str, optional
+        The title of the chart
+    agg_func : str, optional
+        The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
+    barmode : str, optional
+        The mode for displaying bars. Default is 'group'
+    width : int, optional
+        The width of the chart
+    height : int, optional
+        The height of the chart
+    show_text : bool, optional
+        Whether to display text on the chart. Default is False
+    textsize : int, optional
+        Text size. Default is 14
+    textposition : str, optional
+        Text position. May be 'auto', 'inside', 'outside', 'none'. Default is 'auto'
+    xaxis_show : bool, optional
+        Whether to show the X-axis. Default is True
+    yaxis_show : bool, optional
+        Whether to show the Y-axis. Default is True
+    showgrid_x : bool, optional
+        Whether to show grid on X-axis. Default is True
+    showgrid_y : bool, optional
+        Whether to show grid on Y-axis. Default is True
+    legend_position : str, optional
+        Position of the legend ('top', 'right'). Default is 'top'
+    decimal_places : int, optional
+        The number of decimal places to display. Default is 2
+    show_group_size : bool, optional
+        Whether to show the group size. Default is False
+    agg_mode : str, optional
+        Aggregation mode. May be 'groupby', 'resample', None. Default is None
+    groupby_cols : list, optional
+        Columns for groupby
+    resample_freq : str, optional
+        Resample frequency for resample
 
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
+    Returns
+    -------
+    go.Figure
+        The created chart
     """
-    return base_graph_for_bar_line_area(config, titles_for_axis, 'bar')
+    config = {
+        'df': df,
+        'x': x,
+        'y': y,
+        'xaxis_title': xaxis_title,
+        'yaxis_title': yaxis_title,
+        'category': category,
+        'top_n_trim_axis': top_n_trim_axis,
+        'top_n_trim_legend': top_n_trim_legend,
+        'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'category_axis_title': category_axis_title,
+        'title': title,
+        'agg_func': agg_func,
+        'barmode': barmode,
+        'width': width,
+        'height': height,
+        'show_text': show_text,
+        'textsize': textsize,
+        'textposition': textposition,
+        'xaxis_show': xaxis_show,
+        'yaxis_show': yaxis_show,
+        'showgrid_x': showgrid_x,
+        'showgrid_y': showgrid_y,
+        'legend_position': legend_position,
+        'decimal_places': decimal_places,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'groupby_cols': groupby_cols,
+        'resample_freq': resample_freq
+    }
+    return _create_base_fig_for_bar_line_area(config, 'bar')
 
-def line(config: dict, titles_for_axis: dict = None):
+def line(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    category: str = None,
+    agg_mode: str = None,
+    agg_func: str = None,    
+    groupby_cols: list = None,
+    resample_freq: str = None,     
+    barmode: str = 'group',
+    width: int = None,
+    height: int = None,    
+    title: str = None,    
+    xaxis_title: str = None,
+    yaxis_title: str = None,        
+    category_axis_title: str = None,    
+    showgrid_x: bool = True,
+    showgrid_y: bool = True,
+    legend_position: str = 'top',    
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    sort_axis: bool = True,
+    sort_legend: bool = True,
+    show_text: bool = False,
+    textsize: int = 14,
+    textposition: str = 'auto',
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    decimal_places: int = 0,
+    show_group_size: bool = False,
+) -> go.Figure:
     """
-    Creates a line chart using the Plotly Express library.
+    Creates a bar chart using the Plotly Express library.
 
-    Parameters (key in config):
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
-        - x_axis_label (str): The label for the X-axis.
-        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
-        - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.
-        If None or an empty string, the chart will be created without category.
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
-        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
-        - category_axis_label (str): The label for the categories.
-        - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-        - legend_position (str): Положение легенды ('top', 'right')
-        - decimal_places (int): The number of decimal places to display (default is 2).
-        - show_group_size (bool):  Whether to show the group size (default is False).
-        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
-        - groupby_cols(list): Columns for groupby
-        - resample_freq (str): Resample frequency for resample
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing data for creating the chart
+    x : str
+        The name of the column in the DataFrame to be used for creating the X-axis
+    y : str
+        The name of the column in the DataFrame to be used for creating the Y-axis
+    xaxis_title : str, optional
+        The title for the X-axis
+    yaxis_title : str, optional
+        The title for the Y-axis
+    category : str, optional
+        The name of the column in the DataFrame to be used for creating categories
+    top_n_trim_axis : int, optional
+        The number of top categories axis to include in the chart
+    top_n_trim_legend : int, optional
+        The number of top categories legend to include in the chart
+    sort_axis : bool, optional
+        Whether to sort the categories on the axis. Default is True
+    sort_legend : bool, optional
+        Whether to sort the categories in the legend. Default is True
+    category_axis_title : str, optional
+        The title for the categories
+    title : str, optional
+        The title of the chart
+    agg_func : str, optional
+        The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
+    barmode : str, optional
+        The mode for displaying bars. Default is 'group'
+    width : int, optional
+        The width of the chart
+    height : int, optional
+        The height of the chart
+    show_text : bool, optional
+        Whether to display text on the chart. Default is False
+    textsize : int, optional
+        Text size. Default is 14
+    textposition : str, optional
+        Text position. May be 'auto', 'inside', 'outside', 'none'. Default is 'auto'
+    xaxis_show : bool, optional
+        Whether to show the X-axis. Default is True
+    yaxis_show : bool, optional
+        Whether to show the Y-axis. Default is True
+    showgrid_x : bool, optional
+        Whether to show grid on X-axis. Default is True
+    showgrid_y : bool, optional
+        Whether to show grid on Y-axis. Default is True
+    legend_position : str, optional
+        Position of the legend ('top', 'right'). Default is 'top'
+    decimal_places : int, optional
+        The number of decimal places to display. Default is 2
+    show_group_size : bool, optional
+        Whether to show the group size. Default is False
+    agg_mode : str, optional
+        Aggregation mode. May be 'groupby', 'resample', None. Default is None
+    groupby_cols : list, optional
+        Columns for groupby
+    resample_freq : str, optional
+        Resample frequency for resample
 
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
+    Returns
+    -------
+    go.Figure
+        The created chart
     """
-    return base_graph_for_bar_line_area(config, titles_for_axis, 'line')
+    config = {
+        'df': df,
+        'x': x,
+        'y': y,
+        'xaxis_title': xaxis_title,
+        'yaxis_title': yaxis_title,
+        'category': category,
+        'top_n_trim_axis': top_n_trim_axis,
+        'top_n_trim_legend': top_n_trim_legend,
+        'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'category_axis_title': category_axis_title,
+        'title': title,
+        'agg_func': agg_func,
+        'barmode': barmode,
+        'width': width,
+        'height': height,
+        'show_text': show_text,
+        'textsize': textsize,
+        'textposition': textposition,
+        'xaxis_show': xaxis_show,
+        'yaxis_show': yaxis_show,
+        'showgrid_x': showgrid_x,
+        'showgrid_y': showgrid_y,
+        'legend_position': legend_position,
+        'decimal_places': decimal_places,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'groupby_cols': groupby_cols,
+        'resample_freq': resample_freq
+    }
+    return _create_base_fig_for_bar_line_area(config, 'line')
 
-def area(config: dict, titles_for_axis: dict = None):
+def area(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    category: str = None,
+    agg_mode: str = None,
+    agg_func: str = None,    
+    groupby_cols: list = None,
+    resample_freq: str = None,     
+    barmode: str = 'group',
+    width: int = None,
+    height: int = None,    
+    title: str = None,    
+    xaxis_title: str = None,
+    yaxis_title: str = None,        
+    category_axis_title: str = None,    
+    showgrid_x: bool = True,
+    showgrid_y: bool = True,
+    legend_position: str = 'top',    
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    sort_axis: bool = True,
+    sort_legend: bool = True,
+    show_text: bool = False,
+    textsize: int = 14,
+    textposition: str = 'auto',
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    decimal_places: int = 0,
+    show_group_size: bool = False,
+) -> go.Figure:
     """
-    Creates a area chart using the Plotly Express library.
+    Creates a bar chart using the Plotly Express library.
 
-    Parameters (key in config):
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - x (str): The name of the column in the DataFrame to be used for creating the X-axis.
-        - x_axis_label (str): The label for the X-axis.
-        - y (str): The name of the column in the DataFrame to be used for creating the Y-axis.
-        - y_axis_label (str): The label for the Y-axis.
-        - category (str): The name of the column in the DataFrame to be used for creating categories.
-        If None or an empty string, the chart will be created without category.
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
-        - sort_axis (bool): Whether to sort the categories on the axis (default is True).
-        - sort_legend (bool): Whether to sort the categories in the legend (default is True).
-        - category_axis_label (str): The label for the categories.
-        - title (str): The title of the chart.
-        - func (str): The function to be used for aggregating data (default is 'mean'). May be mean, median, sum, count, nunique
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-        - legend_position (str): Положение легенды ('top', 'right')
-        - decimal_places (int): The number of decimal places to display (default is 2).
-        - show_group_size (bool):  Whether to show the group size (default is False).
-        - agg_mode (str): Aggregation mode. May be 'groupby', 'resample', None. Default is None
-        - groupby_cols(list): Columns for groupby
-        - resample_freq (str): Resample frequency for resample
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A DataFrame containing data for creating the chart
+    x : str
+        The name of the column in the DataFrame to be used for creating the X-axis
+    y : str
+        The name of the column in the DataFrame to be used for creating the Y-axis
+    xaxis_title : str, optional
+        The title for the X-axis
+    yaxis_title : str, optional
+        The title for the Y-axis
+    category : str, optional
+        The name of the column in the DataFrame to be used for creating categories
+    top_n_trim_axis : int, optional
+        The number of top categories axis to include in the chart
+    top_n_trim_legend : int, optional
+        The number of top categories legend to include in the chart
+    sort_axis : bool, optional
+        Whether to sort the categories on the axis. Default is True
+    sort_legend : bool, optional
+        Whether to sort the categories in the legend. Default is True
+    category_axis_title : str, optional
+        The title for the categories
+    title : str, optional
+        The title of the chart
+    agg_func : str, optional
+        The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
+    barmode : str, optional
+        The mode for displaying bars. Default is 'group'
+    width : int, optional
+        The width of the chart
+    height : int, optional
+        The height of the chart
+    show_text : bool, optional
+        Whether to display text on the chart. Default is False
+    textsize : int, optional
+        Text size. Default is 14
+    textposition : str, optional
+        Text position. May be 'auto', 'inside', 'outside', 'none'. Default is 'auto'
+    xaxis_show : bool, optional
+        Whether to show the X-axis. Default is True
+    yaxis_show : bool, optional
+        Whether to show the Y-axis. Default is True
+    showgrid_x : bool, optional
+        Whether to show grid on X-axis. Default is True
+    showgrid_y : bool, optional
+        Whether to show grid on Y-axis. Default is True
+    legend_position : str, optional
+        Position of the legend ('top', 'right'). Default is 'top'
+    decimal_places : int, optional
+        The number of decimal places to display. Default is 2
+    show_group_size : bool, optional
+        Whether to show the group size. Default is False
+    agg_mode : str, optional
+        Aggregation mode. May be 'groupby', 'resample', None. Default is None
+    groupby_cols : list, optional
+        Columns for groupby
+    resample_freq : str, optional
+        Resample frequency for resample
 
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
+    Returns
+    -------
+    go.Figure
+        The created chart
     """
-    return base_graph_for_bar_line_area(config, titles_for_axis, 'area')
+    config = {
+        'df': df,
+        'x': x,
+        'y': y,
+        'xaxis_title': xaxis_title,
+        'yaxis_title': yaxis_title,
+        'category': category,
+        'top_n_trim_axis': top_n_trim_axis,
+        'top_n_trim_legend': top_n_trim_legend,
+        'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'category_axis_title': category_axis_title,
+        'title': title,
+        'agg_func': agg_func,
+        'barmode': barmode,
+        'width': width,
+        'height': height,
+        'show_text': show_text,
+        'textsize': textsize,
+        'textposition': textposition,
+        'xaxis_show': xaxis_show,
+        'yaxis_show': yaxis_show,
+        'showgrid_x': showgrid_x,
+        'showgrid_y': showgrid_y,
+        'legend_position': legend_position,
+        'decimal_places': decimal_places,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'groupby_cols': groupby_cols,
+        'resample_freq': resample_freq
+    }
+    return _create_base_fig_for_bar_line_area(config, 'area')
 
 # def pairplot_seaborn(df: pd.DataFrame, titles_for_axis: dict = None):
 #     """
@@ -2453,67 +2862,70 @@ def area(config: dict, titles_for_axis: dict = None):
 #     g.fig.suptitle('Зависимости между числовыми переменными', fontsize=15,
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
-
-def histogram(config: dict, titles_for_axis: dict = None):
+def histogram(
+    column: pd.Series,
+    title: str = None,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    nbins: int = 30,
+    width: int = 600,
+    height: int = 400,
+    left_quantile: float = 0,
+    right_quantile: float = 1,
+    show_marginal_box: bool = True,
+) -> go.Figure:
     """
-    Plot a histogram of a Pandas Series using Plotly Express.
+    Creates an interactive histogram using Plotly.
 
-    Args (keys in config):
-        - column (pd.Series): The input Pandas Series.
-        - titles_for_axis (dict, optional): A dictionary containing the titles for the x-axis and y-axis. Defaults to None.
-        - nbins (int, optional): The number of bins in the histogram. Defaults to 30.
-        - width (int, optional): The width of the plot. Defaults to 800.
-        - height (int, optional): The height of the plot. Defaults to None.
-        - left_quantile (float, optional): The left quantile for trimming the data. Defaults to 0.
-        - right_quantile (float, optional): The right quantile for trimming the data. Defaults to 1.
-        - box (bool): Whether to include a box plot. Defaults to True.
+    Parameters
+    ----------
+    column : pd.Series
+        The data series to plot
+    title : str, optional
+        Title of the histogram
+    xaxis_title : str, optional
+        Label for x-axis
+    yaxis_title : str, optional
+        Label for y-axis
+    nbins : int, optional
+        Number of bins in histogram. Default is 30
+    width : int, optional
+        Width of the plot in pixels. Default is 600
+    height : int, optional
+        Height of the plot in pixels. Default is 400
+    left_quantile : float, optional
+        Left boundary for data trimming (0-1). Default is 0
+    right_quantile : float, optional
+        Right boundary for data trimming (0-1). Default is 1
+    show_marginal_box : bool, optional
+        Whether to include a box plot. Defaults to True.
 
-    Returns:
-        fig: The Plotly Express figure.
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly histogram figure
     """
-    if 'column' not in config:
-        raise ValueError("Column must be in config")
-    if 'nbins' not in config:
-        config['nbins'] = 30
-    if 'width' not in config:
-        config['width'] = 600
-    if 'height' not in config:
-        config['height'] = 400
-    if 'left_quantile' not in config:
-        config['left_quantile'] = 0
-    if 'right_quantile' not in config:
-        config['right_quantile'] = 1
-    if 'marginal' not in config:
-        config['marginal'] = True
-    if 'title' not in config:
-        config['title'] = None
-    # Обрезаем данные между квантилями
-    column = config['column']
     trimmed_column = column.between(column.quantile(
-        config['left_quantile']), column.quantile(config['right_quantile']))
+        left_quantile), column.quantile(right_quantile))
     column = column[trimmed_column]
-    if not titles_for_axis:
-        if 'title' not in config:
-            config['title'] = f'Распределенеие {column.name}'
+    if not title:
+        title = f'Распределенеие {column.name}'
+    if not xaxis_title:
         xaxis_title = 'Значение'
-        yaxis_title = 'Частота'
-    else:
-        if 'title' not in config:
-            config['title'] = f'Распределенеие {column.name}'
-        xaxis_title = f'{titles_for_axis[column.name]}'
-        yaxis_title = 'Частота'
-    # fig = px.histogram(column, title=config['title'], histnorm='percent', nbins=config['nbins'], marginal='box')
-    if config['marginal']:
+    if not yaxis_title:
+        yaxis_title = 'Доля от общего'
+    
+    if show_marginal_box:
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
     else:
         fig = go.Figure()
 
     # Add histogram to bottom subplot
-    if config['marginal']:
+    if show_marginal_box:
         fig.add_trace(
             go.Histogram(
                 x=column,
-                nbinsx=config['nbins'],
+                nbinsx=nbins,
                 histnorm='percent',
                 marker_color='rgba(128, 60, 170, 0.9)'
             ),
@@ -2532,7 +2944,7 @@ def histogram(config: dict, titles_for_axis: dict = None):
         fig.add_trace(
             go.Histogram(
                 x=column,
-                nbinsx=config['nbins'],
+                nbinsx=nbins,
                 histnorm='percent',
                 marker_color='rgba(128, 60, 170, 0.9)'
             ),
@@ -2543,14 +2955,14 @@ def histogram(config: dict, titles_for_axis: dict = None):
     )
     fig.update_traces(showlegend=False)
     fig.update_traces(
-        hovertemplate=f'{titles_for_axis[column.name]} = ' + '%{x}<br>Частота = %{y:.2f}<extra></extra>'
+        hovertemplate=f'{xaxis_title} = ' + '%{x}<br>' + f'{yaxis_title}' + ' = %{y:.2f}<extra></extra>'
         , selector=dict(type='histogram')
     )
     fig.update_traces(
-        hovertemplate= f'{titles_for_axis[column.name]} = ' + '%{x:.2f}<br><extra></extra>'
+        hovertemplate= f'{xaxis_title} = ' + '%{x:.2f}<br><extra></extra>'
         , selector=dict(type='box')
     )
-    if config['marginal']:
+    if show_marginal_box:
         fig.update_layout(
             yaxis2 = dict(
                 domain=[0.95, 1]
@@ -2564,8 +2976,8 @@ def histogram(config: dict, titles_for_axis: dict = None):
             )
         )
     fig.update_layout(
-        title=config['title'],
-        width=config['width'], height=config['height'],
+        title=title,
+        width=width, height=height,
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
         title_y=0.95,
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
@@ -2834,68 +3246,53 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
         # print(col1, col2)
         yield fig
             
-            
-def pairplot(config: dict, titles_for_axis: dict = None):
+def pairplot(
+    df: pd.DataFrame,
+    title: str = None,
+    width: int = 800,
+    height: int = 800,
+    horizontal_spacing: float = None,
+    vertical_spacing: float = None,
+    rows: int = None,
+    cols: int = None,
+    category: str = None,
+    legend_position: str = 'top',
+    titles_for_axis: dict = None
+) -> go.Figure:
     """
     Create a pairplot of numerical variables in a dataframe using Plotly.
 
-    Parameters (key in config):
-    - df (pandas.DataFrame): Input dataframe
-    - width (int, optional): Width of the plot. Defaults to 800.
-    - height (int, optional): Height of the plot. Defaults to 800.
-    - titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
-    - title (str): Title for figure
-    - horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
-    - vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
-    - rows (int, optional): Number of rows in the subplot grid. Defaults to None.
-    - cols (int, optional): Number of columns in the subplot grid. Defaults to None.
-    - category (str, optional): Category column for coloring the scatter plots. Defaults to None.
-    - legend_position (str, optional): Position of the legend. Defaults to 'top'.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    title : str, optional
+        Title for figure
+    width : int, optional
+        Width of the plot. Default is 800
+    height : int, optional
+        Height of the plot. Default is 800
+    horizontal_spacing : float, optional
+        Horizontal spacing between subplots
+    vertical_spacing : float, optional
+        Vertical spacing between subplots
+    rows : int, optional
+        Number of rows in the subplot grid
+    cols : int, optional
+        Number of columns in the subplot grid
+    category : str, optional
+        Category column for coloring the scatter plots
+    legend_position : str, optional
+        Position of the legend ('top' or 'right'). Default is 'top'
+    titles_for_axis : dict, optional
+        Dictionary of custom axis titles. For example dict(price='Price', quantity='Quantity'), where price and quantity are column names in the dataframe
 
-    Returns:
-    - fig (plotly.graph_objs.Figure): The resulting pairplot figure
+    Returns
+    -------
+    go.Figure
+        The resulting pairplot figure
     """
-    if 'width' in config:
-        width = config['width']
-    else:
-        width = 800
-    if 'height' in config:
-        height = config['height']
-    else:
-        height = 800
-    if 'horizontal_spacing' in config:
-        horizontal_spacing = config['horizontal_spacing']
-    else:
-        horizontal_spacing = None
-    if 'vertical_spacing' in config:
-        vertical_spacing = config['vertical_spacing']
-    else:
-        vertical_spacing = None
-    if 'rows' in config:
-        rows = config['rows']
-    else:
-        rows = None
-    if 'cols' in config:
-        cols = config['cols']
-    else:
-        cols = None
-    if 'category' in config:
-        category = config['category']
-    else:
-        category = None
-    if 'legend_position' in config:
-        legend_position = config['legend_position']
-    else:
-        legend_position = 'top'
-    if 'title' in config:
-        title = config['title']
-    else:
-        title = None
-    if not config:
-        raise ValueError("config must be defined")
-    if 'df' not in config:
-        raise ValueError("df must be defined")
-    df = config['df']
+
     if df.empty:
         raise ValueError("Input dataframe is empty")
     num_columns = list(
@@ -3011,122 +3408,96 @@ def pairplot(config: dict, titles_for_axis: dict = None):
             raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
     return fig
             
-def heatmap_categories(config: dict, titles_for_axis: dict = None):
+def heatmap_categories(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    title: str = None,
+    barmode: str = 'group',
+    normalized_mode: str = 'all',
+    orientation: str = 'v',
+    width: int = None,
+    height: int = None,
+    show_text: bool = False,
+    textsize: int = 14,
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    showgrid_x: bool = True,
+    showgrid_y: bool = True,
+) -> go.Figure:
     """
-    Creates a bar chart for categorical columns using the Plotly Express library.
+    Creates a heatmap chart for categorical columns using Plotly Express.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - column_for_x (str): The name of the column in the DataFrame to be used for creating the axis.
-        - column_for_x_label (str): The label for the axis.
-        - column_for_y (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
-        - column_for_y_label (str): The label for the categories.
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.        
-        - title (str): The title of the chart.
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - normalized_mode (str): The mode for normalizing the bars (default is 'all').
-        - orientation (str): The orientation of the chart (default is 'v').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing data for creating the chart
+    x : str
+        Column name for x-axis
+    y : str
+        Column name for y-axis (categories/legend)
+    xaxis_title : str, optional
+        Label for x-axis
+    yaxis_title : str, optional
+        Label for y-axis
+    top_n_trim_axis : int, optional
+        Number of top categories to show on axis
+    top_n_trim_legend : int, optional
+        Number of top categories to show in legend
+    title : str, optional
+        Title of the chart
+    barmode : str, optional
+        Mode for displaying bars. Default is 'group'
+    normalized_mode : str, optional
+        Mode for normalizing bars. Default is 'all'
+    orientation : str, optional
+        Chart orientation ('v' or 'h'). Default is 'v'
+    width : int, optional
+        Width of the chart in pixels
+    height : int, optional
+        Height of the chart in pixels
+    show_text : bool, optional
+        Whether to display text on chart. Default is False
+    textsize : int, optional
+        Size of text. Default is 14
+    xaxis_show : bool, optional
+        Show x-axis. Default is True
+    yaxis_show : bool, optional
+        Show y-axis. Default is True
+    showgrid_x : bool, optional
+        Show grid on x-axis. Default is True
+    showgrid_y : bool, optional
+        Show grid on y-axis. Default is True
 
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
-
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-        titles_for_axis = dict(
-            education = ['Уровень образования', 'уровня образования', 'уровню образования']
-            , family_status = ['Семейное положение', 'семейного положения', 'семейному положению']
-            , gender = ['Пол', 'пола', 'полу']
-            , income_type = ['Тип занятости', 'типа занятости', 'типу занятости']
-            , debt = ['Задолженность', 'задолженности', 'задолженности']
-            , purpose = ['Цель получения кредита', 'цели получения кредита', 'цели получения кредита']
-            , dob_cat = ['Возрастная категория, лет', 'возрастной категории', 'возрастной категории']
-            , total_income_cat = ['Категория дохода', 'категории дохода', 'категории дохода']
-        )
-    config = dict(
-        df = df
-        , column_for_x = 'education'  
-        , column_for_x_label = 'Образование'
-        , column_for_y = 'gender'
-        , column_for_y_label = 'Пол'
-        , title = 'Доход в зависимости от пола и уровня образования'
-        , normalized_mode = 'all'
-        , barmode = 'group'
-        , width = None
-        , height = None
-        , orientation = 'v'
-        , text = False
-        , textsize = 14
-    )
-    bar(config)
+    Returns
+    -------
+    go.Figure
+        The created heatmap chart
     """
-    # Проверка входных данных
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'column_for_x' not in config or not isinstance(config['column_for_x'], str):
-        raise ValueError("column_for_x must be a string")
-    if 'column_for_y' not in config or not isinstance(config['column_for_y'], str):
-        raise ValueError("column_for_y must be a string")
-    if 'barmode' in config and not isinstance(config['barmode'], str):
-        raise ValueError("barmode must be a string")
-    if 'barmode' not in config:
-        config['barmode'] = 'group'
-    if 'normalized_mode' not in config:
-        config['normalized_mode'] = 'all'        
-    if 'orientation' not in config:
-        config['orientation'] = 'v'             
-    if 'width' not in config:
-        config['width'] = None
-    if 'height' not in config:
-        config['height'] = None
-    if 'textsize' not in config:
-        config['textsize'] = 14
-    if 'xaxis_show' not in config:
-        config['xaxis_show'] = True
-    if 'yaxis_show' not in config:
-        config['yaxis_show'] = True
-    if 'showgrid_x' not in config:
-        config['showgrid_x'] = False
-    if 'showgrid_y' not in config:
-        config['showgrid_y'] = False
-    if 'top_n_trim_axis' not in config:
-        config['top_n_trim_axis'] = None
-    if 'top_n_trim_legend' not in config:
-        config['top_n_trim_legend'] = None           
-    # if 'orientation' in config and config['orientation'] == 'h':
-    #     config['x'], config['y'] = config['y'], config['x']
-
-    if titles_for_axis:
-        config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
-        config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
-        column_for_x_label_for_title = titles_for_axis[config['column_for_x']][1]
-        column_for_y_label_for_title= titles_for_axis[config['column_for_y']][1]
-        temp_title = f'Распределение долей для {column_for_x_label_for_title} и {column_for_y_label_for_title}'
-        if config['normalized_mode'] == 'col':
-            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_y']][2]}"
-        elif config['normalized_mode'] == 'row':
-            config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_x']][2]}"
-        else:
-            config['title'] = temp_title
-    else:
-        if 'column_for_x_label' not in config:
-            config['column_for_x_label'] = None
-        if 'column_for_y_label' not in config:
-            config['column_for_y_label'] = None
-        if 'title' not in config:
-            config['title'] = None 
+ 
+    # if titles_for_axis:
+    #     config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
+    #     config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
+    #     column_for_x_label_for_title = titles_for_axis[config['column_for_x']][1]
+    #     column_for_y_label_for_title= titles_for_axis[config['column_for_y']][1]
+    #     temp_title = f'Распределение долей для {column_for_x_label_for_title} и {column_for_y_label_for_title}'
+    #     if config['normalized_mode'] == 'col':
+    #         config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_y']][2]}"
+    #     elif config['normalized_mode'] == 'row':
+    #         config['title'] = temp_title + f"<br>c нормализацией по {titles_for_axis[config['column_for_x']][2]}"
+    #     else:
+    #         config['title'] = temp_title
+    # else:
+    #     if 'column_for_x_label' not in config:
+    #         config['column_for_x_label'] = None
+    #     if 'column_for_y_label' not in config:
+    #         config['column_for_y_label'] = None
+    #     if 'title' not in config:
+    #         config['title'] = None 
     def make_df_for_fig(crosstab_for_figs, mode):
         if mode == 'all':
             # normolized by all size df
@@ -3169,20 +3540,16 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
             margin=dict(l=50, r=50, b=50, t=70),       
         ) 
         return fig     
-    column_for_x = config['column_for_x']
-    column_for_y = config['column_for_y']
-    column_for_x_label = config['column_for_x_label']
-    column_for_y_label = config['column_for_y_label']
-    normalized_mode = config['normalized_mode']
-    orientation = config['orientation']
-    title = config['title']
-    df = config['df']
+    column_for_x = x
+    column_for_y = y
+    column_for_x_label = xaxis_title
+    column_for_y_label = yaxis_title
     crosstab = pd.crosstab(df[column_for_x], df[column_for_y])
     crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
-    if config['top_n_trim_axis']:
-        crosstab_for_figs = crosstab_for_figs.iloc[:config['top_n_trim_axis']]
-    if config['top_n_trim_legend']:
-        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']], crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
+    if top_n_trim_axis:
+        crosstab_for_figs = crosstab_for_figs.iloc[:top_n_trim_axis]
+    if top_n_trim_legend:
+        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :top_n_trim_legend], crosstab_for_figs['data'].iloc[:, :top_n_trim_legend]], axis=1, keys=['data', 'customdata'])        
     # data_for_fig = crosstab_for_figs['data']    
     # customdata = crosstab_for_figs['customdata'].values.T
     if orientation == 'v':
@@ -3218,150 +3585,130 @@ def heatmap_categories(config: dict, titles_for_axis: dict = None):
     fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)      
     return fig
 
-def bar_categories(config: dict, titles_for_axis: dict = None):
+def bar_categories(
+    df: pd.DataFrame,
+    column_for_axis: str,
+    column_for_legend: str = None,
+    axis_title: str = None,
+    legend_title: str = None,
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    title: str = None,
+    barmode: str = 'group',
+    normalized_mode: str = 'all',
+    orientation: str = 'v',
+    width: int = None,
+    height: int = None,
+    show_text: bool = False,
+    textsize: int = 14,
+    textposition: str = 'auto',
+    text_decimal_places: int = 0,
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    showgrid_x: bool = True,
+    showgrid_y: bool = True,
+    legend_position: str = 'top',
+    sort_axis: bool = True,
+    sort_legend: bool = True,
+    swap_axis_legend: bool = True,
+) -> go.Figure:
     """
-    Creates a bar chart for categorical columns using the Plotly Express library.
+    Creates a bar chart for categorical columns using Plotly Express.
 
-    Parameters (key in config):
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - column_for_axis (str): The name of the column in the DataFrame to be used for creating the axis.
-        - column_for_axis_label (str): The label for the axis.
-        - column_for_legend (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
-        - column_for_legend_label (str): The label for the categories.
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
-        - title (str): The title of the chart.
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - normalized_mode (str): The mode for normalizing the bars all, col or row (default is 'all').
-        - orientation (str): The orientation of the chart (default is 'v').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - textposition (str): Text position (default 'auto'). May be 'auto', 'inside', 'outside', 'none'
-        - text_decimal_places (int): The number of decimal places to display in text (default is 0).
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-        - legend_position (str): Положение легенды ('top', 'right')
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the data
+    column_for_axis : str
+        Column name for creating the axis
+    column_for_legend : str, optional
+        Column name for creating categories/legend
+    axis_title : str, optional
+        Title for the axis
+    legend_title : str, optional
+        Title for the categories
+    top_n_trim_axis : int, optional
+        Number of top categories to show on axis
+    top_n_trim_legend : int, optional
+        Number of top categories to show in legend
+    title : str, optional
+        Title of the chart
+    barmode : str, optional
+        Mode for displaying bars ('group', 'stack'). Default is 'group'
+    normalized_mode : str, optional
+        Mode for normalizing bars ('all', 'col', 'row'). Default is 'all'
+    orientation : str, optional
+        Chart orientation ('v' or 'h'). Default is 'v'
+    width : int, optional
+        Width of the chart in pixels
+    height : int, optional
+        Height of the chart in pixels
+    show_text : bool, optional
+        Whether to display text on bars. Default is False
+    textsize : int, optional
+        Size of text. Default is 14
+    textposition : str, optional
+        Position of text ('auto', 'inside', 'outside', 'none'). Default is 'auto'
+    text_decimal_places : int, optional
+        Number of decimal places in text. Default is 0
+    xaxis_show : bool, optional
+        Show x-axis. Default is True
+    yaxis_show : bool, optional
+        Show y-axis. Default is True
+    showgrid_x : bool, optional
+        Show grid on x-axis. Default is True
+    showgrid_y : bool, optional
+        Show grid on y-axis. Default is True
+    legend_position : str, optional
+        Position of legend ('top' or 'right'). Default is 'top'
+    sort_axis : bool, optional
+        Sort categories on axis. Default is True
+    sort_legend : bool, optional
+        Sort categories in legend. Default is True
+    swap_axis_legend : bool, optional
+        Swap axis and legend. Default is True
 
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
+    Returns
+    -------
+    go.Figure
+        The created bar chart
 
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    titles_for_axis = dict(
-        # categorical column ['Именительный падеж', 'для кого / чего', 'по кому чему']
-        # Распределение долей по городу и тарифу с нормализацией по городу
-        city = ['Город', 'города', 'городу']
-        , tariff = ['Тариф', 'тарифа', 'тарифу']
-        , is_active = ['активный ли клиент', 'активности клиента', 'активности клиента']
-        , age_cat = ['Возрастная категория', 'возрастной категории', 'возрастной категории']
-        , call_date_month = ['Месяц звонка', 'месяца звонка', 'месяцу звонка']
-        , duration_cat = ['Категория длительности звонка', 'категории длительности звонка', 'категории длительности звонка']
-        , message_date_month = ['Месяц звонка', 'месяца звонка', 'месяцу звонка']
-        , mb_used_cat = ['Категория интернет трафика', 'категории интернет трафика', 'категории интернет трафика']
-        , session_date_month = ['Дата интернет сессии', 'даты интернет сессии', 'дате интернет сессии']
-        
-    )
-    titles_for_axis = dict(
-        education = ['Уровень образования', 'уровня образования', 'уровню образования']
-        , family_status = ['Семейное положение', 'семейного положения', 'семейному положению']
-        , gender = ['Пол', 'пола', 'полу']
-        , income_type = ['Тип занятости', 'типа занятости', 'типу занятости']
-        , debt = ['Задолженность', 'задолженности', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода', 'категории дохода']
-    )
-    bar(config)
     """
-    # Проверка входных данных
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'column_for_axis' not in config or not isinstance(config['column_for_axis'], str):
-        raise ValueError("column_for_axis must be a string")
-    if 'column_for_legend' in config and not isinstance(config['column_for_legend'], str):
-        raise ValueError("column_for_legend must be a string")
-    if 'barmode' in config and not isinstance(config['barmode'], str):
-        raise ValueError("barmode must be a string")
-    if 'barmode' not in config:
-        config['barmode'] = 'group'
-    if 'orientation' not in config:
-        config['orientation'] = 'v'        
-    if 'normalized_mode' not in config:
-        config['normalized_mode'] = 'all'        
-    if 'width' not in config:
-        config['width'] = None
-    if 'height' not in config:
-        config['height'] = None
-    if 'text' not in config:
-        config['text'] = False        
-    if 'textsize' not in config:
-        config['textsize'] = 14
-    if 'textposition' not in config:
-        config['textposition'] = None   
-    if 'text_decimal_places' not in config:
-        config['text_decimal_places'] = 0
-    if 'xaxis_show' not in config:
-        config['xaxis_show'] = True
-    if 'yaxis_show' not in config:
-        config['yaxis_show'] = True
-    if 'showgrid_x' not in config:
-        config['showgrid_x'] = True
-    if 'showgrid_y' not in config:
-        config['showgrid_y'] = True
-    if 'top_n_trim_axis' not in config:
-        config['top_n_trim_axis'] = None
-    if 'top_n_trim_legend' not in config:
-        config['top_n_trim_legend'] = None    
-    if 'sort_axis' not in config:
-        config['sort_axis'] = True
-    if 'sort_legend' not in config:
-        config['sort_legend'] = True     
-    if 'column_for_legend' not in config:
-        config['column_for_legend'] = None      
-    if 'legend_position' not in config:
-        config['legend_position'] = 'top'   
-    if 'swap_axis_legend' not in config:
-        config['swap_axis_legend'] = True                                              
+                                           
     # if 'orientation' in config and config['orientation'] == 'h':
     #     config['x'], config['y'] = config['y'], config['x']
 
-    if titles_for_axis:
-        if not config['title']:
-            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
-            column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
-            if config['column_for_legend']:
-                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
-                column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
-                temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
-            else:
-                config['column_for_legend_label'] = None
-                temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
-            if config['normalized_mode'] == 'col':
-                config['title'] = temp_title + f" c нормализацией"
-            elif config['normalized_mode'] == 'row':
-                config['title'] = temp_title + f" c нормализацией"
-            else:
-                config['title'] = temp_title
-        else:
-            config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']]
-            if config['column_for_legend']:
-                config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']]
-            else:
-                config['column_for_legend_label'] = None
-    else:
-        if 'column_for_axis_label' not in config:
-            config['column_for_axis_label'] = None
-        if 'column_for_legend_label' not in config:
-            config['column_for_legend_label'] = None
-        if 'title' not in config:
-            config['title'] = None 
+    # if titles_for_axis:
+    #     if not config['title']:
+    #         config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
+    #         column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
+    #         if config['column_for_legend']:
+    #             config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
+    #             column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
+    #             temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
+    #         else:
+    #             config['column_for_legend_label'] = None
+    #             temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
+    #         if config['normalized_mode'] == 'col':
+    #             config['title'] = temp_title + f" c нормализацией"
+    #         elif config['normalized_mode'] == 'row':
+    #             config['title'] = temp_title + f" c нормализацией"
+    #         else:
+    #             config['title'] = temp_title
+    #     else:
+    #         config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']]
+    #         if config['column_for_legend']:
+    #             config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']]
+    #         else:
+    #             config['column_for_legend_label'] = None
+    # else:
+    #     if 'column_for_axis_label' not in config:
+    #         config['column_for_axis_label'] = None
+    #     if 'column_for_legend_label' not in config:
+    #         config['column_for_legend_label'] = None
+    #     if 'title' not in config:
+    #         config['title'] = None 
+            
     def make_df_for_fig(crosstab_for_figs, mode):
         if mode == 'all':
             # normolized by all size df
@@ -3374,7 +3721,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             crosstab_for_figs = crosstab_for_figs.T
             sum_for_normolized = crosstab_for_figs.sum()           
         crosstab_for_figs_all = crosstab_for_figs * 100 / sum_for_normolized
-        if config['normalized_mode'] in ['row', 'col']:
+        if normalized_mode in ['row', 'col']:
             crosstab_for_figs_all = crosstab_for_figs_all.T
             crosstab_for_figs = crosstab_for_figs.T
         crosstab_for_figs_all = pd.concat(
@@ -3382,7 +3729,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         crosstab_for_figs_all['sum_row'] = crosstab_for_figs_all['data'].max(axis=1)
         # display(crosstab_for_figs_all)        
         # display(crosstab_for_figs_all)  
-        if config['sort_axis'] :
+        if sort_axis :
             max_sum_index = 0        
             crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
                 'sum_row', ascending=False).drop('sum_row', axis=1, level=0)
@@ -3390,7 +3737,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                 max_sum_index = crosstab_for_figs_all['sum_row'].idxmax()
                 max_sum_index = crosstab_for_figs_all.index.get_loc(max_sum_index)
                 crosstab_for_figs_all = crosstab_for_figs_all.drop('sum_row', axis=1, level=0)        
-        if config['sort_legend'] :
+        if sort_legend :
             crosstab_for_figs_all = pd.concat(
                 [crosstab_for_figs_all['data'], crosstab_for_figs_all['customdata']], axis=0, keys=['data', 'customdata'])
             crosstab_for_figs_all = crosstab_for_figs_all.sort_values(
@@ -3415,30 +3762,25 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             legend_title_font_size = 14,
             legend_font_color='rgba(0, 0, 0, 0.7)',
             xaxis=dict(
-                visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+                visible=xaxis_show, showgrid=showgrid_x, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
             ), yaxis=dict(
-                visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+                visible=yaxis_show, showgrid=showgrid_y, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
             ),            
             margin=dict(l=50, r=50, b=50, t=70),     
         ) 
         return fig     
-    column_for_axis = config['column_for_axis']
-    column_for_legend = config['column_for_legend']
-    column_for_axis_label = config['column_for_axis_label']
-    column_for_legend_label = config['column_for_legend_label']
-    normalized_mode = config['normalized_mode']
-    orientation = config['orientation']
-    title = config['title']
-    df = config['df']
-    if config['column_for_legend']:
+  
+    column_for_axis_label = axis_title
+    column_for_legend_label = legend_title
+    if column_for_legend:
         crosstab = pd.crosstab(df[column_for_axis], df[column_for_legend])
     else:
         crosstab = df.groupby(column_for_axis, observed=True).size().to_frame('share') 
     crosstab_for_figs= make_df_for_fig(crosstab, normalized_mode)
-    if config['top_n_trim_axis']:
-        crosstab_for_figs = crosstab_for_figs.iloc[:config['top_n_trim_axis']]
-    if config['top_n_trim_legend']:
-        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']], crosstab_for_figs['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])    
+    if top_n_trim_axis:
+        crosstab_for_figs = crosstab_for_figs.iloc[:top_n_trim_axis]
+    if top_n_trim_legend:
+        crosstab_for_figs = pd.concat([crosstab_for_figs['data'].iloc[:, :top_n_trim_legend], crosstab_for_figs['data'].iloc[:, :top_n_trim_legend]], axis=1, keys=['data', 'customdata'])    
     data_for_fig = crosstab_for_figs['data']    
     customdata = crosstab_for_figs['customdata'].values.T    
     if orientation == 'h':
@@ -3447,20 +3789,20 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
         xaxis_title = 'Доля'
         yaxis_title = column_for_axis_label
         legend_title_text = column_for_legend_label    
-        if config['column_for_legend'] and config['normalized_mode'] in ['col']:
+        if column_for_legend and normalized_mode in ['col']:
             legend_title_text, yaxis_title = yaxis_title, legend_title_text    
     else:
         xaxis_title = column_for_axis_label
         yaxis_title = 'Доля'
         legend_title_text = column_for_legend_label
-        if config['column_for_legend'] and config['normalized_mode'] in ['col']:
+        if column_for_legend and normalized_mode in ['col']:
             xaxis_title, legend_title_text = legend_title_text, xaxis_title
-    if config['column_for_legend'] and config['normalized_mode'] in ['col']:
+    if column_for_legend and normalized_mode in ['col']:
         column_for_axis_label, column_for_legend_label = column_for_legend_label, column_for_axis_label
         # if orientation == 'h':
             
     fig = px.bar(
-        data_for_fig, barmode=config['barmode'], orientation=orientation, title=title)
+        data_for_fig, barmode=barmode, orientation=orientation, title=title)
     fig.update_layout(xaxis_title=xaxis_title, yaxis_title=yaxis_title)
     trace_colors = [trace.marker.color for trace in reversed(fig.data)]            
     for i, trace in enumerate(fig.data):
@@ -3468,36 +3810,36 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             # trace.x, trace.y = trace.y, trace.x
             trace.marker.color = trace_colors[i]
             trace.textangle=0
-            if 'text' in config and config['text']:
-                trace.text = [f'{x:.{config['text_decimal_places']}f}' if x >= 0.1 else '<0.1' for x in trace.x]
-            if config['column_for_legend']:
+            if show_text:
+                trace.text = [f'{x:.{text_decimal_places}f}' if x >= 0.1 else '<0.1' for x in trace.x]
+            if column_for_legend:
                 hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
             else:
                 hovertemplate=f'{column_for_axis_label}'+' = %{y}<br>Доля = %{x:.1f} %<br>Количество = %{customdata}<extra></extra>'                    
         else:
-            if 'text' in config and config['text']:
-                trace.text = [f'{y:.{config['text_decimal_places']}f}' if y >= 0.1 else '<0.1' for y in trace.y]
+            if show_text:
+                trace.text = [f'{y:.{text_decimal_places}f}' if y >= 0.1 else '<0.1' for y in trace.y]
 
-            if config['column_for_legend']:
+            if column_for_legend:
                 hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>'+f'{column_for_legend_label}' +\
                                     ' = %{data.name}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'       
             else:
                 hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'   
         trace.customdata = customdata[i]
     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14))
-                      , textfont=dict(family='Segoe UI', size=config['textsize']))   
-    if config['textposition']:
-        fig.update_traces(textposition=config['textposition'])
-    if not config['column_for_legend']:
+                      , textfont=dict(family='Segoe UI', size=textsize))   
+    if textposition:
+        fig.update_traces(textposition=textposition)
+    if not column_for_legend:
         fig.update_layout(showlegend=False)
     if orientation == 'h':
         fig.update_layout(legend_traceorder='reversed')        
     fig.update_layout(
-        height=config['height'],
-        width=config['width'],
+        height=height,
+        width=width,
     )        
-    if config['legend_position'] == 'top':
+    if legend_position == 'top':
         fig.update_layout(
             legend = dict(
                 title_text=legend_title_text
@@ -3510,7 +3852,7 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
                 , x=0.5              # Центрирование по горизонтали
             )     
         )    
-    elif config['legend_position'] == 'right':
+    elif legend_position == 'right':
         fig.update_layout(
                 legend = dict(
                 title_text=legend_title_text
@@ -3528,163 +3870,139 @@ def bar_categories(config: dict, titles_for_axis: dict = None):
             
     return fig_update_layout(fig)
 
-def heatmap(config: dict, titles_for_axis: dict = None):
+def heatmap(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    z: str,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    zaxis_title: str = None,
+    title: str = None,
+    width: int = None,
+    height: int = None,
+    agg_func: str = None,
+    show_text: bool = True,
+    textsize: int = 14,
+    xaxis_show: bool = True,
+    yaxis_show: bool = True,
+    showgrid_x: bool = False,
+    showgrid_y: bool = False,
+    top_n_trim_axis: int = None,
+    top_n_trim_legend: int = None,
+    top_n_trim_from_axis: str = 'end',
+    top_n_trim_from_legend: str = 'end',
+    sort_x: bool = True,
+    sort_y: bool = True,
+    decimal_places: int = 2,
+    is_reversed_y: bool = False,
+    x_axis_position: str = 'bottom',
+    skip_first_col_for_cohort: bool = False,
+    is_show_in_pct: bool = False,
+    do_pretty_value: bool = False,
+    orientation: str = 'v',
+    titles_for_axis: dict = None
+) -> go.Figure:
     """
-    Creates a heatmap chart for categorical columns using the Plotly Express library.
+    Creates a heatmap chart using Plotly Express.
 
-    Parameters:
-    config (dict): A dictionary containing parameters for creating the chart.
-        - df (DataFrame): A DataFrame containing data for creating the chart.
-        - column_for_x (str): The name of the column in the DataFrame to be used for creating the axis.
-        - column_for_x_label (str): The label for the axis.
-        - column_for_y (str): The name of the column in the DataFrame to be used for creating categories (lengends).  
-        - column_for_y_label (str): The label for the categories.
-        - column_for_value (str): The name of the column in the DataFrame to be used for creating values for heatmap
-        - title (str): The title of the chart.
-        - barmode (str): The mode for displaying bars (default is 'group').
-        - normalized_mode (str): The mode for normalizing the bars (default is 'all').
-        - orientation (str): The orientation of the chart (default is 'v').
-        - width (int): The width of the chart (default is None).
-        - height (int): The height of the chart (default is None).
-        - show_text (bool):  Whether to display text on the chart (default is False).
-        - textsize (int): Text size (default 14)
-        - xaxis_show (bool):  Whether to show the X-axis (default is True).
-        - yaxis_show (bool):  Whether to show the Y-axis (default is True).
-        - showgrid_x (bool):   Whether to show grid on X-axis (default is True).
-        - showgrid_y (bool):   Whether to show grid on Y-axis (default is True).
-        - top_n_trim_axis (int): The number of top categories axis to include in the chart.
-        - top_n_trim_legend (int): The number of top categories legend to include in the chart.
-        - top_n_trim_from_axis (str): The direction to trim the categories on the axis ('start' or 'end') (default is 'start').
-        - sort_y (bool): Whether to sort the categories on the x axis (default is True).
-        - sort_y (bool): Whether to sort the categories in the y axis (default is True).
-        - decimal_places (int): The number of decimal places to display (default is 2).
-        - is_reversed_y (bool): Whether to reverse the order of the categories on the Y-axis (default is False).
-        - x_axis_position (str): The position of the X-axis ('top' or 'bottom') (default is 'bottom').
-        - skip_first_col_for_cohort (bool): Whether to skip the first column for cohort (default is False).
-        - is_show_in_pct (bool): Whether to show values in percentage (default is False).
-        - do_pretty_value (bool): Whether to show values in pretty (thousands as k) (default is False).
-    titles_for_axis (dict):  A dictionary containing titles for the axes.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the data
+    x : str
+        Column name for x-axis
+    y : str
+        Column name for y-axis
+    z : str
+        Column name for heatmap values
+    xaxis_title : str, optional
+        Title for x-axis
+    yaxis_title : str, optional
+        Title for y-axis
+    title : str, optional
+        Title of the chart
+    width : int, optional
+        Width of the chart in pixels
+    height : int, optional
+        Height of the chart in pixels
+    agg_func : str, optional
+        Aggregation function to apply to z-values.
+    show_text : bool, optional
+        Show text on heatmap. Default is True
+    textsize : int, optional
+        Size of text. Default is 14
+    xaxis_show : bool, optional
+        Show x-axis. Default is True
+    yaxis_show : bool, optional
+        Show y-axis. Default is True
+    showgrid_x : bool, optional
+        Show grid on x-axis. Default is False
+    showgrid_y : bool, optional
+        Show grid on y-axis. Default is False
+    top_n_trim_axis : int, optional
+        Number of top categories to show on axis
+    top_n_trim_legend : int, optional
+        Number of top categories to show in legend
+    top_n_trim_from_axis : str, optional
+        Direction to trim categories in axis ('start' or 'end'). Default is 'end'
+    top_n_trim_from_legend : str, optional
+        Direction to trim categories in legend ('start' or 'end'). Default is 'end'        
+    sort_x : bool, optional
+        Sort x-axis categories. Default is True
+    sort_y : bool, optional
+        Sort y-axis categories. Default is True
+    decimal_places : int, optional
+        Number of decimal places. Default is 2
+    is_reversed_y : bool, optional
+        Reverse y-axis order. Default is False
+    x_axis_position : str, optional
+        Position of x-axis ('top' or 'bottom'). Default is 'bottom'
+    skip_first_col_for_cohort : bool, optional
+        Skip first column for cohort analysis. Default is False
+    is_show_in_pct : bool, optional
+        Show values as percentages. Default is False
+    do_pretty_value : bool, optional
+        Format large numbers (e.g., 1000 as 1k). Default is False
+    orientation : str, optional
+        Chart orientation ('v' or 'h'). Default is 'v'
 
-    Returns:
-    fig (plotly.graph_objs.Figure): The created chart.
-
-    Example:
-    config = dict(
-        df = df
-        , column_for_y = 'education'  
-        , column_for_x = 'gender'
-        , column_for_value = 'age'
-        , func = 'mean'
-        , width = None
-        , height = None
-        , orientation = 'h'
-    )
-    titles_for_axis = dict(
-        # numeric column (0 - средний род, 1 - мужской род, 2 - женский род) (Середнее образовние, средний доход, средняя температура) )
-        children = ['Количество детей', 'количество детей', 0]
-        , age = ['Возраст, лет', 'возраст', 1]
-        , total_income = ['Ежемесячный доход', 'ежемесячный доход', 1]    
-        # category column
-        , education = ['Уровень образования', 'уровня образования']
-        , family_status = ['Семейное положение', 'семейного положения']
-        , gender = ['Пол', 'пола']
-        , income_type = ['Тип занятости', 'типа занятости']
-        , debt = ['Задолженность (1 - имеется, 0 - нет)', 'задолженности']
-        , purpose = ['Цель получения кредита', 'цели получения кредита']
-        , dob_cat = ['Возрастная категория, лет', 'возрастной категории']
-        , total_income_cat = ['Категория дохода', 'категории дохода']
-    )
-    heatmap(config, titles_for_axis)
+    Returns
+    -------
+    go.Figure
+        The created heatmap chart
     """
-    # Проверка входных данных
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'column_for_x' not in config or not isinstance(config['column_for_x'], str):
-        raise ValueError("column_for_x must be a string")
-    if 'column_for_y' not in config or not isinstance(config['column_for_y'], str):
-        raise ValueError("column_for_y must be a string")
-    if 'column_for_value' not in config or not isinstance(config['column_for_value'], str):
-        raise ValueError("column_for_value must be a string")    
-    if 'barmode' in config and not isinstance(config['barmode'], str):
-        raise ValueError("barmode must be a string")
-    if 'barmode' not in config:
-        config['barmode'] = 'group'
-    if 'func' not in config:
-        config['func'] = 'mean'        
-    if 'width' not in config:
-        config['width'] = None
-    if 'height' not in config:
-        config['height'] = None
-    if 'show_text' not in config:
-        config['show_text'] = True        
-    if 'textsize' not in config:
-        config['textsize'] = 14
-    if 'xaxis_show' not in config:
-        config['xaxis_show'] = True
-    if 'yaxis_show' not in config:
-        config['yaxis_show'] = True
-    if 'showgrid_x' not in config:
-        config['showgrid_x'] = False
-    if 'showgrid_y' not in config:
-        config['showgrid_y'] = False
-    if 'top_n_trim_axis' not in config:
-        config['top_n_trim_axis'] = None
-    if 'top_n_trim_legend' not in config:
-        config['top_n_trim_legend'] = None    
-    if 'sort_x' not in config:
-        config['sort_x'] = True
-    if 'sort_y' not in config:
-        config['sort_y'] = True
-    if 'decimal_places' not in config:
-        config['decimal_places'] = 2          
-    if 'top_n_trim_from_axis' not in config:
-        config['top_n_trim_from_axis'] = 'end'
-    if 'top_n_trim_from_legend' not in config:
-        config['top_n_trim_from_legend'] = 'end'
-    if 'is_reversed_y' not in config:
-        config['is_reversed_y'] = False      
-    if 'x_axis_position' not in config:
-        config['x_axis_position'] = 'Bottom'             
-    if 'skip_first_col_for_cohort' not in config:
-        config['skip_first_col_for_cohort'] = False 
-    if 'is_show_in_pct' not in config:
-         config['is_show_in_pct'] = False
-    if 'orientation' not in config:
-         config['orientation'] = 'v'
-    if 'do_pretty_value' not in config:
-        config['do_pretty_value'] = False
-    if 'title' not in config:
-         config['title'] = None
-    if config['func'] and config['func'] not in ['mean', 'median', 'sum']:
-        raise ValueError("func must be in ['mean', 'median', 'sum']")
-    if titles_for_axis:
-        # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
-        #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарные']}
-        # config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
-        # config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
-        # config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
-        # func = config['func']
-        # numeric = titles_for_axis[config["column_for_value"]][1]
-        # cat = titles_for_axis[config["column_for_x"]][1]
-        # suffix_type = titles_for_axis[config["column_for_value"]][2]
-        # title = f'{func_for_title[func][suffix_type]}'
-        # title += f' {numeric} в зависимости от {cat}'
-        # title += f' и {titles_for_axis[config["column_for_y"]][1]}'
-        # config['title'] = title
-        config['column_for_x_label'] = titles_for_axis[config['column_for_x']]
-        config['column_for_y_label'] = titles_for_axis[config['column_for_y']]
-        config['column_for_value_label'] = titles_for_axis[config['column_for_value']]
-    else:
-        if 'column_for_x_label' not in config:
-            config['column_for_x_label'] = None
-        if 'column_for_y_label' not in config:
-            config['column_for_y_label'] = None
-        if 'column_for_value_label' not in config:
-            config['column_for_value_label'] = None            
-        if 'title' not in config:
-            config['title'] = None 
+
+    if not agg_func:
+        raise ValueError("func must be a string")
+    if not zaxis_title:
+        raise ValueError('zaxis_title must for hover')
+    # if titles_for_axis:
+    #     # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
+    #     #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарные']}
+    #     # config['column_for_x_label'] = titles_for_axis[config['column_for_x']][0]
+    #     # config['column_for_y_label'] = titles_for_axis[config['column_for_y']][0]
+    #     # config['column_for_value_label'] = titles_for_axis[config['column_for_value']][0]
+    #     # func = config['func']
+    #     # numeric = titles_for_axis[config["column_for_value"]][1]
+    #     # cat = titles_for_axis[config["column_for_x"]][1]
+    #     # suffix_type = titles_for_axis[config["column_for_value"]][2]
+    #     # title = f'{func_for_title[func][suffix_type]}'
+    #     # title += f' {numeric} в зависимости от {cat}'
+    #     # title += f' и {titles_for_axis[config["column_for_y"]][1]}'
+    #     # config['title'] = title
+    #     config['column_for_x_label'] = titles_for_axis[config['column_for_x']]
+    #     config['column_for_y_label'] = titles_for_axis[config['column_for_y']]
+    #     config['column_for_value_label'] = titles_for_axis[config['column_for_value']]
+    # else:
+    #     if 'column_for_x_label' not in config:
+    #         config['column_for_x_label'] = None
+    #     if 'column_for_y_label' not in config:
+    #         config['column_for_y_label'] = None
+    #     if 'column_for_value_label' not in config:
+    #         config['column_for_value_label'] = None            
+    #     if 'title' not in config:
+    #         config['title'] = None 
             
     def make_df_for_fig(df, column_for_x, column_for_y, column_for_value, finc, orientation):
         func_df =  pd.pivot_table(df, index=column_for_x, columns=column_for_y, values=column_for_value, aggfunc=func, observed=True)
@@ -3694,17 +4012,17 @@ def heatmap(config: dict, titles_for_axis: dict = None):
         ascending_index = False
         na_position = 'last'
         sort_position = -1
-        if config['sort_x']:
+        if sort_x:
             func_df['sum'] = func_df.sum(axis=1, numeric_only=True)
             func_df = func_df.sort_values(
                 'sum', ascending=ascending_sum).drop('sum', axis=1)
-        if config['sort_y']:
+        if sort_y:
             func_df = func_df.sort_values(func_df.index[sort_position], axis=1, ascending=ascending_index, na_position=na_position)
-        if config['is_reversed_y']:
+        if is_reversed_y:
             func_df = func_df.iloc[::-1]
-        if config['skip_first_col_for_cohort']:
+        if skip_first_col_for_cohort:
             func_df = func_df.iloc[:, 1:]
-            if config['is_reversed_y']:
+            if is_reversed_y:
                 func_df = func_df.iloc[1:]
             else:
                 func_df = func_df.iloc[:-1]
@@ -3729,30 +4047,29 @@ def heatmap(config: dict, titles_for_axis: dict = None):
             margin=dict(l=50, r=50, b=50, t=70),       
         ) 
         return fig     
-    column_for_x = config['column_for_x']
-    column_for_y = config['column_for_y']
-    column_for_x_label = config['column_for_x_label']
-    column_for_y_label = config['column_for_y_label']
-    column_for_value = config['column_for_value']
-    column_for_value_label = config['column_for_value_label']
-    orientation = config['orientation']
-    func = config['func']
-    title = config['title']
-    df = config['df']
+    column_for_x = x
+    column_for_y = y
+    column_for_x_label = xaxis_title
+    column_for_y_label = yaxis_title
+    column_for_value_label = zaxis_title
+    column_for_value = z
+    orientation = orientation
+    func = agg_func
+    title = title
     df_for_fig= make_df_for_fig(df, column_for_x, column_for_y, column_for_value, func, orientation)
-    if config['top_n_trim_axis']:
-        if config['top_n_trim_from_axis'] == 'start':
+    if top_n_trim_axis:
+        if top_n_trim_from_axis == 'start':
             x_nunique = df[column_for_x].nunique()
-            df_for_fig = df_for_fig.iloc[x_nunique-config['top_n_trim_axis']:]
+            df_for_fig = df_for_fig.iloc[x_nunique-top_n_trim_axis:]
         else:
-            df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
-    if config['top_n_trim_legend']:
-        if config['top_n_trim_from_legend'] == 'start':
+            df_for_fig = df_for_fig.iloc[:top_n_trim_axis]
+    if top_n_trim_legend:
+        if top_n_trim_from_legend == 'start':
             y_nunique = df[column_for_y].nunique()
-            df_for_fig = df_for_fig.iloc[:, y_nunique-config['top_n_trim_legend']:]        
+            df_for_fig = df_for_fig.iloc[:, y_nunique-top_n_trim_legend:]        
         else:
-            df_for_fig = df_for_fig.iloc[:, :config['top_n_trim_legend']]        
-    fig = heatmap_simple(df_for_fig, font_size=config['textsize'], decimal_places=config['decimal_places'], show_text=config['show_text'], is_show_in_pct=config['is_show_in_pct'], do_pretty_value=config['do_pretty_value'])
+            df_for_fig = df_for_fig.iloc[:, :top_n_trim_legend]        
+    fig = heatmap_simple(df_for_fig, font_size=textsize, decimal_places=decimal_places, show_text=show_text, is_show_in_pct=is_show_in_pct, do_pretty_value=do_pretty_value)
     if titles_for_axis:
         if orientation == 'h':
             hovertemplate = f'{column_for_x_label}'+' = %{x}<br>'+f'{column_for_y_label}'+' = %{y}<br>' +f'{column_for_value_label}' +' = %{z:.1f}<extra></extra>'
@@ -3770,10 +4087,10 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     # fig.update_layout(coloraxis=dict(colorscale=[
     #                         (0, 'rgba(204, 153, 255, 0.1)'), (1, 'rgb(127, 60, 141)')]))     
     fig.update_layout(
-        height=config['height']
-        , width=config['width']
+        height=height
+        , width=width
     )        
-    if config['x_axis_position'] == 'top':
+    if x_axis_position == 'top':
         fig.update_layout(
             xaxis=dict(
                 side='top'  # Устанавливаем ось X сверху
@@ -3787,32 +4104,69 @@ def heatmap(config: dict, titles_for_axis: dict = None):
     fig =  fig_update_layout(fig)        
     return fig
 
-def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for_axis: dict = None, horizontal_spacing=None, vertical_spacing=None, rows=3, cols=3, density_mode='count', bins=20):
+def pairplot_pairs(
+    df: pd.DataFrame,
+    pairs: dict[tuple, dict],
+    coloring: bool = True,
+    width: int = 850,
+    height: int = 800,
+    density_mode: str = 'count',
+    bins: int = 20,
+    rows: int = 3,
+    cols: int = 3,
+    horizontal_spacing: float = None,
+    vertical_spacing: float = None,
+    titles_for_axis: dict = None
+) -> go.Figure:
     """
-    Create a pairplot of numerical variables in a dataframe using Plotly.
+    Create a pairplot of numerical variables using Plotly with specified column pairs.
 
-    Parameters:
-    df (pandas.DataFrame): Input dataframe
-    pairs (dict): Dict of pairs of column names to plot.
-        Each pair should be a key in the form of a tuple, and the value should be a dictionary where the keys represent the columns from the pair,  
-        and the values are ranges for truncating the values (upper and lower bounds).
-    bins (int, optional): Number of bins for calculate density. Defaults to 20.
-    coloring (bool, optional): Whether to color the points based on density (count elements in sector). Defaults to True.
-    width (int, optional): Width of the plot. Defaults to 800.
-    height (int, optional): Height of the plot. Defaults to 800.
-    titles_for_axis (dict, optional): Dictionary of custom axis titles. Defaults to None.
-    horizontal_spacing (float, optional): Horizontal spacing between subplots. Defaults to None.
-    vertical_spacing (float, optional): Vertical spacing between subplots. Defaults to None.
-    rows (int, optional): Number of rows in the subplot grid. Defaults to None.
-    cols (int, optional): Number of columns in the subplot grid. Defaults to None.
-    density_mode (str): Mode for calculate density ('kde' or 'count')
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    pairs : dict[tuple, dict]
+        Dictionary of column pairs to plot
+        Key: tuple of column names
+        Value: dictionary with column ranges for truncation
+    coloring : bool, optional
+        Color points based on density. Default is True
+    width : int, optional
+        Width of plot in pixels. Default is 850
+    height : int, optional
+        Height of plot in pixels. Default is 800
+    density_mode : str, optional
+        Mode for density calculation ('kde' or 'count'). Default is 'count'
+    bins : int, optional
+        Number of bins for density calculation. Default is 20
+    rows : int, optional
+        Number of subplot rows. Default is 3
+    cols : int, optional
+        Number of subplot columns. Default is 3
+    horizontal_spacing : float, optional
+        Horizontal spacing between subplots
+    vertical_spacing : float, optional
+        Vertical spacing between subplots
+    titles_for_axis : dict, optional
+        Custom axis titles
 
-    Returns:
-    fig (plotly.graph_objs.Figure): The resulting pairplot figure
-    
-    Example:
-        pairs = {('total_images', 'last_price'): None, ('total_images', 'floors_total'): {'total_images': [-2.15, 22.45], 'floors_total': [0.51, 28.54]}}
+    Returns
+    -------
+    go.Figure
+        Pairplot figure
+
+    Examples
+    --------
+    >>> pairs = {
+    ...     ('total_images', 'last_price'): None,
+    ...     ('total_images', 'floors_total'): {
+    ...         'total_images': [-2.15, 22.45],
+    ...         'floors_total': [0.51, 28.54]
+    ...     }
+    ... }
+    >>> pairplot_pairs(df, pairs, density_mode='kde', bins=30)
     """
+
     if df.empty:
         raise ValueError("Input dataframe is empty")
     num_columns = list(
@@ -3960,95 +4314,107 @@ def pairplot_pairs(df, pairs, coloring = True, width=850, height=800, titles_for
     fig.update_layout(showlegend=False)
     return fig
 
-def histograms_stacked(config, titles_for_axis=None):
+
+def histograms_stacked(
+    df: pd.DataFrame,
+    x: str,
+    category: str,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    title: str = None,
+    top_n: int = 20,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    nbins: int = 20,
+    line_width: int = 5,
+    opacity: float = 0.7,
+    height: int = None,
+    width: int = None,
+    mode: str = 'normal',
+    barmode: str = 'group',
+    legend_position: str = 'top',
+    show_box: bool = True,
+    use_contrast_colors: bool = False,
+) -> go.Figure:
     """
-    Функция для построения наложенных гистограмм по категориальной переменной.
-    Parameters (key in config):
-    df: DataFrame с данными
-    cat_var: Название категориальной переменной
-    num_var: Название числовой переменной
-    top_n: Количество топ категорий для отображения
-    lower_quantile: Нижний квантиль для обрезки данных
-    upper_quantile: Верхний квантиль для обрезки данных
-    bins: Количество бинов для гистограммы
-    line_width: Ширина линий на графике
-    opacity: Прозрачность линий
-    height: Высота графика
-    width: Ширина графика
-    mode: Режим отображения ('step' для ступенчатой гистограммы, 'normal' для обычной)
-    barmode: Режим отображения нескольких графиков ('group', 'stack', 'overlay', 'relative') default is group
-    legend_position: Положение легенды ('top', 'right')
-    box:  Отображать ли коробчатую диаграмму
-    Объект Figure с графиком
-    titles_for_axis: Словарь с названиями для осей
+    Creates stacked histograms for categorical variables.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    x : str
+        Name of numerical variable
+    category : str
+        Name of categorical variable        
+    xaxis_title : str, optional
+        Title for x-axis
+    yaxis_title : str, optional
+        Title for y-axis        
+    title : str, optional
+        Title for plot
+    top_n : int, optional
+        Number of top categories to display. Default is 20
+    lower_quantile : float, optional
+        Lower quantile for data trimming (0-1). Default is 0
+    upper_quantile : float, optional
+        Upper quantile for data trimming (0-1). Default is 1
+    nbins : int, optional
+        Number of histogram bins. Default is 20
+    line_width : int, optional
+        Width of plot lines. Default is 5
+    opacity : float, optional
+        Transparency of lines (0-1). Default is 0.7
+    height : int, optional
+        Plot height in pixels
+    width : int, optional
+        Plot width in pixels
+    mode : str, optional
+        Display mode ('step' or 'normal'). Default is 'normal'
+    barmode : str, optional
+        Multi-plot display mode ('group', 'stack', 'overlay', 'relative'). Default is 'group'
+    legend_position : str, optional
+        Legend position ('top' or 'right'). Default is 'top'
+    show_box : bool, optional
+        Show box plot. Default is True
+    use_contrast_colors : bool, optional
+        Use special contrasting colors for histograms. Default is False
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with stacked histograms
+
     """
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
-        raise ValueError("cat_var must be a string")
-    if 'num_var' in config and not isinstance(config['num_var'], str):
-        raise ValueError("num_var must be a string")
-    if 'top_n' not in config:
-        config['top_n'] = 20
-    if 'lower_quantile' not in config:
-        config['lower_quantile'] = 0      
-    if 'upper_quantile' not in config:
-        config['upper_quantile'] = 1      
-    if 'line_width' not in config:
-        config['line_width'] = 5
-    if 'opacity' not in config:
-        config['opacity'] = 0.7
-    if 'height' not in config:
-        config['height'] = None        
-    if 'width' not in config:
-        config['width'] = None
-    if 'bins' not in config:
-        config['bins'] = 20
-    if 'barmode' not in config:
-        config['barmode'] = 'group'        
-    if 'mode' not in config:
-        config['mode'] = 'normal'      
-    if config['top_n'] == 'all':
-        config['top_n'] = config['df'][config['cat_var']].nunique()      
-    if 'box' not in config:
-        config['box'] = True
-    if 'legend_position' not in config:
-        config['legend_position'] = 'top'
-    if 'title' not in config:
-        config['title'] = None
-    df = config['df']
-    cat_var = config['cat_var']
-    num_var = config['num_var']
-    top_n = config['top_n']
-    lower_quantile = config['lower_quantile']
-    upper_quantile = config['upper_quantile']
-    line_width = config['line_width']
-    opacity = config['opacity']
-    height = config['height']
-    width = config['width']
-    bins = config['bins']
-    barmode = config['barmode']
-    legend_position = config['legend_position']
+
+    cat_var = category
+    num_var = x
+    bins = nbins
+    if not xaxis_title:
+        xaxis_title = num_var
+    if not yaxis_title:
+        yaxis_title = 'Доля от общего'
+    if not legend_title:
+        legend_title = cat_var
+
     
         
-    if not titles_for_axis:
-        title = f'Гистограмма для {num_var} в зависимости от {cat_var}'
-        xaxis_title = num_var
-        yaxis_title = 'Частота'
-        legend_title = cat_var
-    else:
-        title = config['title']
-        xaxis_title = f'{titles_for_axis[num_var]}'
-        yaxis_title = 'Частота'    
-        legend_title = f'{titles_for_axis[cat_var]}'
+    # if not titles_for_axis:
+    #     title = f'Гистограмма для {num_var} в зависимости от {cat_var}'
+    #     xaxis_title = num_var
+    #     yaxis_title = 'Частота'
+    #     legend_title = cat_var
+    # else:
+    #     title = config['title']
+    #     xaxis_title = f'{titles_for_axis[num_var]}'
+    #     yaxis_title = 'Частота'    
+    #     legend_title = f'{titles_for_axis[cat_var]}'
     # if legend_position == 'top':
     #     legend_title = None
     # Получение топ N категорий
     categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
 
-    if config['mode'] == 'step':
+    if mode == 'step':
         # Создание графика
         dist_plot = go.Figure()
         box_plot = go.Figure()
@@ -4057,8 +4423,13 @@ def histograms_stacked(config, titles_for_axis=None):
         #         '#66CCCC', '#B690C4']
         # colors_box = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3', "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
         #                 ]    
-        colors = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)']
-        colors_box = colors
+        # colors = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)']
+        if use_contrast_colors:
+            colors = colorway_for_stacked_histogram
+            colors_box = colorway_for_stacked_histogram
+        else:
+            colors = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)']
+            colors_box = colors            
         hist_data = []
         max_y = -np.inf
         # Проход по каждой категории и построение гистограммы
@@ -4070,7 +4441,7 @@ def histograms_stacked(config, titles_for_axis=None):
             upper_bound = data.quantile(upper_quantile)
             trimmed_data = data[(data >= lower_bound) & (data <= upper_bound)]
             hist_data.append(trimmed_data)
-            if config['box']:
+            if show_box:
                 box_plot.add_trace(go.Box(
                     x=data,
                     name=str(category),
@@ -4111,10 +4482,10 @@ def histograms_stacked(config, titles_for_axis=None):
         box_plot.update_traces(
             hovertemplate= xaxis_title + ' = %{x}<extra></extra>')
         # Объединяем графики
-        if config['box']:
+        if show_box:
             fig = make_subplots(rows=2, cols=1, row_heights=[0.1, 0.9], shared_xaxes=True)        
             # Добавляем распределительный график
-            if config['box']:
+            if show_box:
                 for trace in box_plot.data:
                     fig.add_trace(trace, row=1, col=1)
             for trace in dist_plot.data:    
@@ -4152,12 +4523,12 @@ def histograms_stacked(config, titles_for_axis=None):
         #     xanchor="center",  # Привязка к центру
         #     x=0.5              # Центрирование по горизонтали                       
         # )
-    elif config['mode'] == 'normal':
+    elif mode == 'normal':
         # group_labels = categories
         # colors = ['#A56CC1', '#A6ACEC'] #, '#63F5EF']
         # colors = ['rgba(128, 60, 170, 0.9)', "rgba(112, 155, 219, 0.9)", '#049CB3']
         # Create distplot with curve_type set to 'normal'
-        if config['box']:
+        if show_box:
             marginal = 'box'
         else:
             marginal = None
@@ -4165,8 +4536,8 @@ def histograms_stacked(config, titles_for_axis=None):
         upper_quantile = df[num_var].quantile(upper_quantile)  # 75-й процентиль
         # Фильтруем DataFrame по квантилям
         filtered_df = df[(df[num_var] >= lower_quantile) & (df[num_var] <= upper_quantile)]
-            
-        fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins, histnorm='percent')
+        if use_contrast_colors:    
+            fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins, histnorm='percent')
         # fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')     
         # Обновление hovertemplate для гистограммы
         fig.update_traces(hovertemplate=xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>', 
@@ -4176,7 +4547,7 @@ def histograms_stacked(config, titles_for_axis=None):
                           selector=dict(type='box'))             
     else:
         raise ValueError("Invalid mode. Please choose 'box' or 'normal'.")
-    if config['box']:
+    if show_box:
         xaxis = dict(
                 visible=False
             )  
@@ -4202,7 +4573,7 @@ def histograms_stacked(config, titles_for_axis=None):
             , tickcolor="rgba(0, 0, 0, 0.4)"
             , showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
         )        
-        if config['mode'] == 'normal':        
+        if mode == 'normal':        
             xaxis, xaxis2 = xaxis2, xaxis
             yaxis, yaxis2 = yaxis2, yaxis
         fig.update_layout(  
@@ -4219,7 +4590,7 @@ def histograms_stacked(config, titles_for_axis=None):
             , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
             , hoverlabel=dict(bgcolor="white")
         )
-        if config['mode'] == 'step':
+        if mode == 'step':
             fig.update_layout(
                 yaxis_range = [0, max_y]
             )
@@ -4284,78 +4655,89 @@ def histograms_stacked(config, titles_for_axis=None):
     # fig.update_yaxes(visible=False, row=1, col=1)  # Убираем ось Y для верхнего графика       
     return fig
 
-def boxplots_stacked(config, titles_for_axis=None):
+def boxplots_stacked(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    category: str,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    legend_title: str = None,
+    top_n: int = 20,
+    height: int = None,
+    width: int = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    sort: bool = False,
+    legend_position: str = 'top',
+    orientation: str = None,
+    title: str = None,
+) -> go.Figure:
     """
-    Функция для построения наложенных боксплотов по категориальной переменной.
-    :param titles_for_axis: Словарь с названиями для осей
-    :param df: DataFrame с данными
-    :param cat_var: Название категориальной переменной
-    :param num_var: Название числовой переменной
-    :param top_n: Количество топ категорий для отображения
-    :param height: Высота графика
-    :param width: Ширина графика
-    :return: Объект Figure с графиком
-    """
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
-        raise ValueError("cat_var must be a string")
-    if 'num_var' not in config or not isinstance(config['num_var'], str):
-        raise ValueError("num_var must be a string")
-    if 'top_n' not in config:
-        config['top_n'] = 20
-    if 'height' not in config:
-        config['height'] = None        
-    if 'width' not in config:
-        config['width'] = None
-    if config['top_n'] == 'all':
-        config['top_n'] = config['df'][config['cat_var']].nunique()
-    if 'lower_quantile' not in config:
-        config['lower_quantile'] = 0      
-    if 'upper_quantile' not in config:
-        config['upper_quantile'] = 1           
-    if 'sort' not in config:
-        config['sort'] = False     
-    if 'legend_var' not in config:
-        config['legend_var'] = None            
-    if 'legend_position' not in config:
-        config['legend_position'] = 'top'
-    if 'lower_quantile' not in config:
-        config['lower_quantile'] = 0.01            
-    if 'upper_quantile' not in config:
-        config['upper_quantile'] = 0.99
-    if 'title' not in config:
-        config['title'] = None
+    Creates stacked box plots for categorical variables.
 
-    df = config['df']
-    cat_var = config['cat_var']
-    num_var = config['num_var']
-    legend_var = config['legend_var']
-    top_n = config['top_n']
-    sort = config['sort']
-    height = config['height']
-    width = config['width']
-    lower_quantile = config['lower_quantile']
-    upper_quantile = config['upper_quantile']    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    x : str
+        Name of categorical variable
+    y : str
+        Name of numerical variable
+    top_n : int, optional
+        Number of top categories to display. Default is 20
+    height : int, optional
+        Plot height in pixels
+    width : int, optional
+        Plot width in pixels
+    lower_quantile : float, optional
+        Lower quantile for data trimming (0-1). Default is 0
+    upper_quantile : float, optional
+        Upper quantile for data trimming (0-1). Default is 1
+    sort : bool, optional
+        Sort categories by values. Default is False
+    category : str, optional
+        Variable to use for legend grouping
+    legend_position : str, optional
+        Legend position ('top' or 'right'). Default is 'top'
+    orientation : str, optional
+        Orientation of the plot ('h' for horizontal, 'v' for vertical). Default is None
+    title : str, optional
+        Plot title
+    titles_for_axis : dict, optional
+        Dictionary of custom axis titles
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with stacked box plots
+    """
+    cat_var = x
+    num_var = y
+    legend_var = category
+
     def trim_by_quantiles(group):
         lower_bound = group.quantile(lower_quantile)
         upper_bound = group.quantile(upper_quantile)
         return group[(group >= lower_bound) & (group <= upper_bound)]        
-    if not titles_for_axis:
-        title = f'Распределение {num_var} в зависимости от {cat_var}'
+    # if not titles_for_axis:
+    #     title = f'Распределение {num_var} в зависимости от {cat_var}'
+    #     xaxis_title = cat_var
+    #     yaxis_title = num_var
+    #     if legend_var:
+    #         legend_title_text = legend_var
+    # else:
+    #     title = config['title']
+    #     xaxis_title = f'{titles_for_axis[cat_var]}'
+    #     yaxis_title = f'{titles_for_axis[num_var]}'
+    #     if legend_var:
+    #         legend_title_text = f'{titles_for_axis[legend_var]}'
+    if not xaxis_title:
         xaxis_title = cat_var
+    if not yaxis_title:
         yaxis_title = num_var
-        if legend_var:
-            legend_title_text = legend_var
-    else:
-        title = config['title']
-        xaxis_title = f'{titles_for_axis[cat_var]}'
-        yaxis_title = f'{titles_for_axis[num_var]}'
-        if legend_var:
-            legend_title_text = f'{titles_for_axis[legend_var]}'
-
+    if legend_title:
+        legend_title = legend_var
     # Получение топ N категорий
     if not sort:
         categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
@@ -4375,7 +4757,7 @@ def boxplots_stacked(config, titles_for_axis=None):
     if legend_var:
         columns_for_groupby.append(legend_var)
     trimmed_df = df.groupby(columns_for_groupby, observed=True)[num_var].apply(trim_by_quantiles).reset_index()
-    fig = px.box(trimmed_df, x=cat_var, y=num_var, color=legend_var)
+    fig = px.box(trimmed_df, x=cat_var, y=num_var, color=legend_var, orientation=orientation)
     # # Проход по каждой категории и построение боксплота
     # for category in categories:
     #     data = df[df[cat_var] == category][num_var]
@@ -4394,10 +4776,10 @@ def boxplots_stacked(config, titles_for_axis=None):
     # Настройка графика
     if legend_var:
         showlegend = True
-        if config['legend_position'] == 'top':
+        if legend_position == 'top':
             fig.update_layout(
                 legend = dict(
-                    title_text=legend_title_text
+                    title_text=legend_title
                     , title_font_color='rgba(0, 0, 0, 0.7)'
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="h"  # Горизонтальное расположение
@@ -4407,10 +4789,10 @@ def boxplots_stacked(config, titles_for_axis=None):
                     , x=0.5              # Центрирование по горизонтали
                 )     
             )    
-        elif config['legend_position'] == 'right':
+        elif legend_position == 'right':
             fig.update_layout(
                     legend = dict(
-                    title_text=legend_title_text
+                    title_text=legend_title
                     , title_font_color='rgba(0, 0, 0, 0.7)'
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="v"  # Горизонтальное расположение
@@ -4458,63 +4840,82 @@ def boxplots_stacked(config, titles_for_axis=None):
     )
     return fig
 
-def violins_stacked(config, titles_for_axis=None):
+def violins_stacked(
+    df: pd.DataFrame,
+    x: str,
+    y: str,
+    category: str,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    legend_title: str = None,
+    top_n: int = 20,
+    height: int = None,
+    width: int = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    sort: bool = False,
+    legend_position: str = 'top',
+    orientation: str = None,
+    title: str = None,
+) -> go.Figure:
     """
-    Функция для построения наложенных violins по категориальной переменной.
-    :param titles_for_axis: Словарь с названиями для осей
-    config (dict): A dictionary containing parameters for creating the chart.
-        :param df: DataFrame с данными
-        :param cat_var: Название категориальной переменной
-        :param num_var: Название числовой переменной
-        :param top_n: Количество топ категорий для отображения
-        :param height: Высота графика
-        :param width: Ширина графика
-        :return: Объект Figure с графиком
-    """
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'cat_var' not in config or not isinstance(config['cat_var'], str):
-        raise ValueError("cat_var must be a string")
-    if 'num_var' not in config or not isinstance(config['num_var'], str):
-        raise ValueError("num_var must be a string")
-    if 'top_n' not in config:
-        config['top_n'] = 20
-    if 'height' not in config:
-        config['height'] = None        
-    if 'width' not in config:
-        config['width'] = None
-    if config['top_n'] == 'all':
-        config['top_n'] = config['df'][config['cat_var']].nunique()
-    if 'lower_quantile' not in config:
-        config['lower_quantile'] = 0      
-    if 'upper_quantile' not in config:
-        config['upper_quantile'] = 1           
-    if 'sort' not in config:
-        config['sort'] = False
-    if 'title' not in config:
-        config['title'] = None
-        
-    df = config['df']
-    cat_var = config['cat_var']
-    num_var = config['num_var']
-    top_n = config['top_n']
-    sort = config['sort']
-    height = config['height']
-    width = config['width']
-    lower_quantile = config['lower_quantile']
-    upper_quantile = config['upper_quantile']    
-    
-    if not titles_for_axis:
-        title = f'Распределение {num_var} в зависимости от {cat_var}'
-        xaxis_title = cat_var
-        yaxis_title = num_var
-    else:
-        title = config['title']
-        xaxis_title = f'{titles_for_axis[cat_var]}'
-        yaxis_title = f'{titles_for_axis[num_var]}'
+    Creates stacked box plots for categorical variables.
 
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    x : str
+        Name of categorical variable
+    y : str
+        Name of numerical variable
+    top_n : int, optional
+        Number of top categories to display. Default is 20
+    height : int, optional
+        Plot height in pixels
+    width : int, optional
+        Plot width in pixels
+    lower_quantile : float, optional
+        Lower quantile for data trimming (0-1). Default is 0
+    upper_quantile : float, optional
+        Upper quantile for data trimming (0-1). Default is 1
+    sort : bool, optional
+        Sort categories by values. Default is False
+    category : str, optional
+        Variable to use for legend grouping
+    legend_position : str, optional
+        Legend position ('top' or 'right'). Default is 'top'
+    orientation : str, optional
+        Orientation of the plot ('h' for horizontal, 'v' for vertical). Default is None
+    title : str, optional
+        Plot title
+    xaxis_title : str, optional
+        Title for the x-axis
+    yaxis_title : str, optional
+        Title for the y-axis
+    legend_title : str, optional
+        Title for the legend
+
+    Returns
+    -------
+    go.Figure
+        Plotly figure with stacked box plots
+    """
+        
+
+    cat_var = category
+    num_var = x
+    
+    # if not titles_for_axis:
+    #     title = f'Распределение {num_var} в зависимости от {cat_var}'
+    #     xaxis_title = cat_var
+    #     yaxis_title = num_var
+    # else:
+    #     title = config['title']
+    #     xaxis_title = f'{titles_for_axis[cat_var]}'
+    #     yaxis_title = f'{titles_for_axis[num_var]}'
+    xaxis_title = cat_var
+    yaxis_title = num_var
     # Получение топ N категорий
     if not sort:
         categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
@@ -4791,3 +5192,169 @@ def plot_confidence_intervals(df, categorical_col, numerical_col, second_categor
         yaxis_title=yaxis_title
     )
     return plotly_default_settings(fig)
+
+def subplots(
+    configs,
+    title=None,
+    width=None,
+    height=None,
+    rows=1,
+    cols=2,
+    shared_xaxes=False,
+    shared_yaxes=False,
+    horizontal_spacing=None,
+    specs=None,
+    column_widths=None,
+    row_heights=None,
+    subplot_titles=None
+):
+    """
+    Creates a figure with multiple subplots using Plotly.
+
+    Parameters:
+    configs (list): List of dictionaries containing configuration for each subplot
+        Required keys:
+        - fig: The plotly figure object
+        - layout: The plotly layout object
+        - row (int): Row position of the subplot
+        - col (int): Column position of the subplot
+        Optional keys:
+        - is_margin (bool): Boolean to indicate if the plot is a margin plot
+        - domain_x (list): X-axis domain range
+        - domain_y (list): Y-axis domain range
+        - showgrid_x (bool): Show X-axis grid
+        - showgrid_y (bool): Show Y-axis grid
+        - showticklabels_x (bool): Show X-axis tick labels
+        - xaxis_visible (bool): X-axis visibility
+        - yaxis_visible (bool): Y-axis visibility
+        - show_yaxis_title (bool): Whether show yaxis title
+    title (str): Main figure title
+    width (int): Figure width in pixels
+    height (int): Figure height in pixels
+    rows (int): Number of rows in subplot grid
+    cols (int): Number of columns in subplot grid
+    shared_xaxes (bool): Share X axes between subplots
+    shared_yaxes (bool): Share Y axes between subplots
+    horizontal_spacing (float): Spacing between subplots horizontally
+    specs (list): Subplot specifications
+    column_widths (list): List of relative column widths
+    row_heights (list): List of relative row heights
+    subplot_titles (list): List of subplot titles
+
+    Returns:
+    plotly.graph_objects.Figure: The created figure with subplots
+    """
+
+    # Create subplot layout
+    fig = make_subplots(
+        rows=rows,
+        cols=cols,
+        column_widths=column_widths,
+        row_heights=row_heights,
+        specs=specs,
+        subplot_titles=subplot_titles,
+        shared_xaxes=shared_xaxes,
+        shared_yaxes=shared_yaxes,
+        horizontal_spacing=horizontal_spacing
+    )
+
+    # Process each subplot configuration
+    if configs:
+        for config in configs:
+            if not config['fig']:
+                continue
+
+            # Set default values for configuration
+            config['is_margin'] = config.get('is_margin', False)
+            config['with_margin'] = config.get('with_margin', False)
+            config['show_yaxis_title'] = config.get('show_yaxis_title', True)
+            config['show_xaxis_title'] = config.get('show_xaxis_title', True)
+
+            # Handle margin plot settings
+            if config['is_margin']:
+                config['domain_y'] = config.get('domain_y', [0.95, 1])
+                config['showgrid_x'] = config.get('showgrid_x', False)
+                config['showgrid_y'] = config.get('showgrid_y', False)
+                config['showticklabels_x'] = config.get('showticklabels_x', False)
+                config['xaxis_visible'] = config.get('xaxis_visible', False)
+                config['yaxis_visible'] = config.get('yaxis_visible', False)
+            else:
+                # Handle regular plot settings
+                if 'with_margin' in config:
+                    config['domain_y'] = config.get('domain_y', [0, 0.9])
+                config['showgrid_x'] = config.get('showgrid_x', True)
+                config['showgrid_y'] = config.get('showgrid_y', True)
+                config['showticklabels_x'] = config.get('showticklabels_x', True)
+                config['xaxis_visible'] = config.get('xaxis_visible', True)
+                config['yaxis_visible'] = config.get('yaxis_visible', True)
+
+            # Set axis titles
+            if config['show_xaxis_title']:
+                config['xaxis_title_text'] = config['layout'].xaxis.title.text if 'layout' in config else None
+            else:
+                config['xaxis_title_text'] = None
+            if config['show_yaxis_title']:
+                config['yaxis_title_text'] = config['layout'].yaxis.title.text if 'layout' in config else None
+            else:
+                config['yaxis_title_text'] = None
+
+            # Add trace and update axes
+            fig.add_trace(config['fig'], row=config['row'], col=config['col'])
+
+            # Update X axes
+            fig.update_xaxes(
+                row=config['row'],
+                col=config['col'],
+                showgrid=config['showgrid_x'],
+                showticklabels=config['showticklabels_x'],
+                visible=config['xaxis_visible'],
+                title_text=config['xaxis_title_text'],
+                gridwidth=1,
+                gridcolor="rgba(0, 0, 0, 0.1)"
+            )
+
+            # Update domains if specified
+            if 'domain_x' in config:
+                fig.update_xaxes(row=config['row'], col=config['col'], domain=config['domain_x'])
+            if 'domain_y' in config:
+                fig.update_yaxes(row=config['row'], col=config['col'], domain=config['domain_y'])
+
+            # Update Y axes
+            fig.update_yaxes(
+                row=config['row'],
+                col=config['col'],
+                showgrid=config['showgrid_y'],
+                gridwidth=1,
+                gridcolor="rgba(0, 0, 0, 0.1)",
+                visible=config['yaxis_visible'],
+                title_text=config['yaxis_title_text']
+            )
+
+    # Adjust subplot titles position
+    if subplot_titles:
+        for i, _ in enumerate(subplot_titles):
+            fig['layout']['annotations'][i-1]['y'] = 1.04
+
+    # Update figure layout
+    fig.update_layout(
+        title=title,
+        width=width,
+        height=height,
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_showticklabels=True,
+        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        legend_title_font_size=14,
+        legend_font_color='rgba(0, 0, 0, 0.7)',
+        hoverlabel=dict(bgcolor="white")
+    )
+
+    return fig
