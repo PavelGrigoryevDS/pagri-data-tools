@@ -5046,41 +5046,84 @@ def plot_confidence_intervals_old(df, categorical_col, numerical_col, confidence
     fig.update_layout(height=height, width=width, title_text=title, xaxis_title=xaxis_title, yaxis_title=yaxis_title)
     return plotly_default_settings(fig)
 
-def plot_confidence_intervals(df, categorical_col, numerical_col, second_categorical_col=None, confidence_level=0.95, orientation='vertical', height=600, width=800, titles_for_axis=None, legend_position='top'):
+def plot_confidence_intervals(
+    df: pd.DataFrame,
+    categorical_col: str,
+    numerical_col: str,
+    second_categorical_col: str = None,
+    confidence_level: float = 0.95,
+    orientation: str = 'vertical',
+    height: int = 600,
+    width: int = 800,
+    legend_position: str = 'top',
+    title: str = None,
+    xaxis_title: str = None, 
+    yaxis_title: str = None,
+    legend_title: str = None
+) -> go.Figure:
     """
-    Функция для построения графика с средними значениями и доверительными интервалами с использованием t-статистики.
+    Creates a plot with mean values and confidence intervals using t-statistics.
 
-    Параметры:
-    df (pd.DataFrame): Входной DataFrame.
-    categorical_col (str): Название первой категориальной переменной.
-    numerical_col (str): Название числовой переменной.
-    second_categorical_col (str, optional): Название второй категориальной переменной для разделения данных.
-    confidence_level (float): Уровень доверия для доверительного интервала (по умолчанию 0.95).
-    orientation (str): Ориентация графика ('vertical' или 'horizontal').
-    height (int): Высота графика.
-    width (int): Ширина графика.
-    titles_for_axis (dict, optional): Словарь с подписями осей и заголовка.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe
+    categorical_col : str
+        Name of primary categorical variable
+    numerical_col : str
+        Name of numerical variable
+    second_categorical_col : str, optional
+        Name of secondary categorical variable for data grouping
+    confidence_level : float, optional
+        Confidence level for interval calculation (0-1). Default is 0.95
+    orientation : str, optional
+        Plot orientation ('vertical' or 'horizontal'). Default is 'vertical'
+    height : int, optional
+        Plot height in pixels. Default is 600
+    width : int, optional
+        Plot width in pixels. Default is 800
+    legend_position : str, optional
+        Legend position ('top' or 'right'). Default is 'top'
+    title : str, optional
+        Plot title. Default is None
+    xaxis_title : str, optional
+        X-axis title. Default is None
+    yaxis_title : str, optional
+        Y-axis title. Default is None
+    legend_title : str, optional
+        Legend title. Default is None
 
-    Пример словаря для подписей осей и заголовка:
-    titles_for_axis = dict(
-        body_mass_g = ['Вес', 'вес', 1],
-        island = ['Остров', 'острова', 'острову']
-    )
+    Returns
+    -------
+    go.Figure
+        Plotly figure with confidence intervals
+
+    Examples
+    --------
+    >>> plot_confidence_intervals(df, 'category', 'values')
+    
+    >>> plot_confidence_intervals(
+    ...     df, 
+    ...     'island', 
+    ...     'body_mass_g', 
+    ...     second_categorical_col='species',
+    ... )
     """
-    func_for_title = ['Среднее', 'Средний', 'Средняя', 'Средние']
-    suffix_type = titles_for_axis[numerical_col][2] if titles_for_axis else 0
 
-    if not titles_for_axis:
-        # title = f'Среднее {numerical_col} в зависимости от {categorical_col} с {int(confidence_level*100)}% доверительными интервалами'
-        xaxis_title = categorical_col
-        yaxis_title = numerical_col
-    else:
-        if second_categorical_col:
-            title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} и {titles_for_axis[second_categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
-        else:
-            title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
-        xaxis_title = f'{titles_for_axis[categorical_col][0]}'
-        yaxis_title = f'{titles_for_axis[numerical_col][0]}'
+    # func_for_title = ['Среднее', 'Средний', 'Средняя', 'Средние']
+    # suffix_type = titles_for_axis[numerical_col][2] if titles_for_axis else 0
+
+    # if not titles_for_axis:
+    #     # title = f'Среднее {numerical_col} в зависимости от {categorical_col} с {int(confidence_level*100)}% доверительными интервалами'
+    #     xaxis_title = categorical_col
+    #     yaxis_title = numerical_col
+    # else:
+    #     if second_categorical_col:
+    #         title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} и {titles_for_axis[second_categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
+    #     else:
+    #         title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
+    #     xaxis_title = f'{titles_for_axis[categorical_col][0]}'
+    #     yaxis_title = f'{titles_for_axis[numerical_col][0]}'
 
     # Группируем данные и вычисляем среднее, стандартное отклонение и количество наблюдений
     if second_categorical_col:
@@ -5100,14 +5143,14 @@ def plot_confidence_intervals(df, categorical_col, numerical_col, second_categor
     if orientation == 'v':
         x_col = categorical_col
         y_col = "mean"
-        if titles_for_axis:
-            hovertemplate = 'Среднее = %{y}<br>' + f'{titles_for_axis[categorical_col][0]} = ' + '%{x}'
+        if xaxis_title:
+            hovertemplate = 'Среднее = %{y}<br>' + f'{xaxis_title} = ' + '%{x}'
     elif orientation == 'h':
         x_col = "mean"
         y_col = categorical_col
         xaxis_title, yaxis_title = yaxis_title, xaxis_title
-        if titles_for_axis:
-            hovertemplate = 'Среднее = %{x}<br>' + f'{titles_for_axis[categorical_col][0]} = ' + '%{y}'
+        if xaxis_title:
+            hovertemplate = 'Среднее = %{x}<br>' + f'{xaxis_title} = ' + '%{y}'
     else:
         raise ValueError("Ориентация должна быть 'vertical' или 'horizontal'.")
 
@@ -5158,7 +5201,7 @@ def plot_confidence_intervals(df, categorical_col, numerical_col, second_categor
                     domain=[0, 0.95]
                 )              
                 , legend = dict(
-                    title_text=titles_for_axis[second_categorical_col][0] if titles_for_axis else second_categorical_col
+                    title_text=legend_title if legend_title else second_categorical_col
                     , title_font_color='rgba(0, 0, 0, 0.7)'
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="h"  # Горизонтальное расположение
@@ -5171,7 +5214,7 @@ def plot_confidence_intervals(df, categorical_col, numerical_col, second_categor
         elif legend_position == 'right':
             fig.update_layout(
                     legend = dict(
-                    title_text=titles_for_axis[second_categorical_col][0] if titles_for_axis else second_categorical_col
+                    title_text=legend_title if legend_title else second_categorical_col
                     , title_font_color='rgba(0, 0, 0, 0.7)'
                     , font_color='rgba(0, 0, 0, 0.7)'
                     , orientation="v"  # Горизонтальное расположение
