@@ -2484,7 +2484,9 @@ def histogram(config: dict, titles_for_axis: dict = None):
     if 'right_quantile' not in config:
         config['right_quantile'] = 1
     if 'marginal' not in config:
-        config['marginal'] = 'box'
+        config['marginal'] = True
+    if 'title' not in config:
+        config['title'] = None
     # Обрезаем данные между квантилями
     column = config['column']
     trimmed_column = column.between(column.quantile(
@@ -2500,7 +2502,41 @@ def histogram(config: dict, titles_for_axis: dict = None):
             config['title'] = f'Распределенеие {column.name}'
         xaxis_title = f'{titles_for_axis[column.name]}'
         yaxis_title = 'Частота'
-    fig = px.histogram(column, title=config['title'], histnorm='percent', nbins=config['nbins'], marginal=config['marginal'])
+    # fig = px.histogram(column, title=config['title'], histnorm='percent', nbins=config['nbins'], marginal='box')
+    if config['marginal']:
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
+    else:
+        fig = go.Figure()
+
+    # Add histogram to bottom subplot
+    if config['marginal']:
+        fig.add_trace(
+            go.Histogram(
+                x=column,
+                nbinsx=config['nbins'],
+                histnorm='percent',
+                marker_color='rgba(128, 60, 170, 0.9)'
+            ),
+            row=1, col=1
+        )
+
+        # Add box plot to top subplot
+        fig.add_trace(
+            go.Box(
+                x=column,
+                marker_color='rgba(128, 60, 170, 0.9)',
+            ),
+            row=2, col=1
+        )
+    else:
+        fig.add_trace(
+            go.Histogram(
+                x=column,
+                nbinsx=config['nbins'],
+                histnorm='percent',
+                marker_color='rgba(128, 60, 170, 0.9)'
+            ),
+        )
     fig.update_layout(
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title
@@ -2518,32 +2554,34 @@ def histogram(config: dict, titles_for_axis: dict = None):
         fig.update_layout(
             yaxis2 = dict(
                 domain=[0.95, 1]
+                , visible = False
             )
             , xaxis2 = dict(
                 visible=False
-            )              
+            )
             , yaxis = dict(
                 domain=[0, 0.9]
-            )            
+            )
         )
     fig.update_layout(
-        # , title={'text': f'<b>{title}</b>'}
+        title=config['title'],
         width=config['width'], height=config['height'],
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
         title_y=0.95,
         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        xaxis_showticklabels=True,
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
+        yaxis_linecolor="rgba(0, 0, 0, 0.4)",
         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
+        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",
         legend_title_font_color='rgba(0, 0, 0, 0.7)',
         legend_title_font_size = 14,
         legend_font_color='rgba(0, 0, 0, 0.7)',
-        margin=dict(l=50, r=50, b=10, t=50), 
+        margin=dict(l=50, r=50, b=10, t=50),
         hoverlabel=dict(bgcolor="white")
         , xaxis=dict(
             showgrid=True, gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
