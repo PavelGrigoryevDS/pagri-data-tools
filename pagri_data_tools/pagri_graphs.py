@@ -65,7 +65,7 @@ px.defaults.color_discrete_sequence = colorway_for_bar
 # px.defaults.width = 500
 # px.defaults.height = 300
 
-def plotly_default_settings(
+def fig_update(
     fig: go.Figure,
     title: str = None,
     xaxis_title: str = None,
@@ -91,7 +91,8 @@ def plotly_default_settings(
     yaxis_tickvals: list = None,
     texttemplate: str = None,
     textfont: dict = None,
-    legend_position: str = 'top',
+    legend_position: str = None,
+    opacity: float = None,
     textposition: str = None,
     template: str = "plotly_white",
     hovermode: str = None,
@@ -103,7 +104,7 @@ def plotly_default_settings(
     hoverlabel_align: str = None,
     xaxis_range: list = None,
     yaxis_range: list = None,
-    showmodebar: bool = True,
+    margin: dict = dict(l=50, r=50, b=50, t=70),
 ) -> go.Figure:
     """
     Apply consistent styling settings to a Plotly figure.
@@ -241,6 +242,12 @@ def plotly_default_settings(
         - 'bottom center'
         - 'middle center'
         Example: textposition='top center'
+    margin : dict, optional
+        Plot margins in pixels.
+        Example: margin=dict(l=50, r=50, t=50, b=50)
+        where l=left, r=right, t=top, b=bottom
+    opacity : float, optional
+        Opacity for figure
 
     Returns
     -------
@@ -262,11 +269,21 @@ def plotly_default_settings(
 
     # Layout
     GRID_WIDTH = 1
-    MARGINS = dict(l=50, r=50, b=50, t=70)
+    if title:
+        fig.update_layout(title_text=title)
+    if xaxis_title:
+        fig.update_layout(xaxis_title_text=xaxis_title)
+    if yaxis_title:
+        fig.update_layout(yaxis_title_text=yaxis_title)
+    if legend_title:
+        fig.update_layout(legend_title_text=legend_title)
+    if width:
+        fig.update_layout(width=width)
+    if height:
+        fig.update_layout(height=height)
 
     fig.update_layout(
         # X-axis settings
-        xaxis_title_text=xaxis_title,
         xaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
         xaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
         xaxis_linecolor=LINE_COLOR,
@@ -285,7 +302,6 @@ def plotly_default_settings(
         ),
 
         # Y-axis settings
-        yaxis_title_text=yaxis_title,
         yaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
         yaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
         yaxis_linecolor=LINE_COLOR,
@@ -314,34 +330,30 @@ def plotly_default_settings(
         legend_orientation=legend_orientation,
 
         # General settings
-        title_text=title,
         title_font=dict(size=TITLE_FONT_SIZE, color=FONT_COLOR),
         font=dict(size=TICK_FONT_SIZE, family=FONT_FAMILY, color=FONT_COLOR),
-        margin=MARGINS,
+        margin=margin,
         hoverlabel=dict(bgcolor=HOVER_BGCOLOR, align=hoverlabel_align),
         hovermode=hovermode,
         template=template,
-        height=height,
-        width=width,
         bargap=bargap,
         bargroupgap=bargroupgap,
-        showmodebar=showmodebar
     )
 
     if hovertemplate:
         fig.update_traces(hovertemplate=hovertemplate)
 
-    if texttemplate:
-        fig.update_traces(
-            texttemplate=texttemplate,
-            textfont=textfont if textfont else {},
-            textposition=textposition
-        )
+    fig.update_traces(
+        texttemplate=texttemplate,
+        textfont=textfont if textfont else {},
+        textposition=textposition,
+        opacity=opacity
+    )
     if legend_position:
         if legend_position == 'top':
             fig.update_layout(
                 yaxis = dict(
-                    domain=[0, 0.9]
+                    domain=[0, 0.97]
                 ),
                 legend = dict(
                     orientation="h",
