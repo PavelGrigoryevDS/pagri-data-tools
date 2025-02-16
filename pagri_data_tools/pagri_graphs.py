@@ -65,39 +65,305 @@ px.defaults.color_discrete_sequence = colorway_for_bar
 # px.defaults.width = 500
 # px.defaults.height = 300
 
+def plotly_default_settings(
+    fig: go.Figure,
+    title: str = None,
+    xaxis_title: str = None,
+    yaxis_title: str = None,
+    legend_title: str = None,
+    height: int = None,
+    width: int = None,
+    showlegend: bool = True,
+    xaxis_showgrid: bool = True,
+    yaxis_showgrid: bool = True,
+    xaxis_tickformat: str = None,
+    yaxis_tickformat: str = None,
+    xaxis_tickprefix: str = None,
+    xaxis_ticksuffix: str = None,
+    yaxis_tickprefix: str = None,
+    yaxis_ticksuffix: str = None,
+    hovertemplate: str = None,
+    xaxis_dtick: float = None,
+    yaxis_dtick: float = None,
+    xaxis_ticktext: list = None,
+    xaxis_tickvals: list = None,
+    yaxis_ticktext: list = None,
+    yaxis_tickvals: list = None,
+    texttemplate: str = None,
+    textfont: dict = None,
+    legend_position: str = 'top',
+    textposition: str = None,
+    template: str = "plotly_white",
+    hovermode: str = None,
+    bargap: float = None,
+    bargroupgap: float = None,
+    legend_x: float = None,
+    legend_y: float = None,
+    legend_orientation: str = None,
+    hoverlabel_align: str = None,
+    xaxis_range: list = None,
+    yaxis_range: list = None,
+    showmodebar: bool = True,
+) -> go.Figure:
+    """
+    Apply consistent styling settings to a Plotly figure.
 
-def plotly_default_settings(fig):
-    # Segoe UI Light
+    Parameters
+    ----------
+    fig : go.Figure
+        The Plotly figure object to style. Must be created before passing to this function.
+        Example: fig = go.Figure() or fig = px.line()
+
+    title : str, optional
+        Main chart title displayed at the top of the figure.
+        Example: title="Sales Performance 2023"
+
+    xaxis_title, yaxis_title : str, optional
+        Axis labels for x and y axes.
+        Example: xaxis_title="Date", yaxis_title="Revenue ($)"
+
+    legend_title : str, optional
+        Title displayed above the legend.
+        Example: legend_title="Product Categories"
+
+    xaxis_showgrid, yaxis_showgrid : bool, default=True
+        Whether to show grid lines on each axis.
+        Example: xaxis_showgrid=False to hide x-axis grid
+
+    xaxis_tickformat, yaxis_tickformat : str, optional
+        Format string for axis ticks.
+        Examples:
+        - '%Y-%m-%d' for dates
+        - '.0f' for integers
+        - '.2f' for 2 decimal places
+        - '$,.0f' for currency without decimals
+        - '.1%' for percentages
+
+    template : str, default="plotly_white"
+        Plotly template name for consistent styling.
+        Options: "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn"
+
+    height, width : int, optional
+        Figure dimensions in pixels.
+        Example: height=600, width=800
+
+    showlegend : bool, default=True
+        Whether to display the legend.
+        Example: showlegend=False to hide legend
+
+    hovermode : str, default="x unified"
+        Hover interaction mode.
+        Options:
+        - 'x unified': single tooltip for all traces at x position
+        - 'x': separate tooltip for each trace at x position
+        - 'y': separate tooltip for each trace at y position
+        - 'closest': tooltip for closest point
+        - False: disable hover tooltips
+
+    bargap : float, default=0.2
+        Gap between bars in bar charts (0 to 1).
+        Example: bargap=0.3 for 30% gap
+
+    bargroupgap : float, default=0.1
+        Gap between bar groups (0 to 1).
+        Example: bargroupgap=0.2 for 20% gap
+
+    legend_x, legend_y : float
+        Legend position coordinates (0 to 1).
+        Example: legend_x=1.02, legend_y=1.0 for outside right
+
+    legend_orientation : str, default='v'
+        Legend orientation.
+        Options: 'v' (vertical), 'h' (horizontal)
+
+    yaxis_tickprefix, yaxis_ticksuffix : str, default=''
+        Prefix/suffix for axis tick labels.
+        Examples:
+        - yaxis_tickprefix='$'
+        - yaxis_ticksuffix='%'
+
+    hovertemplate : str, optional
+        Custom hover tooltip template.
+        Example: hovertemplate='Date: %{x}<br>Value: %{y:.2f}$<extra></extra>'
+
+    hoverlabel_align : str, default='auto'
+        Hover label text alignment.
+        Options: 'left', 'right', 'auto'
+
+    xaxis_range, yaxis_range : List, optional
+        Custom axis ranges [min, max].
+        Example: yaxis_range=[0, 100]
+
+    yaxis_ticktext, xaxis_ticktext : list, optional
+        Custom tick labels for axes.
+        Example: yaxis_ticktext=['Low', 'Medium', 'High']
+
+    yaxis_tickvals, xaxis_tickvals : list, optional
+        Values where custom tick labels should be placed.
+        Example: yaxis_tickvals=[0, 50, 100]
+
+    texttemplate : str, optional
+        Template for text displayed on the plot.
+        Example: texttemplate='%{y:.1f}%'
+
+    textfont : dict, optional
+        Font settings for displayed text.
+        Example: textfont=dict(size=12, color='red', family='Arial')
+
+    xaxis_tickprefix, xaxis_ticksuffix : str, default=''
+        Prefix/suffix for x-axis tick labels.
+        Example: xaxis_ticksuffix=' km'
+
+    showmodebar : bool, default=True
+        Whether to show the mode bar (navbar).
+        Example: showmodebar=False to hide toolbar
+
+    legend_position : str, optional
+        Predefined legend position.
+        Options: 'top', 'right'
+        Example: legend_position='top'
+
+    xaxis_dtick, yaxis_dtick : float, optional
+        Step size between axis ticks.
+        Examples:
+        - xaxis_dtick=1 for integer steps
+        - xaxis_dtick=0.5 for half steps
+        - xaxis_dtick='M1' for monthly steps in time series
+
+    textposition : str, optional
+        Position of text labels relative to data points.
+        Options:
+        - 'top'
+        - 'bottom'
+        - 'middle'
+        - 'auto'
+        - 'top center'
+        - 'bottom center'
+        - 'middle center'
+        Example: textposition='top center'
+
+    Returns
+    -------
+    go.Figure
+        The styled Plotly figure
+    """
+    # Fonts
+    TITLE_FONT_SIZE = 16
+    AXIS_TITLE_FONT_SIZE = 14
+    TICK_FONT_SIZE = 14
+    LEGEND_TITLE_FONT_SIZE = 14
+    FONT_FAMILY = "Segoe UI"
+
+    # Colors
+    FONT_COLOR = "rgba(0, 0, 0, 0.7)"
+    LINE_COLOR = "rgba(0, 0, 0, 0.4)"
+    GRID_COLOR = "rgba(0, 0, 0, 0.1)"
+    HOVER_BGCOLOR = "white"
+
+    # Layout
+    GRID_WIDTH = 1
+    MARGINS = dict(l=50, r=50, b=50, t=70)
+
     fig.update_layout(
-        # Для подписей и меток
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
-        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
-        legend_title_font_color='rgba(0, 0, 0, 0.7)',
-        legend_title_font_size = 14,
-        legend_font_color='rgba(0, 0, 0, 0.7)',
-        # xaxis_linewidth=2,
-        # yaxis_linewidth=2
-        margin=dict(l=50, r=50, b=50, t=70),
-        hoverlabel=dict(bgcolor="white"),
+        # X-axis settings
+        xaxis_title_text=xaxis_title,
+        xaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
+        xaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
+        xaxis_linecolor=LINE_COLOR,
+        xaxis_tickcolor=LINE_COLOR,
+        xaxis_tickformat=xaxis_tickformat,
+        xaxis_range=xaxis_range,
+        xaxis_tickprefix=xaxis_tickprefix,
+        xaxis_ticksuffix=xaxis_ticksuffix,
+        xaxis_ticktext=xaxis_ticktext,
+        xaxis_tickvals=xaxis_tickvals,
         xaxis=dict(
-            showgrid=True
-            , gridwidth=1
-            , gridcolor="rgba(0, 0, 0, 0.1)"
+            showgrid=xaxis_showgrid,
+            gridwidth=GRID_WIDTH,
+            gridcolor=GRID_COLOR,
+            dtick=xaxis_dtick
         ),
+
+        # Y-axis settings
+        yaxis_title_text=yaxis_title,
+        yaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
+        yaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
+        yaxis_linecolor=LINE_COLOR,
+        yaxis_tickcolor=LINE_COLOR,
+        yaxis_tickformat=yaxis_tickformat,
+        yaxis_tickprefix=yaxis_tickprefix,
+        yaxis_ticksuffix=yaxis_ticksuffix,
+        yaxis_range=yaxis_range,
+        yaxis_ticktext=yaxis_ticktext,
+        yaxis_tickvals=yaxis_tickvals,
         yaxis=dict(
-            showgrid=True
-            , gridwidth=1
-            , gridcolor="rgba(0, 0, 0, 0.07)"
-        )
+            showgrid=yaxis_showgrid,
+            gridwidth=GRID_WIDTH,
+            gridcolor=GRID_COLOR,
+            dtick=yaxis_dtick
+        ),
+
+        # Legend settings
+        legend_title_text=legend_title,
+        legend_title_font_color=FONT_COLOR,
+        legend_title_font_size=LEGEND_TITLE_FONT_SIZE,
+        legend_font_color=FONT_COLOR,
+        showlegend=showlegend,
+        legend_x=legend_x,
+        legend_y=legend_y,
+        legend_orientation=legend_orientation,
+
+        # General settings
+        title_text=title,
+        title_font=dict(size=TITLE_FONT_SIZE, color=FONT_COLOR),
+        font=dict(size=TICK_FONT_SIZE, family=FONT_FAMILY, color=FONT_COLOR),
+        margin=MARGINS,
+        hoverlabel=dict(bgcolor=HOVER_BGCOLOR, align=hoverlabel_align),
+        hovermode=hovermode,
+        template=template,
+        height=height,
+        width=width,
+        bargap=bargap,
+        bargroupgap=bargroupgap,
+        showmodebar=showmodebar
     )
+
+    if hovertemplate:
+        fig.update_traces(hovertemplate=hovertemplate)
+
+    if texttemplate:
+        fig.update_traces(
+            texttemplate=texttemplate,
+            textfont=textfont if textfont else {},
+            textposition=textposition
+        )
+    if legend_position:
+        if legend_position == 'top':
+            fig.update_layout(
+                yaxis = dict(
+                    domain=[0, 0.9]
+                ),
+                legend = dict(
+                    orientation="h",
+                    yanchor="top",
+                    y=legend_y if legend_y else 1.09,
+                    xanchor="center",
+                    x=legend_x if legend_x else 0.5
+                )
+            )
+        elif legend_position == 'right':
+            fig.update_layout(
+                legend =  dict(
+                        orientation="v",
+                        y=1,
+                        yanchor="top",
+                        xanchor="left",
+                        x=legend_x
+                    )
+            )
+        else:
+            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
+
     return fig
 
 
