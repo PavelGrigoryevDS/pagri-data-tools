@@ -48,6 +48,7 @@ colorway_for_treemap = [
     'rgba(64, 134, 87, 1)',
     'rgba(134, 96, 147, 1)',
     'rgba(132, 169, 233, 1)']
+colorway_for_heatmap = [[0, 'rgba(204, 153, 255, 0.1)'], [1, 'rgb(127, 60, 141)']]
 # default setting for Plotly
 # for line plot
 pio.templates["custom_theme_for_line"] = go.layout.Template(
@@ -117,6 +118,8 @@ def fig_update(
     xaxis_range: list = None,
     yaxis_range: list = None,
     margin: dict = dict(l=50, r=50, b=50, t=70),
+    xgap: int = None,
+    ygap: int = None
 ) -> go.Figure:
     """
     Apply consistent styling settings to a Plotly figure.
@@ -260,6 +263,8 @@ def fig_update(
         where l=left, r=right, t=top, b=bottom
     opacity : float, optional
         Opacity for figure
+    xgap, ygap : int, optional
+        xgap and ygap for cells in heatmap
 
     Returns
     -------
@@ -293,9 +298,8 @@ def fig_update(
         fig.update_layout(width=width)
     if height:
         fig.update_layout(height=height)
-
     fig.update_layout(
-        # X-axis settings
+    #     # X-axis settings
         xaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
         xaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
         xaxis_linecolor=LINE_COLOR,
@@ -341,24 +345,36 @@ def fig_update(
         legend_y=legend_y,
         legend_orientation=legend_orientation,
 
-        # General settings
+    #
+    #     # General settings
         title_font=dict(size=TITLE_FONT_SIZE, color=FONT_COLOR),
         font=dict(size=TICK_FONT_SIZE, family=FONT_FAMILY, color=FONT_COLOR),
         margin=margin,
         hoverlabel=dict(bgcolor=HOVER_BGCOLOR, align=hoverlabel_align),
         hovermode=hovermode,
-        template=template,
         bargap=bargap,
         bargroupgap=bargroupgap,
     )
-
+    if fig.data[0].type == 'heatmap':
+        fig.update_traces(
+            xgap=xgap
+            , ygap=ygap
+        )
+        fig.update_layout(
+            xaxis_showgrid = False
+            , yaxis_showgrid = False
+            , coloraxis_colorbar_title_text=None
+        )
+    else:
+        fig.update_layout(template=template)
     if hovertemplate:
         fig.update_traces(hovertemplate=hovertemplate)
-
+    if textposition:
+        fig.update_traces(textposition=textposition)
+    if texttemplate:
+        fig.update_layout(texttemplate=texttemplate)
     fig.update_traces(
-        texttemplate=texttemplate,
-        textfont=textfont if textfont else {},
-        textposition=textposition,
+        textfont=textfont if textfont else None,
         opacity=opacity
     )
     if legend_position:
