@@ -33,7 +33,14 @@ This command installs all dependencies listed in the pyproject.toml file.
 ```bash
 poetry install
 ```
-#### 7. Import Module:  
+
+#### 6. Update Dependencies:
+This command updates all dependencies listed in the pyproject.toml file to their latest compatible versions, respecting the version constraints.
+```bash
+poetry update
+```
+
+#### 8. Import Module:  
 You can now import and use module in your Python scripts.
 ```python
 import pagri_data_tools
