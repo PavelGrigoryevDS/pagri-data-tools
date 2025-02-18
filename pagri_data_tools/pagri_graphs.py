@@ -373,8 +373,9 @@ def fig_update(
         fig.update_traces(textposition=textposition)
     if texttemplate:
         fig.update_layout(texttemplate=texttemplate)
+    if textfont:
+        fig.update_layout(textfont=textfont)
     fig.update_traces(
-        textfont=textfont if textfont else None,
         opacity=opacity
     )
     if legend_position:
@@ -3020,7 +3021,7 @@ def histogram(
     height: int = 400,
     left_quantile: float = 0,
     right_quantile: float = 1,
-    show_marginal_box: bool = True,
+    show_marginal_box: bool = True
 ) -> go.Figure:
     """
     Creates an interactive histogram using Plotly.
@@ -3053,15 +3054,16 @@ def histogram(
     go.Figure
         Interactive Plotly histogram figure
     """
-    trimmed_column = column.between(column.quantile(
-        left_quantile), column.quantile(right_quantile))
-    column = column[trimmed_column]
+    if pd.api.types.is_numeric_dtype(column):
+        trimmed_column = column.between(column.quantile(
+            left_quantile), column.quantile(right_quantile))
+        column = column[trimmed_column]
     if not title:
         title = f'Распределенеие {column.name}'
     if not xaxis_title:
         xaxis_title = 'Значение'
     if not yaxis_title:
-        yaxis_title = 'Доля от общего'
+        yaxis_title = 'Доля'
     
     if show_marginal_box:
         fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
@@ -3074,7 +3076,7 @@ def histogram(
             go.Histogram(
                 x=column,
                 nbinsx=nbins,
-                histnorm='percent',
+                histnorm='probability',
                 marker_color='rgba(128, 60, 170, 0.9)'
             ),
             row=1, col=1
@@ -3093,7 +3095,7 @@ def histogram(
             go.Histogram(
                 x=column,
                 nbinsx=nbins,
-                histnorm='percent',
+                histnorm='probability',
                 marker_color='rgba(128, 60, 170, 0.9)'
             ),
         )
@@ -5403,38 +5405,81 @@ def subplots(
     Creates a figure with multiple subplots using Plotly.
 
     Parameters:
-    configs (list): List of dictionaries containing configuration for each subplot
-        Required keys:
-        - fig: The plotly figure object
-        - layout: The plotly layout object
-        - row (int): Row position of the subplot
-        - col (int): Column position of the subplot
+    ----------
+    configs : list
+        List of dictionaries containing configuration for each subplot.
+        Each dictionary must contain the following keys:
+        - fig : plotly.graph_objects.Figure
+            The plotly figure object for the subplot.
+        - layout : plotly.graph_objects.Layout
+            The plotly layout object for the subplot.
+        - row : int
+            Row position of the subplot (1-indexed).
+        - col : int
+            Column position of the subplot (1-indexed).
+
         Optional keys:
-        - is_margin (bool): Boolean to indicate if the plot is a margin plot
-        - domain_x (list): X-axis domain range
-        - domain_y (list): Y-axis domain range
-        - showgrid_x (bool): Show X-axis grid
-        - showgrid_y (bool): Show Y-axis grid
-        - showticklabels_x (bool): Show X-axis tick labels
-        - xaxis_visible (bool): X-axis visibility
-        - yaxis_visible (bool): Y-axis visibility
-        - show_yaxis_title (bool): Whether show yaxis title
-    title (str): Main figure title
-    width (int): Figure width in pixels
-    height (int): Figure height in pixels
-    rows (int): Number of rows in subplot grid
-    cols (int): Number of columns in subplot grid
-    shared_xaxes (bool): Share X axes between subplots
-    shared_yaxes (bool): Share Y axes between subplots
-    horizontal_spacing (float): Spacing between subplots horizontally
-    specs (list): Subplot specifications
-    column_widths (list): List of relative column widths
-    row_heights (list): List of relative row heights
-    subplot_titles (list): List of subplot titles
+        - is_margin : bool, default=False
+            Boolean to indicate if the plot is a margin plot.
+        - domain_x : list, default=None
+            X-axis domain range as [min, max].
+        - domain_y : list, default=None
+            Y-axis domain range as [min, max].
+        - showgrid_x : bool, default=True
+            Show X-axis grid lines.
+        - showgrid_y : bool, default=True
+            Show Y-axis grid lines.
+        - showticklabels_x : bool, default=True
+            Show X-axis tick labels.
+        - xaxis_visible : bool, default=True
+            X-axis visibility.
+        - yaxis_visible : bool, default=True
+            Y-axis visibility.
+        - show_yaxis_title : bool, default=True
+            Whether to show the Y-axis title.
+
+    title : str, default=''
+        Main figure title.
+
+    width : int, default=800
+        Figure width in pixels.
+
+    height : int, default=600
+        Figure height in pixels.
+
+    rows : int, default=1
+        Number of rows in subplot grid.
+
+    cols : int, default=1
+        Number of columns in subplot grid.
+
+    shared_xaxes : bool, default=False
+        Share X axes between subplots.
+
+    shared_yaxes : bool, default=False
+        Share Y axes between subplots.
+
+    horizontal_spacing : float, default=0.1
+        Spacing between subplots horizontally (0 to 1).
+
+    specs : list, default=None
+        Subplot specifications, where each element defines the type of plot in that subplot.
+
+    column_widths : list, default=None
+        List of relative column widths.
+
+    row_heights : list, default=None
+        List of relative row heights.
+
+    subplot_titles : list, default=None
+        List of subplot titles.
 
     Returns:
-    plotly.graph_objects.Figure: The created figure with subplots
+    -------
+    plotly.graph_objects.Figure
+        The created figure with subplots.
     """
+    # Implementation of the function goes here
 
     # Create subplot layout
     fig = make_subplots(
