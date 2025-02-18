@@ -2344,113 +2344,11 @@ def _create_base_fig_for_bar_line_area(config: dict, graph_type: str = 'bar'):
     """
     Creates a figure for bar, line or area function using the Plotly Express library.
     """    
-    # Проверка входных данных
-    if not isinstance(config, dict):
-        raise TypeError("config must be a dictionary")
-    if 'df' not in config or not isinstance(config['df'], pd.DataFrame):
-        raise ValueError("df must be a pandas DataFrame")
-    if 'x' not in config or not isinstance(config['x'], str):
-        raise ValueError("x must be a string")
-    if 'y' not in config or not isinstance(config['y'], str):
-        raise ValueError("y must be a string")
-    if not config['agg_func'] or not isinstance(config['agg_func'], str):
-        raise ValueError("agg_func must be a string")
-    if 'barmode' in config and not isinstance(config['barmode'], str):
-        raise ValueError("barmode must be a string")
-    if 'agg_mode' in config and config['agg_mode'] != 'groupby' and 'resample_freq' not in config:
-        raise ValueError("resample_freq must be define")
-    # if 'agg_func' not in config:
-    #     config['agg_func'] = None
-    # if 'barmode' not in config:
-    #     config['barmode'] = 'group'
-    # if 'width' not in config:
-    #     config['width'] = None
-    # if 'height' not in config:
-    #     config['height'] = None
-    # if 'show_text' not in config:
-    #     config['show_text'] = False            
-    # if 'textsize' not in config:
-    #     config['textsize'] = 14
-    # if 'xaxis_show' not in config:
-    #     config['xaxis_show'] = True
-    # if 'yaxis_show' not in config:
-    #     config['yaxis_show'] = True
-    # if 'showgrid_x' not in config:
-    #     config['showgrid_x'] = True
-    # if 'showgrid_y' not in config:
-    #     config['showgrid_y'] = True
-    # if 'sort' not in config:
-    #     config['sort'] = True        
-    # if 'top_n_trim_axis' not in config:
-    #     config['top_n_trim_axis'] = None
-    # if 'top_n_trim_legend' not in config:
-    #     config['top_n_trim_legend'] = None    
-    # if 'sort_axis' not in config:
-    #     config['sort_axis'] = True
-    # if 'sort_legend' not in config:
-    #     config['sort_legend'] = True   
-    # if 'textposition' not in config:
-    #     config['textposition'] = None   
-    # if 'legend_position' not in config:
-    #     config['legend_position'] = 'right'          
-    # if 'decimal_places' not in config:                        
-    #     config['decimal_places'] = 1
-    # if 'show_group_size' not in config:
-    #     config['show_group_size'] = False
-    # if 'agg_mode' not in config:
-    #     config['agg_mode'] = None
-    # if 'title' not in config:
-    #     config['title'] = None
-    # if 'groupby_col' not in config:
-    #     config['groupby_col'] = None
 
-    if pd.api.types.is_numeric_dtype(config['df'][config['y']]) and 'orientation' in config and config['orientation'] == 'h':
-        config['x'], config['y'] = config['y'], config['x']
-
-    # if titles_for_axis:
-    #     # if not (config['func'] is None) and config['func'] not in ['mean', 'median', 'sum', 'count', 'nunique']:
-    #     #     raise ValueError("func must be in ['mean', 'median', 'sum', 'count', 'nunique']")
-    #     # func_for_title = {'mean': ['Среднее', 'Средний', 'Средняя', 'Средние'], 'median': [
-    #     #     'Медианное', 'Медианный', 'Медианная', 'Медианные'], 'sum': ['Суммарное', 'Суммарный', 'Суммарная', 'Суммарное']
-    #     #     , 'count': ['Общее', 'Общее', 'Общее', 'Общие']}
-    #     config['x_axis_label'] = titles_for_axis[config['x']]
-    #     config['y_axis_label'] = titles_for_axis[config['y']]
-    #     config['category_axis_label'] = titles_for_axis[config['category']
-    #                                             ] if 'category' in config else None
-    #     # func = config['func']
-    #     # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-    #     #     numeric = titles_for_axis[config["y"]][1]
-    #     #     cat = titles_for_axis[config["x"]][1]
-    #     #     suffix_type = titles_for_axis[config["y"]][2]
-    #     # else:
-    #     #     numeric = titles_for_axis[config["x"]][1]
-    #     #     cat = titles_for_axis[config["y"]][1]
-    #     #     suffix_type = titles_for_axis[config["x"]][2]
-    #     # if func == 'nunique':
-    #     #     numeric_list = numeric.split()[1:]
-    #     #     title = f'Количество уникальных {' '.join(numeric_list)}'
-    #     #     title += f' в зависимости от {cat}'
-    #     # elif func is None:
-    #     #     title = f' {numeric.capitalize()} в зависимости от {cat}'
-    #     # else:
-    #     #     title = f'{func_for_title[func][suffix_type]}'
-    #     #     title += f' {numeric} в зависимости от {cat}'
-    #     # if 'category' in config and config['category']:
-    #     #     title += f' и {titles_for_axis[config["category"]][1]}'
-    # else:
-    #     if 'x_axis_label' not in config:
-    #         config['x_axis_label'] = None
-    #     if 'y_axis_label' not in config:
-    #         config['y_axis_label'] = None
-    #     if 'category_axis_label' not in config:
-    #         config['category_axis_label'] = None
-    #     if 'title' not in config:
-    #         config['title'] = None
-    # if 'category' not in config:
-    #     config['category'] = None
-    #     config['category_axis_label'] = None
-    if not isinstance(config['category'], str) and config['category'] is not None:
-        raise ValueError("category must be a string")
+    if 'agg_mode' in config and config['agg_mode'] == 'resample' and 'resample_freq' not in config:
+        raise ValueError("For resample mode resample_freq must be define")
+    if 'agg_mode' in config and config['agg_mode'] == 'groupby' and 'groupby_by' not in config:
+        raise ValueError("For groupby mode groupby_by must be define")
 
     def human_readable_number(x, decimal_places):
         format_string = f"{{:.{decimal_places}f}}"
@@ -2464,13 +2362,17 @@ def _create_base_fig_for_bar_line_area(config: dict, graph_type: str = 'bar'):
 
     def prepare_df(config: dict):
         df = config['df']
-        color = [config['category']] if config['category'] else []
-        if config['groupby_cols']:
-            num_column =  set([config['x'], config['y']]) - set(config['groupby_cols'])
+        color = [config['color']] if config['color'] else []
+        if config['groupby_by']:
+            num_column = set([config['x'], config['y']]) - set(config['groupby_by'])
             if len(num_column) != 1:
-                raise ValueError("Set([x,y]) - Set(groupby_cols) must have result with one element")
+                raise ValueError(
+                    "Error: There must be exactly one numeric value among the parameters 'x' and 'y' "
+                    "that is not included in 'groupby_by'. Ensure that only one of 'x' or 'y' "
+                    "is not present in the 'groupby_by' list."
+                )
             num_column = num_column.pop()
-            cat_columns = config['groupby_cols']
+            cat_columns = config['groupby_by']
         else:
             if not (pd.api.types.is_numeric_dtype(df[config['x']]) or pd.api.types.is_numeric_dtype(df[config['y']])):
                 raise ValueError("At least one of x or y must be numeric.")
@@ -2850,31 +2752,15 @@ def line(
     df: pd.DataFrame,
     x: str,
     y: str,
-    category: str = None,
+    color: str = None,
     agg_mode: str = None,
     agg_func: str = None,    
     groupby_cols: list = None,
-    resample_freq: str = None,     
-    barmode: str = 'group',
-    width: int = None,
-    height: int = None,    
-    title: str = None,    
-    xaxis_title: str = None,
-    yaxis_title: str = None,        
-    category_axis_title: str = None,    
-    showgrid_x: bool = True,
-    showgrid_y: bool = True,
-    legend_position: str = 'top',    
+    resample_freq: str = None,      
     top_n_trim_axis: int = None,
     top_n_trim_legend: int = None,
     sort_axis: bool = True,
     sort_legend: bool = True,
-    show_text: bool = False,
-    textsize: int = 14,
-    textposition: str = 'auto',
-    xaxis_show: bool = True,
-    yaxis_show: bool = True,
-    decimal_places: int = 0,
     show_group_size: bool = False,
 ) -> go.Figure:
     """
@@ -2888,11 +2774,7 @@ def line(
         The name of the column in the DataFrame to be used for creating the X-axis
     y : str
         The name of the column in the DataFrame to be used for creating the Y-axis
-    xaxis_title : str, optional
-        The title for the X-axis
-    yaxis_title : str, optional
-        The title for the Y-axis
-    category : str, optional
+    color : str, optional
         The name of the column in the DataFrame to be used for creating categories
     top_n_trim_axis : int, optional
         The number of top categories axis to include in the chart
@@ -2902,32 +2784,8 @@ def line(
         Whether to sort the categories on the axis. Default is True
     sort_legend : bool, optional
         Whether to sort the categories in the legend. Default is True
-    category_axis_title : str, optional
-        The title for the categories
-    title : str, optional
-        The title of the chart
     agg_func : str, optional
         The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
-    barmode : str, optional
-        The mode for displaying bars. Default is 'group'
-    width : int, optional
-        The width of the chart
-    height : int, optional
-        The height of the chart
-    show_text : bool, optional
-        Whether to display text on the chart. Default is False
-    textsize : int, optional
-        Text size. Default is 14
-    textposition : str, optional
-        Text position. May be 'auto', 'inside', 'outside', 'none'. Default is 'auto'
-    xaxis_show : bool, optional
-        Whether to show the X-axis. Default is True
-    yaxis_show : bool, optional
-        Whether to show the Y-axis. Default is True
-    showgrid_x : bool, optional
-        Whether to show grid on X-axis. Default is True
-    showgrid_y : bool, optional
-        Whether to show grid on Y-axis. Default is True
     legend_position : str, optional
         Position of the legend ('top', 'right'). Default is 'top'
     decimal_places : int, optional
@@ -2950,28 +2808,12 @@ def line(
         'df': df,
         'x': x,
         'y': y,
-        'xaxis_title': xaxis_title,
-        'yaxis_title': yaxis_title,
-        'category': category,
+        'color': color,
         'top_n_trim_axis': top_n_trim_axis,
         'top_n_trim_legend': top_n_trim_legend,
         'sort_axis': sort_axis,
         'sort_legend': sort_legend,
-        'category_axis_title': category_axis_title,
-        'title': title,
         'agg_func': agg_func,
-        'barmode': barmode,
-        'width': width,
-        'height': height,
-        'show_text': show_text,
-        'textsize': textsize,
-        'textposition': textposition,
-        'xaxis_show': xaxis_show,
-        'yaxis_show': yaxis_show,
-        'showgrid_x': showgrid_x,
-        'showgrid_y': showgrid_y,
-        'legend_position': legend_position,
-        'decimal_places': decimal_places,
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
         'groupby_cols': groupby_cols,
@@ -2986,7 +2828,7 @@ def area(
     category: str = None,
     agg_mode: str = None,
     agg_func: str = None,    
-    groupby_cols: list = None,
+    groupby_by: list = None,
     resample_freq: str = None,     
     barmode: str = 'group',
     width: int = None,
