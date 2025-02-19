@@ -107,7 +107,7 @@ def fig_update(
     legend_position: str = None,
     opacity: float = None,
     textposition: str = None,
-    template: str = "plotly_white",
+    template: str = "simple_white",
     hovermode: str = None,
     bargap: float = None,
     bargroupgap: float = None,
@@ -117,7 +117,7 @@ def fig_update(
     hoverlabel_align: str = None,
     xaxis_range: list = None,
     yaxis_range: list = None,
-    margin: dict = dict(l=50, r=50, b=50, t=70),
+    margin: dict = dict(l=50, r=50, b=50, t=50),
     xgap: int = None,
     ygap: int = None
 ) -> go.Figure:
@@ -271,140 +271,114 @@ def fig_update(
     go.Figure
         The styled Plotly figure
     """
-    # Fonts
+    # Fonts and Colors
     TITLE_FONT_SIZE = 16
+    FONT_SIZE = 14
     AXIS_TITLE_FONT_SIZE = 14
     TICK_FONT_SIZE = 14
     LEGEND_TITLE_FONT_SIZE = 14
     FONT_FAMILY = "Segoe UI"
-
-    # Colors
     FONT_COLOR = "rgba(0, 0, 0, 0.7)"
     LINE_COLOR = "rgba(0, 0, 0, 0.4)"
     GRID_COLOR = "rgba(0, 0, 0, 0.1)"
     HOVER_BGCOLOR = "white"
-
-    # Layout
     GRID_WIDTH = 1
-    if title:
-        fig.update_layout(title_text=title)
-    if xaxis_title:
-        fig.update_layout(xaxis_title_text=xaxis_title)
-    if yaxis_title:
-        fig.update_layout(yaxis_title_text=yaxis_title)
-    if legend_title:
-        fig.update_layout(legend_title_text=legend_title)
-    if width:
-        fig.update_layout(width=width)
-    if height:
-        fig.update_layout(height=height)
-    fig.update_layout(
-    #     # X-axis settings
-        xaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
-        xaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
-        xaxis_linecolor=LINE_COLOR,
-        xaxis_tickcolor=LINE_COLOR,
-        xaxis_tickformat=xaxis_tickformat,
-        xaxis_range=xaxis_range,
-        xaxis_tickprefix=xaxis_tickprefix,
-        xaxis_ticksuffix=xaxis_ticksuffix,
-        xaxis_ticktext=xaxis_ticktext,
-        xaxis_tickvals=xaxis_tickvals,
-        xaxis=dict(
-            showgrid=xaxis_showgrid,
-            gridwidth=GRID_WIDTH,
-            gridcolor=GRID_COLOR,
-            dtick=xaxis_dtick
-        ),
 
-        # Y-axis settings
-        yaxis_title_font=dict(size=AXIS_TITLE_FONT_SIZE, color=FONT_COLOR),
-        yaxis_tickfont=dict(size=TICK_FONT_SIZE, color=FONT_COLOR),
-        yaxis_linecolor=LINE_COLOR,
-        yaxis_tickcolor=LINE_COLOR,
-        yaxis_tickformat=yaxis_tickformat,
-        yaxis_tickprefix=yaxis_tickprefix,
-        yaxis_ticksuffix=yaxis_ticksuffix,
-        yaxis_range=yaxis_range,
-        yaxis_ticktext=yaxis_ticktext,
-        yaxis_tickvals=yaxis_tickvals,
-        yaxis=dict(
-            showgrid=yaxis_showgrid,
-            gridwidth=GRID_WIDTH,
-            gridcolor=GRID_COLOR,
-            dtick=yaxis_dtick
-        ),
 
-        # Legend settings
-        legend_title_text=legend_title,
-        legend_title_font_color=FONT_COLOR,
-        legend_title_font_size=LEGEND_TITLE_FONT_SIZE,
-        legend_font_color=FONT_COLOR,
-        showlegend=showlegend,
-        legend_x=legend_x,
-        legend_y=legend_y,
-        legend_orientation=legend_orientation,
+    # Layout updates
+    layout_updates = {
+        'title_text': title,
+        'width': width,
+        'height': height,
+        'legend_title_text': legend_title,
+        'showlegend': showlegend,
+        'template': template,
+        'hoverlabel': {'bgcolor': HOVER_BGCOLOR, 'align': hoverlabel_align},
+        'hovermode': hovermode,
+        'bargap': bargap,
+        'bargroupgap': bargroupgap,
+        'margin': margin,
+        'font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        'title_font': {'size': TITLE_FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR}
+    }
+    # Update layout only if there are updates
+    layout_updates = {k: v for k, v in layout_updates.items() if v is not None}
+    if layout_updates:
+        fig.update_layout(**layout_updates)
 
-    #
-    #     # General settings
-        title_font=dict(size=TITLE_FONT_SIZE, color=FONT_COLOR),
-        font=dict(size=TICK_FONT_SIZE, family=FONT_FAMILY, color=FONT_COLOR),
-        margin=margin,
-        hoverlabel=dict(bgcolor=HOVER_BGCOLOR, align=hoverlabel_align),
-        hovermode=hovermode,
-        bargap=bargap,
-        bargroupgap=bargroupgap,
-    )
-    if fig.data[0].type == 'heatmap':
-        fig.update_traces(
-            xgap=xgap
-            , ygap=ygap
-        )
-        fig.update_layout(
-            xaxis_showgrid = False
-            , yaxis_showgrid = False
-            , coloraxis_colorbar_title_text=None
-        )
-    else:
-        fig.update_layout(template=template)
-    if hovertemplate:
-        fig.update_traces(hovertemplate=hovertemplate)
-    if textposition:
-        fig.update_traces(textposition=textposition)
-    if texttemplate:
+    # X-axis settings
+    xaxis_updates = {
+        'linecolor': LINE_COLOR,
+        'tickcolor': LINE_COLOR,
+        'showgrid': xaxis_showgrid,
+        'gridwidth': GRID_WIDTH,
+        'gridcolor': GRID_COLOR,
+        'dtick': xaxis_dtick,
+        'title_text': xaxis_title,
+        'tickformat': xaxis_tickformat,
+        'range': xaxis_range,
+        'tickprefix': xaxis_tickprefix,
+        'ticksuffix': xaxis_ticksuffix,
+        'ticktext': xaxis_ticktext,
+        'tickvals': xaxis_tickvals,
+        'title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        'tickfont': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+    }
+    fig.update_xaxes(**{k: v for k, v in xaxis_updates.items() if v is not None})
+
+    # Y-axis settings
+    yaxis_updates = {
+        'linecolor': LINE_COLOR,
+        'tickcolor': LINE_COLOR,
+        'showgrid': yaxis_showgrid,
+        'gridwidth': GRID_WIDTH,
+        'gridcolor': GRID_COLOR,
+        'dtick': yaxis_dtick,
+        'title_text': yaxis_title,
+        'tickformat': yaxis_tickformat,
+        'range': yaxis_range,
+        'tickprefix': yaxis_tickprefix,
+        'ticksuffix': yaxis_ticksuffix,
+        'ticktext': yaxis_ticktext,
+        'tickvals': yaxis_tickvals,
+        'title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        'tickfont': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+    }
+    fig.update_yaxes(**{k: v for k, v in yaxis_updates.items() if v is not None})
+
+    # Legend settings
+    legend_updates = {
+        'legend_title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        'legend_font_color': FONT_COLOR,
+        'legend_orientation': legend_orientation,
+        'legend_x': legend_x,
+        'legend_y': legend_y,
+    }
+    fig.update_layout(**{k: v for k, v in legend_updates.items() if v is not None})
+
+    # Update traces if necessary
+    trace_updates = {}
+    if hovertemplate is not None:
+        trace_updates['hovertemplate'] = hovertemplate
+    if textposition is not None:
+        trace_updates['textposition'] = textposition
+    if texttemplate is not None:
         fig.update_layout(texttemplate=texttemplate)
-    if textfont:
+    if textfont is not None:
         fig.update_layout(textfont=textfont)
-    fig.update_traces(
-        opacity=opacity
-    )
-    if legend_position:
-        if legend_position == 'top':
-            fig.update_layout(
-                yaxis = dict(
-                    domain=[0, 0.97]
-                ),
-                legend = dict(
-                    orientation="h",
-                    yanchor="top",
-                    y=legend_y if legend_y else 1.09,
-                    xanchor="center",
-                    x=legend_x if legend_x else 0.5
-                )
-            )
-        elif legend_position == 'right':
-            fig.update_layout(
-                legend =  dict(
-                        orientation="v",
-                        y=1,
-                        yanchor="top",
-                        xanchor="left",
-                        x=legend_x
-                    )
-            )
-        else:
-            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
+    if opacity is not None:
+        trace_updates['opacity'] = opacity
 
+    if trace_updates:
+        fig.update_traces(**trace_updates)
+
+    if fig.data and fig.data[0].type == 'heatmap':
+        fig.update_traces(xgap=xgap, ygap=ygap)
+        fig.update_layout(xaxis_showgrid=False, yaxis_showgrid=False, coloraxis_colorbar_title_text=None)
+    for trace in fig.data:
+        trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
+        # trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+        # trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
     return fig
 
 
@@ -2341,329 +2315,310 @@ def graph_analysis_gen(df):
             graph_analysis(df, list(cat_pair), num_column)
             yield [num_column] + list(cat_pair)
             
-def _create_base_fig_for_bar_line_area(config: dict, graph_type: str = 'bar'):
-    """
-    Creates a figure for bar, line or area function using the Plotly Express library.
-    """    
-
-    if 'agg_mode' in config and config['agg_mode'] == 'resample' and 'resample_freq' not in config:
-        raise ValueError("For resample mode resample_freq must be define")
-    if 'agg_mode' in config and config['agg_mode'] == 'groupby' and 'groupby_by' not in config:
-        raise ValueError("For groupby mode groupby_by must be define")
-
-    def human_readable_number(x, decimal_places):
-        format_string = f"{{:.{decimal_places}f}}"
-        
-        if x >= 1e6 or x <= -1e6:
-            return f"{format_string.format(x / 1e6)}M"
-        elif x >= 1e3 or x <= -1e3:
-            return f"{format_string.format(x / 1e3)}k"
-        else:
-            return format_string.format(x)
-
-    def prepare_df(config: dict):
-        df = config['df']
-        color = [config['color']] if config['color'] else []
-        if config['groupby_by']:
-            num_column = set([config['x'], config['y']]) - set(config['groupby_by'])
-            if len(num_column) != 1:
-                raise ValueError(
-                    "Error: There must be exactly one numeric value among the parameters 'x' and 'y' "
-                    "that is not included in 'groupby_by'. Ensure that only one of 'x' or 'y' "
-                    "is not present in the 'groupby_by' list."
-                )
-            num_column = num_column.pop()
-            cat_columns = config['groupby_by']
-        else:
-            if not (pd.api.types.is_numeric_dtype(df[config['x']]) or pd.api.types.is_numeric_dtype(df[config['y']])):
-                raise ValueError("At least one of x or y must be numeric.")
-            elif pd.api.types.is_numeric_dtype(df[config['y']]):
-                cat_columns = [config['x']] + color
-                num_column = config['y']
-            else:
-                cat_columns = [config['y']] + color
-                num_column = config['x']
-        if config['agg_func'] is None:
-            func = 'first'
-        else:
-            func = config.get('agg_func', 'mean')  # default to 'mean' if not provided
-        if config['y'] == num_column:
-            ascending = False
-        else:
-            ascending = True
-        func_df = (df[[*cat_columns, num_column]]
-                   .groupby(cat_columns, observed=True)
-                   .agg(num=(num_column, func), count=(num_column, 'count'))
-                   .reset_index())
-        if config['sort_axis']:
-            func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
-                'num'].transform('sum')
-            func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
-                    .drop('temp', axis=1)
-                    )
-        if not config['sort_legend']:
-            if config['sort_axis']:
-                func_df = (func_df.sort_values([cat_columns[0], cat_columns[1]], ascending=[False, True])
-                        )            
-        func_df['count'] = func_df['count'].apply(
-            lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
-        func_df['pretty_value'] = func_df['num'].apply(human_readable_number, args = [config['decimal_places']])
-        func_df[cat_columns] = func_df[cat_columns].astype('str')
-        return func_df.rename(columns={'num': num_column})
-    xaxis_title = config['xaxis_title']
-    yaxis_title = config['yaxis_title']
-    category_axis_title = config['category_axis_title']
-    if config['agg_mode'] == 'resample':
-        if config['agg_func'] is None:
-            func = 'first'
-        else:
-            func = config['agg_func']
-        columns = [config['x'], config['y']]
-        if config['category']:
-            columns.append(config['category'])
-            df_for_fig = config['df'][columns].set_index(config['x']).groupby(config['category'], observed=True ).resample(config['resample_freq'])[config['y']].agg(func).reset_index()
-        else:
-            df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
-        # x = config['df'][config['x']].values
-        # y = config['df'][config['y']].values
-        custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
-        # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-        #     custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
-        # else:
-        #     custom_data = [df_for_fig[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
-        if graph_type == 'bar':
-            fig = px.bar(df_for_fig, x=config['x'], y=config['y'], color=config['category'],
-                        barmode=config['barmode'], custom_data=custom_data)
-        elif graph_type == 'line':
-            fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
-        elif graph_type == 'area':
-            fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
-    elif config['agg_mode'] == 'groupby':
-        df_for_fig = prepare_df(config)
-        if config['top_n_trim_axis']:
-            df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
-        # if config['top_n_trim_legend']:
-        #     df_for_fig = pd.concat([df_for_fig['data'].iloc[:, :config['top_n_trim_legend']], df_for_fig['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])        
-        # display(df_for_fig)
-        x = df_for_fig[config['x']].values
-        y = df_for_fig[config['y']].values
-        color = df_for_fig[config['category']
-                        ].values if config['category'] else None
-        custom_data = [df_for_fig['count'], df_for_fig['pretty_value']]
-        # display(df_for_fig)
-        if 'show_text' in config and config['show_text']:
-            if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
-                text = [human_readable_number(el, config['decimal_places']) for el in y]
-            else:
-                text = [human_readable_number(el, config['decimal_places']) for el in x]
-        else:
-            text = None
-        # display(df_for_fig)
-        # display(custom_data)
-        if graph_type == 'bar':
-            fig = px.bar(x=x, y=y, color=color,
-                        barmode=config['barmode'], text=text, custom_data=custom_data)
-        elif graph_type == 'line':
-            fig = px.line(x=x, y=y, color=color,
-                        text=text, custom_data=custom_data)   
-        elif graph_type == 'area':
-            fig = px.area(x=x, y=y, color=color,
-                        text=text, custom_data=custom_data)               
-        color = []
-        for trace in fig.data:
-            color.append(trace.marker.color)
-        if graph_type == 'bar':
-            fig.update_traces(textposition='auto')
-        elif graph_type == 'line':
-            fig.update_traces(textposition='top center')
-        elif graph_type == 'area':
-            fig.update_traces(textposition='top center')   
-        if pd.api.types.is_numeric_dtype(df_for_fig[config['x']]):
-            # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
-            traces = list(fig.data)
-            traces.sort(key=lambda x: x.x[-1])
-            fig.data = traces
-            color = color[::-1]
-            for i, trace in enumerate(fig.data):
-                trace.marker.color = color[i]
-            fig.update_layout(legend={'traceorder': 'reversed'})
-        if config['textposition']:
-            fig.update_traces(textposition=config['textposition'])
-    else:
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            if not config['sort_axis'] or pd.api.types.is_datetime64_any_dtype(config['df'][config['x']]):
-                df = config['df']
-            else:
-                num_for_sort = config['y']
-                ascending_for_sort = False
-                df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
-            custom_data = [df[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
-        else:
-            if config['sort_axis']:
-                num_for_sort = config['x']
-                ascending_for_sort = True
-                df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
-            else:
-                df = config['df']
-            custom_data = [df[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
-        if graph_type == 'bar':
-            fig = px.bar(df, x=config['x'], y=config['y'], color=config['category'],
-                        barmode=config['barmode'], custom_data=custom_data)
-        elif graph_type == 'line':
-            fig = px.line(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
-        elif graph_type == 'area':
-            fig = px.area(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
-    if config['legend_position'] == 'top':
-        fig.update_layout(
-            yaxis = dict(
-                domain=[0, 0.9]
-            )
-            , legend = dict(
-                title_text=category_axis_title
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="h"  # Горизонтальное расположение
-                , yanchor="top"    # Привязка к верхней части
-                , y=1.09         # Положение по вертикали (отрицательное значение переместит вниз)
-                , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали
-            )
-        )
-    elif config['legend_position'] == 'right':
-        fig.update_layout(
-                legend = dict(
-                title_text=category_axis_title
-                , title_font_color='rgba(0, 0, 0, 0.7)'
-                , font_color='rgba(0, 0, 0, 0.7)'
-                , orientation="v"  # Горизонтальное расположение
-                # , yanchor="bottom"    # Привязка к верхней части
-                , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
-                # , xanchor="center" # Привязка к центру
-                # , x=0.5              # Центрирование по горизонтали
-            )
-        )
-    else:
-        raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
-    if xaxis_title:
-        hovertemplate_x = f'{xaxis_title} = '
-    else:
-        hovertemplate_x = f'x = '
-    if yaxis_title:
-        hovertemplate_y = f'{yaxis_title} = '
-    else:
-        hovertemplate_y = f'y = '
-    if category_axis_title:
-        hovertemplate_color = f'<br>{category_axis_title} = '
-    else:
-        hovertemplate_color = f'color = '
-    if config['agg_mode'] == 'groupby':
-        if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
-            hovertemplate = hovertemplate_x + \
-                '%{x}<br>' + hovertemplate_y + '%{customdata[1]}'
-        else:
-            hovertemplate = hovertemplate_x + \
-                '%{customdata[1]}<br>' + hovertemplate_y + '%{y}'
-    elif config['agg_mode'] == 'resample':
-        hovertemplate = hovertemplate_x + \
-                '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
-    else:
-        if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
-            hovertemplate = hovertemplate_x + \
-                '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
-        else:
-            hovertemplate = hovertemplate_x + \
-                '%{customdata[0]}<br>' + hovertemplate_y + '%{y}'
-    if config['category']:
-        hovertemplate += hovertemplate_color + '%{data.name}'
-    if config['show_group_size']:
-        hovertemplate += f'<br>Размер группы '
-        hovertemplate += '%{customdata[0]}'
-    # hovertemplate += f'<br>cnt_in_sum_pct = '
-    # hovertemplate += '%{customdata[1]}'
-    hovertemplate += '<extra></extra>'
-    fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white"), textfont=dict(
-        family='Segoe UI', size=config['textsize']  # Размер шрифта
-        # color='black'  # Цвет текста
-    ) # Положение текстовых меток (outside или inside))
-    )        
-    fig.update_layout(
-        # , title={'text': f'<b>{title}</b>'}
-        # , margin=dict(l=50, r=50, b=50, t=70)
-        margin=dict(t=80),
-        width=config['width'], height=config['height'],
-        title={'text': config["title"]}, xaxis_title=xaxis_title, yaxis_title=yaxis_title, 
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
-        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
-        legend_title_font_color='rgba(0, 0, 0, 0.7)',
-        legend_title_font_size = 14,
-        legend_font_color='rgba(0, 0, 0, 0.7)',
-        hoverlabel=dict(bgcolor="white"), xaxis=dict(
-            visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
-        ), yaxis=dict(
-            visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
-        ),
-        legend=dict(
-            title_font_color="rgba(0, 0, 0, 0.5)", font_color="rgba(0, 0, 0, 0.5)"
-        )
-    )      
-    return fig    
+# def _create_base_fig_for_bar_line_area(config: dict, args: list, kwargs: dict, graph_type: str = 'bar'):
+#     """
+#     Creates a figure for bar, line or area function using the Plotly Express library.
+#     """
+#
+#     if 'agg_mode' in config and config['agg_mode'] == 'resample' and 'resample_freq' not in config:
+#         raise ValueError("For resample mode resample_freq must be define")
+#     if 'agg_mode' in config and config['agg_mode'] == 'groupby' and 'groupby_by' not in config:
+#         raise ValueError("For groupby mode groupby_by must be define")
+#
+#     def human_readable_number(x, decimal_places):
+#         format_string = f"{{:.{decimal_places}f}}"
+#
+#         if x >= 1e6 or x <= -1e6:
+#             return f"{format_string.format(x / 1e6)}M"
+#         elif x >= 1e3 or x <= -1e3:
+#             return f"{format_string.format(x / 1e3)}k"
+#         else:
+#             return format_string.format(x)
+#
+#     def prepare_df(config: dict):
+#         df = args[0]
+#         color = [kwargs['color']] if 'color' in kwargs else []
+#         if config['groupby_by']:
+#             if 'agg_func' not in config:
+#                 raise ValueError(
+#             num_column = set([kwargs['x'], kwargs['y']]) - set(config['groupby_by'])
+#             if len(num_column) != 1:
+#                 raise ValueError(
+#                     "Error: There must be exactly one numeric value among the parameters 'x' and 'y' "
+#                     "that is not included in 'groupby_by'. Ensure that only one of 'x' or 'y' "
+#                     "is not present in the 'groupby_by' list."
+#                 )
+#             num_column = num_column.pop()
+#             cat_columns = config['groupby_by']
+#         else:
+#             if not (pd.api.types.is_numeric_dtype(df[config['x']]) or pd.api.types.is_numeric_dtype(df[config['y']])):
+#                 raise ValueError("At least one of x or y must be numeric.")
+#             elif pd.api.types.is_numeric_dtype(df[config['y']]):
+#                 cat_columns = [config['x']] + color
+#                 num_column = config['y']
+#             else:
+#                 cat_columns = [config['y']] + color
+#                 num_column = config['x']
+#         if config['agg_func'] is None:
+#             func = 'first'
+#         else:
+#             func = config.get('agg_func', 'mean')  # default to 'mean' if not provided
+#         if config['y'] == num_column:
+#             ascending = False
+#         else:
+#             ascending = True
+#         func_df = (df[[*cat_columns, num_column]]
+#                    .groupby(cat_columns, observed=True)
+#                    .agg(num=(num_column, func), count=(num_column, 'count'))
+#                    .reset_index())
+#         if config['sort_axis']:
+#             func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
+#                 'num'].transform('sum')
+#             func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
+#                     .drop('temp', axis=1)
+#                     )
+#         if not config['sort_legend']:
+#             if config['sort_axis']:
+#                 func_df = (func_df.sort_values([cat_columns[0], cat_columns[1]], ascending=[False, True])
+#                         )
+#         func_df['count'] = func_df['count'].apply(
+#             lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
+#         func_df['pretty_value'] = func_df['num'].apply(human_readable_number, args = [config['decimal_places']])
+#         func_df[cat_columns] = func_df[cat_columns].astype('str')
+#         return func_df.rename(columns={'num': num_column})
+#     xaxis_title = config['xaxis_title']
+#     yaxis_title = config['yaxis_title']
+#     category_axis_title = config['category_axis_title']
+#     if config['agg_mode'] == 'resample':
+#         if config['agg_func'] is None:
+#             func = 'first'
+#         else:
+#             func = config['agg_func']
+#         columns = [config['x'], config['y']]
+#         if config['category']:
+#             columns.append(config['category'])
+#             df_for_fig = config['df'][columns].set_index(config['x']).groupby(config['category'], observed=True ).resample(config['resample_freq'])[config['y']].agg(func).reset_index()
+#         else:
+#             df_for_fig = config['df'][columns].set_index(config['x']).resample(config['resample_freq']).agg(func).reset_index()
+#         # x = config['df'][config['x']].values
+#         # y = config['df'][config['y']].values
+#         custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+#         # if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+#         #     custom_data = [df_for_fig[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+#         # else:
+#         #     custom_data = [df_for_fig[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
+#         if graph_type == 'bar':
+#             fig = px.bar(df_for_fig, x=config['x'], y=config['y'], color=config['category'],
+#                         barmode=config['barmode'], custom_data=custom_data)
+#         elif graph_type == 'line':
+#             fig = px.line(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+#         elif graph_type == 'area':
+#             fig = px.area(df_for_fig, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+#     elif config['agg_mode'] == 'groupby':
+#         df_for_fig = prepare_df(config)
+#         if config['top_n_trim_axis']:
+#             df_for_fig = df_for_fig.iloc[:config['top_n_trim_axis']]
+#         # if config['top_n_trim_legend']:
+#         #     df_for_fig = pd.concat([df_for_fig['data'].iloc[:, :config['top_n_trim_legend']], df_for_fig['data'].iloc[:, :config['top_n_trim_legend']]], axis=1, keys=['data', 'customdata'])
+#         # display(df_for_fig)
+#         x = df_for_fig[config['x']].values
+#         y = df_for_fig[config['y']].values
+#         color = df_for_fig[config['category']
+#                         ].values if config['category'] else None
+#         custom_data = [df_for_fig['count'], df_for_fig['pretty_value']]
+#         # display(df_for_fig)
+#         if 'show_text' in config and config['show_text']:
+#             if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
+#                 text = [human_readable_number(el, config['decimal_places']) for el in y]
+#             else:
+#                 text = [human_readable_number(el, config['decimal_places']) for el in x]
+#         else:
+#             text = None
+#         # display(df_for_fig)
+#         # display(custom_data)
+#         if graph_type == 'bar':
+#             fig = px.bar(x=x, y=y, color=color,
+#                         barmode=config['barmode'], text=text, custom_data=custom_data)
+#         elif graph_type == 'line':
+#             fig = px.line(x=x, y=y, color=color,
+#                         text=text, custom_data=custom_data)
+#         elif graph_type == 'area':
+#             fig = px.area(x=x, y=y, color=color,
+#                         text=text, custom_data=custom_data)
+#         color = []
+#         for trace in fig.data:
+#             color.append(trace.marker.color)
+#         if graph_type == 'bar':
+#             fig.update_traces(textposition='auto')
+#         elif graph_type == 'line':
+#             fig.update_traces(textposition='top center')
+#         elif graph_type == 'area':
+#             fig.update_traces(textposition='top center')
+#         if pd.api.types.is_numeric_dtype(df_for_fig[config['x']]):
+#             # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
+#             traces = list(fig.data)
+#             traces.sort(key=lambda x: x.x[-1])
+#             fig.data = traces
+#             color = color[::-1]
+#             for i, trace in enumerate(fig.data):
+#                 trace.marker.color = color[i]
+#             fig.update_layout(legend={'traceorder': 'reversed'})
+#         if config['textposition']:
+#             fig.update_traces(textposition=config['textposition'])
+#     else:
+#         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+#             if not config['sort_axis'] or pd.api.types.is_datetime64_any_dtype(config['df'][config['x']]):
+#                 df = config['df']
+#             else:
+#                 num_for_sort = config['y']
+#                 ascending_for_sort = False
+#                 df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+#             custom_data = [df[config['y']].apply(human_readable_number, args = [config['decimal_places']])]
+#         else:
+#             if config['sort_axis']:
+#                 num_for_sort = config['x']
+#                 ascending_for_sort = True
+#                 df = config['df'].sort_values(num_for_sort, ascending=ascending_for_sort)
+#             else:
+#                 df = config['df']
+#             custom_data = [df[config['x']].apply(human_readable_number, args = [config['decimal_places']])]
+#         if graph_type == 'bar':
+#             fig = px.bar(df, x=config['x'], y=config['y'], color=config['category'],
+#                         barmode=config['barmode'], custom_data=custom_data)
+#         elif graph_type == 'line':
+#             fig = px.line(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+#         elif graph_type == 'area':
+#             fig = px.area(df, x=config['x'], y=config['y'], color=config['category'], custom_data=custom_data)
+#     if config['legend_position'] == 'top':
+#         fig.update_layout(
+#             yaxis = dict(
+#                 domain=[0, 0.9]
+#             )
+#             , legend = dict(
+#                 title_text=category_axis_title
+#                 , title_font_color='rgba(0, 0, 0, 0.7)'
+#                 , font_color='rgba(0, 0, 0, 0.7)'
+#                 , orientation="h"  # Горизонтальное расположение
+#                 , yanchor="top"    # Привязка к верхней части
+#                 , y=1.09         # Положение по вертикали (отрицательное значение переместит вниз)
+#                 , xanchor="center" # Привязка к центру
+#                 , x=0.5              # Центрирование по горизонтали
+#             )
+#         )
+#     elif config['legend_position'] == 'right':
+#         fig.update_layout(
+#                 legend = dict(
+#                 title_text=category_axis_title
+#                 , title_font_color='rgba(0, 0, 0, 0.7)'
+#                 , font_color='rgba(0, 0, 0, 0.7)'
+#                 , orientation="v"  # Горизонтальное расположение
+#                 # , yanchor="bottom"    # Привязка к верхней части
+#                 , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
+#                 # , xanchor="center" # Привязка к центру
+#                 # , x=0.5              # Центрирование по горизонтали
+#             )
+#         )
+#     else:
+#         raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
+#     if xaxis_title:
+#         hovertemplate_x = f'{xaxis_title} = '
+#     else:
+#         hovertemplate_x = f'x = '
+#     if yaxis_title:
+#         hovertemplate_y = f'{yaxis_title} = '
+#     else:
+#         hovertemplate_y = f'y = '
+#     if category_axis_title:
+#         hovertemplate_color = f'<br>{category_axis_title} = '
+#     else:
+#         hovertemplate_color = f'color = '
+#     if config['agg_mode'] == 'groupby':
+#         if pd.api.types.is_numeric_dtype(df_for_fig[config['y']]):
+#             hovertemplate = hovertemplate_x + \
+#                 '%{x}<br>' + hovertemplate_y + '%{customdata[1]}'
+#         else:
+#             hovertemplate = hovertemplate_x + \
+#                 '%{customdata[1]}<br>' + hovertemplate_y + '%{y}'
+#     elif config['agg_mode'] == 'resample':
+#         hovertemplate = hovertemplate_x + \
+#                 '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
+#     else:
+#         if pd.api.types.is_numeric_dtype(config['df'][config['y']]):
+#             hovertemplate = hovertemplate_x + \
+#                 '%{x}<br>' + hovertemplate_y + '%{customdata[0]}'
+#         else:
+#             hovertemplate = hovertemplate_x + \
+#                 '%{customdata[0]}<br>' + hovertemplate_y + '%{y}'
+#     if config['category']:
+#         hovertemplate += hovertemplate_color + '%{data.name}'
+#     if config['show_group_size']:
+#         hovertemplate += f'<br>Размер группы '
+#         hovertemplate += '%{customdata[0]}'
+#     # hovertemplate += f'<br>cnt_in_sum_pct = '
+#     # hovertemplate += '%{customdata[1]}'
+#     hovertemplate += '<extra></extra>'
+#     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white"), textfont=dict(
+#         family='Segoe UI', size=config['textsize']  # Размер шрифта
+#         # color='black'  # Цвет текста
+#     ) # Положение текстовых меток (outside или inside))
+#     )
+#     fig.update_layout(
+#         # , title={'text': f'<b>{title}</b>'}
+#         # , margin=dict(l=50, r=50, b=50, t=70)
+#         margin=dict(t=80),
+#         width=config['width'], height=config['height'],
+#         title={'text': config["title"]}, xaxis_title=xaxis_title, yaxis_title=yaxis_title,
+#         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+#         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+#         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+#         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+#         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+#         yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+#         xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+#         yaxis_linecolor="rgba(0, 0, 0, 0.4)",
+#         xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+#         yaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+#         legend_title_font_color='rgba(0, 0, 0, 0.7)',
+#         legend_title_font_size = 14,
+#         legend_font_color='rgba(0, 0, 0, 0.7)',
+#         hoverlabel=dict(bgcolor="white"), xaxis=dict(
+#             visible=config['xaxis_show'], showgrid=config['showgrid_x'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.1)"
+#         ), yaxis=dict(
+#             visible=config['yaxis_show'], showgrid=config['showgrid_y'], gridwidth=1, gridcolor="rgba(0, 0, 0, 0.07)"
+#         ),
+#         legend=dict(
+#             title_font_color="rgba(0, 0, 0, 0.5)", font_color="rgba(0, 0, 0, 0.5)"
+#         )
+#     )
+#     return fig
             
 def bar(
-    df: pd.DataFrame,
-    x: str,
-    y: str,
-    category: str = None,
+    *args,
     agg_mode: str = None,
     agg_func: str = None,    
-    groupby_cols: list = None,
-    resample_freq: str = None,     
-    barmode: str = 'group',
-    width: int = None,
-    height: int = None,    
-    title: str = None,    
-    xaxis_title: str = None,
-    yaxis_title: str = None,        
-    category_axis_title: str = None,    
-    showgrid_x: bool = True,
-    showgrid_y: bool = True,
-    legend_position: str = 'top',    
+    groupby_by: list = None,
+    resample_freq: str = None,
     top_n_trim_axis: int = None,
     top_n_trim_legend: int = None,
     sort_axis: bool = True,
     sort_legend: bool = True,
-    show_text: bool = False,
-    textsize: int = 14,
-    textposition: str = 'auto',
-    xaxis_show: bool = True,
-    yaxis_show: bool = True,
-    decimal_places: int = 0,
     show_group_size: bool = False,
+    decimal_places: int = 2,
+    **kwargs
 ) -> go.Figure:
     """
     Creates a bar chart using the Plotly Express library.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        A DataFrame containing data for creating the chart
-    x : str
-        The name of the column in the DataFrame to be used for creating the X-axis
-    y : str
-        The name of the column in the DataFrame to be used for creating the Y-axis
-    xaxis_title : str, optional
-        The title for the X-axis
-    yaxis_title : str, optional
-        The title for the Y-axis
-    category : str, optional
-        The name of the column in the DataFrame to be used for creating categories
+    agg_mode : str, optional
+        Aggregation mode. May be 'groupby', 'resample', None. Default is None
+    agg_func : str, optional
+        The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
+    groupby_by : list, optional
+        Columns for groupby
+    resample_freq : str, optional
+        Resample frequency for resample
     top_n_trim_axis : int, optional
         The number of top categories axis to include in the chart
     top_n_trim_legend : int, optional
@@ -2672,82 +2627,27 @@ def bar(
         Whether to sort the categories on the axis. Default is True
     sort_legend : bool, optional
         Whether to sort the categories in the legend. Default is True
-    category_axis_title : str, optional
-        The title for the categories
-    title : str, optional
-        The title of the chart
-    agg_func : str, optional
-        The function to be used for aggregating data. May be mean, median, sum, count, nunique. Default is 'mean'
-    barmode : str, optional
-        The mode for displaying bars. Default is 'group'
-    width : int, optional
-        The width of the chart
-    height : int, optional
-        The height of the chart
-    show_text : bool, optional
-        Whether to display text on the chart. Default is False
-    textsize : int, optional
-        Text size. Default is 14
-    textposition : str, optional
-        Text position. May be 'auto', 'inside', 'outside', 'none'. Default is 'auto'
-    xaxis_show : bool, optional
-        Whether to show the X-axis. Default is True
-    yaxis_show : bool, optional
-        Whether to show the Y-axis. Default is True
-    showgrid_x : bool, optional
-        Whether to show grid on X-axis. Default is True
-    showgrid_y : bool, optional
-        Whether to show grid on Y-axis. Default is True
-    legend_position : str, optional
-        Position of the legend ('top', 'right'). Default is 'top'
-    decimal_places : int, optional
-        The number of decimal places to display. Default is 2
     show_group_size : bool, optional
         Whether to show the group size. Default is False
-    agg_mode : str, optional
-        Aggregation mode. May be 'groupby', 'resample', None. Default is None
-    groupby_cols : list, optional
-        Columns for groupby
-    resample_freq : str, optional
-        Resample frequency for resample
-
+    decimal_places : int, optional
+        The number of decimal places to display in hover. Default is 2
     Returns
     -------
     go.Figure
         The created chart
     """
     config = {
-        'df': df,
-        'x': x,
-        'y': y,
-        'xaxis_title': xaxis_title,
-        'yaxis_title': yaxis_title,
-        'category': category,
         'top_n_trim_axis': top_n_trim_axis,
         'top_n_trim_legend': top_n_trim_legend,
         'sort_axis': sort_axis,
         'sort_legend': sort_legend,
-        'category_axis_title': category_axis_title,
-        'title': title,
         'agg_func': agg_func,
-        'barmode': barmode,
-        'width': width,
-        'height': height,
-        'show_text': show_text,
-        'textsize': textsize,
-        'textposition': textposition,
-        'xaxis_show': xaxis_show,
-        'yaxis_show': yaxis_show,
-        'showgrid_x': showgrid_x,
-        'showgrid_y': showgrid_y,
-        'legend_position': legend_position,
-        'decimal_places': decimal_places,
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
-        'groupby_cols': groupby_cols,
+        'groupby_by': groupby_by,
         'resample_freq': resample_freq
     }
-    return _create_base_fig_for_bar_line_area(config, 'bar')
+    return _create_base_fig_for_bar_line_area(config=config, args=args, kwargs=kwargs, graph_type='bar')
 
 def line(
     df: pd.DataFrame,
@@ -3012,6 +2912,64 @@ def area(
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
 def histogram(
+    *args,
+    left_quantile: float = 0,
+    right_quantile: float = 1,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates an interactive histogram using Plotly with additional customizations.
+
+    Parameters
+    ----------
+    left_quantile : float, optional
+        The left quantile for data filtering (default is 0).
+    right_quantile : float, optional
+        The right quantile for data filtering (default is 1).
+    **kwargs : dict
+        Any additional keyword arguments accepted by `px.histogram`. This includes:
+
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
+    """
+    kwargs.setdefault('histnorm', 'probability')  # Пример дополнительного параметра
+    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('width', 600)
+    kwargs.setdefault('height', 400)
+    kwargs.setdefault('marginal', 'box')
+    if pd.api.types.is_numeric_dtype(kwargs['x']):
+        trimmed_column = kwargs['x'].between(kwargs['x'].quantile(
+            left_quantile), kwargs['x'].quantile(right_quantile))
+        kwargs['x'] = kwargs['x'][trimmed_column]
+    fig = px.histogram(*args, **kwargs)
+    for trace in fig.data:
+        # trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
+        if trace.type == 'histogram':
+            if 'x' in trace:
+                xaxis_title = fig
+                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
+                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+
+    if 'marginal' in kwargs:
+        fig.update_layout(
+            yaxis2 = dict(
+                domain=[0.95, 1]
+                , visible = False
+            )
+            , xaxis2 = dict(
+                visible=False
+            )
+            , yaxis = dict(
+                domain=[0, 0.9]
+            )
+        )
+    fig.update_layout(yaxis_title='Доля')
+    fig = fig_update(fig)
+    return fig
+
+def histogram_go(
     column: pd.Series,
     title: str = None,
     xaxis_title: str = None,
