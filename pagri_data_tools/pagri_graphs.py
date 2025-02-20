@@ -12,7 +12,8 @@ from dash.dependencies import Input, Output
 from scipy.stats import gaussian_kde
 import plotly.figure_factory as ff
 from scipy.stats import t
- 
+import re
+
 pio.renderers.default = "notebook"
 # colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
 #                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -376,9 +377,37 @@ def fig_update(
         fig.update_traces(xgap=xgap, ygap=ygap)
         fig.update_layout(xaxis_showgrid=False, yaxis_showgrid=False, coloraxis_colorbar_title_text=None)
     for trace in fig.data:
-        trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
+        trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
         # trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
         # trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+    if legend_position == 'top':
+        fig.update_layout(
+            yaxis = dict(
+                domain=[0, 0.92]
+            )
+            , legend = dict(
+                orientation="h"  # Горизонтальное расположение
+                , yanchor="top"    # Привязка к верхней части
+                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали
+            )
+        )
+    elif legend_position == 'right':
+        fig.update_layout(
+                yaxis = dict(
+                    domain=[0, 1]
+                )
+                , legend = dict(
+                    title_font_color='rgba(0, 0, 0, 0.7)'
+                    , font_color='rgba(0, 0, 0, 0.7)'
+                    , xanchor=None
+                    , yanchor=None
+                    , orientation="v"  # Горизонтальное расположение
+                    , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
+                    , x=None              # Центрирование по горизонтали
+                )
+        )
     return fig
 
 def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: dict, graph_type: str = 'bar'):
@@ -393,16 +422,12 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     if config.get('agg_mode') and 'agg_func' not in config:
         raise ValueError('resample or groupby mode agg_func must be defined')
 
-    # Validate the number of arguments
-    if len(args) > 1:
-        raise ValueError('params for plotly must be in kwargs')
-
     # Ensure the first argument or 'data_frame' in kwargs is a DataFrame
     if not isinstance(df, pd.DataFrame):
         raise ValueError('data_frame must be pandas DataFrame')
 
     # Assign the DataFrame to variable df
-    if not df:
+    if df is None:
         raise ValueError('data_frame must be pandas DataFrame and defined')
 
     # Check data types of x and y in 'groupby' mode
@@ -420,7 +445,10 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     top_n_trim_x = config.get('top_n_trim_x')
     top_n_trim_color = config.get('top_n_trim_color')
     top_n_trim_y = config.get('top_n_trim_y')
-
+    if graph_type in ['line', 'area']:
+        if kwargs.get('color'):
+            kwargs.setdefault('color_discrete_sequence', colorway_for_line)
+        kwargs.setdefault('line_shape', 'spline')
     # Function to create a combined filter mask
     def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
         """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
@@ -527,7 +555,13 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             if 'color' not in kwargs:
                 raise ValueError('For top_n_trim_color color must be defined')
             top_color = df.groupby(kwargs['color'], observed=True)[kwargs['y']].agg(agg_func).nlargest(top_n_trim_color).index.to_list()
-
+            if graph_type in ['line', 'area']:
+                kwargs.setdefault('category_orders', {kwargs.get('color'): top_color})
+        else:
+            if kwargs.get('color'):
+                top_color = df.groupby(kwargs['color'], observed=True)[kwargs['y']].agg(agg_func).nlargest(10).index.to_list()
+                if graph_type in ['line', 'area']:
+                    kwargs.setdefault('category_orders', {kwargs.get('color'): top_color})
         # Create DataFrame for the figure
         if 'color' in kwargs:
             columns.append(kwargs['color'])
@@ -537,7 +571,6 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=True)[kwargs['y']].agg(agg_func).reset_index()
         else:
             df_for_fig = df[columns].set_index(kwargs['x']).resample(config['resample_freq']).agg(agg_func).reset_index()
-
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
@@ -621,10 +654,19 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
 
     # Set x-axis format and figure dimensions
+    fig_update_config = dict()
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-        fig = fig_update(fig, xaxis_tickformat="%b'%y", width=1000, height=450)
+        fig_update_config['xaxis_tickformat'] = "%b'%y"
+        fig_update_config['width'] = 1000
+        fig_update_config['height'] = 450
     else:
-        fig = fig_update(fig, width=600, height=400)
+        fig_update_config['width'] = 600
+        fig_update_config['height'] = 400
+    if kwargs.get('color'):
+        fig_update_config['legend_position'] = 'top'
+        fig_update_config['opacity'] = 0.7
+        fig_update_config['legend_title'] = ''
+    fig = fig_update(fig, **fig_update_config)
 
     return fig
 
@@ -998,7 +1040,6 @@ def area(
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
 
 def histogram(
-    *args,
     left_quantile: float = 0,
     right_quantile: float = 1,
     **kwargs
@@ -1012,8 +1053,34 @@ def histogram(
         The left quantile for data filtering (default is 0).
     right_quantile : float, optional
         The right quantile for data filtering (default is 1).
+    x : str, optional
+        The name of the column in `data_frame` to be used for the x-axis. If not provided, the function will attempt to use the first column.
+    y : str, optional
+        The name of the column in `data_frame` to be used for the y-axis. If not provided, the function will count occurrences.
+    color : str, optional
+        The name of the column in `data_frame` to be used for color encoding. This will create a separate histogram for each unique value in this column.
+    barmode : str, optional
+        The mode for the bars in the histogram. Options include 'group', 'overlay', and 'relative'. Default is 'overlay'.
+    nbins : int, optional
+        The number of bins to use for the histogram. If not specified, the function will automatically determine the number of bins.
+    histnorm : str, optional
+        Normalization method for the histogram. Options include 'percent', 'probability', 'density', and 'probability density'. Default is None (no normalization).
+    barnorm : str, optional
+        Specifies how to normalize the heights of the bars in the histogram. Possible values include:
+        - 'fraction': normalizes the heights of the bars so that the sum of all heights equals 1 (fraction of the total count).
+        - 'percent': normalizes the heights of the bars so that the sum of all heights equals 100 (percentage of the total count).
+        - 'density': normalizes the heights of the bars so that the area under the histogram equals 1 (probability density).
+        - None: by default, the heights of the bars are not normalized.
+    marginal : str, optional
+        If set, adds a marginal histogram or box plot to the figure. Options include 'rug', 'box', and 'violin'.
+    template : str, optional
+        The name of the template to use for the figure. Default is None, which uses the default Plotly template.
+    title : str, optional
+        The title of the histogram. Default is None.
+    labels : dict, optional
+        A dictionary mapping column names to labels for the axes and legend.
     **kwargs : dict
-        Any additional keyword arguments accepted by `px.histogram`. This includes:
+        Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
 
     Returns
     -------
@@ -1029,7 +1096,7 @@ def histogram(
         trimmed_column = kwargs['x'].between(kwargs['x'].quantile(
             left_quantile), kwargs['x'].quantile(right_quantile))
         kwargs['x'] = kwargs['x'][trimmed_column]
-    fig = px.histogram(*args, **kwargs)
+    fig = px.histogram(**kwargs)
     for trace in fig.data:
         # trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
         if trace.type == 'histogram':
@@ -1038,7 +1105,7 @@ def histogram(
                 trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
                 trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
 
-    if 'marginal' in kwargs:
+    if kwargs.get('marginal'):
         fig.update_layout(
             yaxis2 = dict(
                 domain=[0.95, 1]
@@ -1060,14 +1127,14 @@ def heatmap(
     x: str = None,
     y: str = None,
     z: str = None,
-    is_agg: bool = None,
+    do_pivot: bool = False,
     agg_func: str = None,
-    x_top_n: int = None,
-    y_top_n: int = None,
-    x_top_from: str = 'start',
-    y_top_from: str = 'start',
-    sort_x: bool = True,
-    sort_y: bool = True,
+    top_n_trim_x: int = None,
+    top_n_trim_y: int = None,
+    top_n_trim_from_x: str = 'start',
+    top_n_trim_from_y: str = 'start',
+    sort_x: bool = False,
+    sort_y: bool = False,
     reverse_x: bool = False,
     reverse_y: bool = False,
     skip_first_col_for_cohort: bool = False,
@@ -1087,8 +1154,8 @@ def heatmap(
         Column name in the DataFrame to use for the y-axis
     z : str, optional
         Column name in the DataFrame to use for the z-values
-    is_agg : bool, optional
-        Whether to aggregate the data before creating the heatmap
+    do_pivot : bool, optional
+        Whether to do pivot table before creating the heatmap
     agg_func : str, optional
         Aggregation function to use if is_agg is True. Options:
         - 'mean': Calculate the mean of the values
@@ -1096,15 +1163,15 @@ def heatmap(
         - 'count': Count the number of values
         - 'max': Calculate the maximum of the values
         - 'min': Calculate the minimum of the values
-    x_top_n : int, optional
+    top_n_trim_x : int, optional
         Number of top columns to display on the x-axis
-    y_top_n : int, optional
+    top_n_trim_y : int, optional
         Number of top rows to display on the y-axis
-    x_top_from : str, optional
+    top_n_trim_from_x : str, optional
         Whether to start counting from the beginning or end of the x-axis. Options:
         - 'start': Start counting from the beginning
         - 'end': Start counting from the end
-    y_top_from : str, optional
+    top_n_trim_from_y : str, optional
         Whether to start counting from the beginning or end of the y-axis. Options:
         - 'start': Start counting from the beginning
         - 'end': Start counting from the end
@@ -1137,7 +1204,7 @@ def heatmap(
     df = data_frame
 
     # If aggregation is enabled, check that x, y, and z are defined
-    if is_agg:
+    if do_pivot:
         if x is None:
             raise ValueError('x must be defined')
         if y is None:
@@ -1164,7 +1231,8 @@ def heatmap(
         if sort_x:
             df_pivoted.loc['sum'] = df_pivoted.sum(numeric_only=True)
             df_pivoted = df_pivoted.sort_values(
-                'sum', ascending=ascending_x, axis=1).drop('sum')
+                'sum', ascending=ascending_x, axis=1) #.drop('sum')
+            display(df_pivoted)
         if sort_y:
             df_pivoted['sum'] = df_pivoted.sum(axis=1, numeric_only=True)
             df_pivoted = df_pivoted.sort_values(
@@ -1183,22 +1251,22 @@ def heatmap(
         return df_pivoted
 
     # If aggregation is enabled, create a DataFrame for the figure
-    if is_agg:
+    if do_pivot:
         df_for_fig = make_df_for_fig(df, x, y, z, agg_func)
 
         # Select top N columns and rows if necessary
-        if x_top_n:
-            if x_top_from == 'end':
+        if top_n_trim_x:
+            if top_n_trim_from_x == 'end':
                 x_nunique = df[x].nunique()
-                df_for_fig = df_for_fig.iloc[:, x_nunique-x_top_n:]
+                df_for_fig = df_for_fig.iloc[:, x_nunique-top_n_trim_x:]
             else:
-                df_for_fig = df_for_fig.iloc[:, :x_top_n]
-        if y_top_n:
-            if y_top_from == 'end':
+                df_for_fig = df_for_fig.iloc[:, :top_n_trim_x]
+        if top_n_trim_y:
+            if top_n_trim_from_y == 'end':
                 y_nunique = df[y].nunique()
-                df_for_fig = df_for_fig.iloc[y_nunique-y_top_n:]
+                df_for_fig = df_for_fig.iloc[y_nunique-top_n_trim_y:]
             else:
-                df_for_fig = df_for_fig.iloc[:y_top_n]
+                df_for_fig = df_for_fig.iloc[:top_n_trim_y]
 
         # Create the figure using Plotly Express
         fig = px.imshow(df_for_fig, **kwargs)
@@ -1218,6 +1286,7 @@ def heatmap(
     if texttemplate:
         fig.update_traces(texttemplate=texttemplate)
 
+    fig = fig_update(fig)
     # Return the figure
     return fig
 
