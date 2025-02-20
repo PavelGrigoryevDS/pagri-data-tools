@@ -363,7 +363,7 @@ def fig_update(
     if textposition is not None:
         trace_updates['textposition'] = textposition
     if texttemplate is not None:
-        fig.update_layout(texttemplate=texttemplate)
+        fig.update_traces(texttemplate=texttemplate)
     if textfont is not None:
         fig.update_layout(textfont=textfont)
     if opacity is not None:
@@ -381,6 +381,845 @@ def fig_update(
         # trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
     return fig
 
+def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: dict, graph_type: str = 'bar'):
+    """
+    Creates a figure for bar, line or area function using the Plotly Express library.
+    """
+    # Check for 'resample_freq' in config if aggregation mode is 'resample'
+    if config.get('agg_mode') == 'resample' and 'resample_freq' not in config:
+        raise ValueError("For resample mode resample_freq must be define")
+
+    # Check for aggregation function if aggregation mode is set
+    if config.get('agg_mode') and 'agg_func' not in config:
+        raise ValueError('resample or groupby mode agg_func must be defined')
+
+    # Validate the number of arguments
+    if len(args) > 1:
+        raise ValueError('params for plotly must be in kwargs')
+
+    # Ensure the first argument or 'data_frame' in kwargs is a DataFrame
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError('data_frame must be pandas DataFrame')
+
+    # Assign the DataFrame to variable df
+    if not df:
+        raise ValueError('data_frame must be pandas DataFrame and defined')
+
+    # Check data types of x and y in 'groupby' mode
+    if config.get('agg_mode') == 'groupby':
+        if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]) or pd.api.types.is_datetime64_any_dtype(df[kwargs['y']]):
+            raise ValueError("For resample mode groupby x and y must not be datetime")
+
+    # Ensure 'x' and 'y' keys are present in kwargs
+    if 'x' not in kwargs or 'y' not in kwargs:
+        raise ValueError('x and y must be defined')
+
+    # Retrieve aggregation function and mode from config
+    agg_func = config.get('agg_func')
+    agg_mode = config.get('agg_mode')
+    top_n_trim_x = config.get('top_n_trim_x')
+    top_n_trim_color = config.get('top_n_trim_color')
+    top_n_trim_y = config.get('top_n_trim_y')
+
+    # Function to create a combined filter mask
+    def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
+        """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
+        mask = None
+
+        # Filter by color
+        if top_n_trim_color:
+            if 'color' not in kwargs:
+                raise ValueError('For top_n_trim_color color must be defined')
+            top_color = (
+                df.groupby(kwargs['color'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_color)
+                .index
+            )
+            mask = df[kwargs['color']].isin(top_color)
+
+        # Filter by x axis
+        if top_n_trim_x:
+            top_x = (
+                df.groupby(kwargs['x'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_x)
+                .index
+            )
+            x_mask = df[kwargs['x']].isin(top_x)
+            mask = mask & x_mask if mask is not None else x_mask
+
+        # Filter by y axis
+        if top_n_trim_y:
+            top_y = (
+                df.groupby(kwargs['y'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_y)
+                .index
+            )
+            y_mask = df[kwargs['y']].isin(top_y)
+            mask = mask & y_mask if mask is not None else y_mask
+        return mask
+
+    # Function to prepare the DataFrame for plotting
+    def prepare_df(df: pd.DataFrame, config: dict, kwargs: dict):
+        color = [kwargs['color']] if 'color' in kwargs else []
+
+        # Check for 'agg_column' in config
+        if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
+            raise ValueError('If x and y are numeric, agg_column must be defined')
+
+        # Determine numeric and categorical columns
+        if 'agg_column' in config:
+            num_column = config['agg_column']
+            if kwargs['x'] == num_column:
+                cat_columns = [kwargs['y']] + color
+            else:
+                cat_columns = [kwargs['y']] + color
+        else:
+            if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
+                num_column = kwargs['x']
+                cat_columns = [kwargs['y']] + color
+            else:
+                num_column = kwargs['y']
+                cat_columns = [kwargs['x']] + color
+
+        # Determine sorting order
+        ascending = False if kwargs['y'] == num_column else True
+
+        # Create filter mask
+        mask = create_filter_mask(df, config, kwargs, num_column)
+
+        # Apply mask to DataFrame
+        func_df = df[mask] if mask is not None else df
+
+        # Aggregate data
+        func_df = (func_df[[*cat_columns, num_column]]
+                   .groupby(cat_columns, observed=True)
+                   .agg(num=(num_column, agg_func), count=(num_column, 'count'))
+                   .reset_index())
+
+        # Sort data by axis if specified
+        if 'sort_axis' in config:
+            func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)['num'].transform('sum')
+            func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
+                       .drop('temp', axis=1))
+
+        # Format the 'count' column
+        func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
+        func_df[cat_columns] = func_df[cat_columns].astype('str')
+        return func_df.rename(columns={'num': num_column})
+
+    # Handle data in 'resample' mode
+    if agg_mode == 'resample':
+        if 'agg_func' not in config:
+            raise ValueError('agg_func must be defined')
+        if 'resample_freq' not in config:
+            raise ValueError('For resample agg_mode resample_freq must be defined')
+        if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
+            raise ValueError('x must be datetime type')
+
+        # Define columns for aggregation
+        columns = [kwargs['x'], kwargs['y']]
+
+        # Filter by color if specified
+        if top_n_trim_color:
+            if 'color' not in kwargs:
+                raise ValueError('For top_n_trim_color color must be defined')
+            top_color = df.groupby(kwargs['color'], observed=True)[kwargs['y']].agg(agg_func).nlargest(top_n_trim_color).index.to_list()
+
+        # Create DataFrame for the figure
+        if 'color' in kwargs:
+            columns.append(kwargs['color'])
+            if top_n_trim_color:
+                df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=True)[kwargs['y']].agg(agg_func).reset_index()
+            else:
+                df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=True)[kwargs['y']].agg(agg_func).reset_index()
+        else:
+            df_for_fig = df[columns].set_index(kwargs['x']).resample(config['resample_freq']).agg(agg_func).reset_index()
+
+        # Create the figure using Plotly Express
+        figure_creators = {
+            'bar': px.bar,
+            'line': px.line,
+            'area': px.area
+        }
+        fig = figure_creators[graph_type](df_for_fig, **kwargs)
+
+    # Handle data in 'groupby' mode
+    elif agg_mode == 'groupby':
+        df_for_fig = prepare_df(df, config, kwargs)
+        custom_data = [df_for_fig['count']]
+        figure_creators = {
+            'bar': px.bar,
+            'line': px.line,
+            'area': px.area
+        }
+        fig = figure_creators[graph_type](df_for_fig, custom_data=custom_data, **kwargs)
+
+        # Change color order in the figure
+        color = []
+        for trace in fig.data:
+            color.append(trace.marker.color)
+        if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
+            # Sort by the last value in x for descending order
+            traces = list(fig.data)
+            traces.sort(key=lambda x: x.x[-1])
+            fig.data = traces
+            color = color[::-1]
+            for i, trace in enumerate(fig.data):
+                trace.marker.color = color[i]
+            fig.update_layout(legend={'traceorder': 'reversed'})
+
+    # Handle data in normal mode
+    else:
+        df_sorted = df
+        if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
+            if pd.api.types.is_numeric_dtype(df[kwargs['y']]):
+                if config.get('sort_axis'):
+                    num_for_sort = kwargs['y']
+                    ascending_for_sort = False
+                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
+            else:
+                if config.get('sort_axis'):
+                    num_for_sort = kwargs['x']
+                    ascending_for_sort = True
+                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
+
+        # Create the figure using Plotly Express
+        figure_creators = {
+            'bar': px.bar,
+            'line': px.line,
+            'area': px.area
+        }
+        fig = figure_creators[graph_type](df_sorted, **kwargs)
+
+    # Configure hovertemplate for the figures
+    is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
+    is_x_numeric = pd.api.types.is_numeric_dtype(df[kwargs['x']])
+    is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
+    is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
+    is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
+    for trace in fig.data:
+
+        # Adjust hovertemplate based on aggregation mode
+        if agg_mode:
+            if agg_mode == 'resample':
+                if not is_y_integer and agg_func not in ['count', 'nunique']:
+                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+            if agg_mode == 'groupby':
+                if is_x_numeric and not is_x_integer and agg_func not in ['count', 'nunique']:
+                    trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+                if is_y_numeric and not is_y_integer and agg_func not in ['count', 'nunique']:
+                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+                if config.get('show_group_size'):
+                    trace.hovertemplate += f'<br>Group size: %{customdata[0]}'
+        else:
+            if is_x_numeric and not is_x_integer:
+                trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+            if is_y_numeric and not is_y_integer:
+                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+
+    # Set x-axis format and figure dimensions
+    if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
+        fig = fig_update(fig, xaxis_tickformat="%b'%y", width=1000, height=450)
+    else:
+        fig = fig_update(fig, width=600, height=400)
+
+    return fig
+
+
+def bar(
+    data_frame: pd.DataFrame,
+    agg_mode: str = None,
+    agg_func: str = None,
+    agg_column: str = None,
+    resample_freq: str = None,
+    top_n_trim_x: int = None,
+    top_n_trim_y: int = None,
+    top_n_trim_color: int = None,
+    sort_axis: bool = True,
+    show_group_size: bool = False,
+    decimal_places: int = 2,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a bar chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    agg_mode : str, optional
+        Aggregation mode. Options:
+        - 'groupby': Group by categorical columns
+        - 'resample': Resample time series data
+        - None: No aggregation (default)
+    agg_func : str, optional
+        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+    agg_column : str, optional
+         Column to aggregate
+    resample_freq : str, optional
+        Resample frequency for resample. Options: 'ME', 'W', D' and others
+    top_n_trim_x : int, optional
+        Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
+    top_n_trim_y : int, optional
+        Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
+    top_n_trim_color : int, optional
+        Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
+    sort_axis : bool, optional
+        Whether to sort numeric axis. Default is True
+    show_group_size : bool, optional
+        Whether to show the group size (only for groupby mode). Default is False
+    decimal_places : int, optional
+        The number of decimal places to display in hover. Default is 2
+    x : str, optional
+        Column to use for the x-axis
+    y : str, optional
+        Column to use for the y-axis
+    color : str, optional
+        Column to use for color encoding
+    pattern : str, optional
+        Column to use for pattern encoding
+    hover_name : str, optional
+        Column to use for hover text
+    hover_data : list, optional
+        List of columns to use for hover data
+    custom_data : list, optional
+        List of columns to use for custom data
+    text : str, optional
+        Column to use for text
+    facet_row : str, optional
+        Column to use for facet row
+    facet_col : str, optional
+        Column to use for facet column
+    facet_col_wrap : int, optional
+        Number of columns to use for facet column wrap
+    error_x : str, optional
+        Column to use for x-axis error bars
+    error_x_minus : str, optional
+        Column to use for x-axis error bars (minus)
+    error_y : str, optional
+        Column to use for y-axis error bars
+    error_y_minus : str, optional
+        Column to use for y-axis error bars (minus)
+    animation_frame : str, optional
+        Column to use for animation frame
+    animation_group : str, optional
+        Column to use for animation group
+    range_x : list, optional
+        List of values to use for x-axis range
+    range_y : list, optional
+        List of values to use for y-axis range
+    log_x : bool, optional
+        Whether to use a logarithmic scale for the x-axis. Default is False
+    log_y : bool, optional
+        Whether to use a logarithmic scale for the y-axis. Default is False
+    range_x_equals : list, optional
+        List of values to use for x-axis range, with equal scaling. Default is None
+    range_y_equals : list, optional
+        List of values to use for y-axis range, with equal scaling. Default is None
+    title : str, optional
+        Title of the chart. Default is None
+    template : str, optional
+        Template to use for the chart. Default is None
+    width : int, optional
+        Width of the chart in pixels. Default is None
+    height : int, optional
+        Height of the chart in pixels. Default is None
+    **kwargs
+        Additional keyword arguments to pass to the Plotly Express function. Default is None
+    Returns
+    -------
+    go.Figure
+        The created chart
+    """
+    config = {
+        'top_n_trim_x': top_n_trim_x,
+        'top_n_trim_y': top_n_trim_y,
+        'top_n_trim_color': top_n_trim_color,
+        'agg_column': agg_column,
+        'sort_axis': sort_axis,
+        'agg_func': agg_func,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'resample_freq': resample_freq,
+        'decimal_places': decimal_places
+    }
+    config = {k: v for k,v in config.items() if v is not None}
+    return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
+
+def line(
+    data_frame: pd.DataFrame,
+    agg_mode: str = None,
+    agg_func: str = None,
+    agg_column: str = None,
+    resample_freq: str = None,
+    top_n_trim_x: int = None,
+    top_n_trim_y: int = None,
+    top_n_trim_color: int = None,
+    sort_axis: bool = True,
+    show_group_size: bool = False,
+    decimal_places: int = 2,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a line chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    agg_mode : str, optional
+        Aggregation mode. Options:
+        - 'groupby': Group by categorical columns
+        - 'resample': Resample time series data
+        - None: No aggregation (default)
+    agg_func : str, optional
+        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+    agg_column : str, optional
+         Column to aggregate
+    resample_freq : str, optional
+        Resample frequency for resample. Options: 'ME', 'W', D' and others
+    top_n_trim_x : int, optional
+        Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
+    top_n_trim_y : int, optional
+        Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
+    top_n_trim_color : int, optional
+        Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
+    sort_axis : bool, optional
+        Whether to sort numeric axis. Default is True
+    show_group_size : bool, optional
+        Whether to show the group size (only for groupby mode). Default is False
+    decimal_places : int, optional
+        The number of decimal places to display in hover. Default is 2
+    x : str, optional
+        Column to use for the x-axis
+    y : str, optional
+        Column to use for the y-axis
+    color : str, optional
+        Column to use for color encoding
+    line_dash : str, optional
+        Column to use for line dash encoding
+    line_shape : str, optional
+        Column to use for line shape encoding
+    hover_name : str, optional
+        Column to use for hover text
+    hover_data : list, optional
+        List of columns to use for hover data
+    custom_data : list, optional
+        List of columns to use for custom data
+    text : str, optional
+        Column to use for text
+    facet_row : str, optional
+        Column to use for facet row
+    facet_col : str, optional
+        Column to use for facet column
+    facet_col_wrap : int, optional
+        Number of columns to use for facet column wrap
+    error_x : str, optional
+        Column to use for x-axis error bars
+    error_x_minus : str, optional
+        Column to use for x-axis error bars (minus)
+    error_y : str, optional
+        Column to use for y-axis error bars
+    error_y_minus : str, optional
+        Column to use for y-axis error bars (minus)
+    animation_frame : str, optional
+        Column to use for animation frame
+    animation_group : str, optional
+        Column to use for animation group
+    range_x : list, optional
+        List of values to use for x-axis range
+    range_y : list, optional
+        List of values to use for y-axis range
+    log_x : bool, optional
+        Whether to use a logarithmic scale for the x-axis. Default is False
+    log_y : bool, optional
+        Whether to use a logarithmic scale for the y-axis. Default is False
+    range_x_equals : list, optional
+        List of values to use for x-axis range, with equal scaling. Default is None
+    range_y_equals : list, optional
+        List of values to use for y-axis range, with equal scaling. Default is None
+    title : str, optional
+        Title of the chart. Default is None
+    template : str, optional
+        Template to use for the chart. Default is None
+    width : int, optional
+        Width of the chart in pixels. Default is None
+    height : int, optional
+        Height of the chart in pixels. Default is None
+    **kwargs
+        Additional keyword arguments to pass to the Plotly Express function. Default is None
+    Returns
+    -------
+    go.Figure
+        The created chart
+    """
+    config = {
+        'top_n_trim_x': top_n_trim_x,
+        'top_n_trim_y': top_n_trim_y,
+        'top_n_trim_color': top_n_trim_color,
+        'agg_column': agg_column,
+        'sort_axis': sort_axis,
+        'agg_func': agg_func,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'resample_freq': resample_freq,
+        'decimal_places': decimal_places
+    }
+    config = {k: v for k,v in config.items() if v is not None}
+    return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
+
+def area(
+    data_frame: pd.DataFrame,
+    agg_mode: str = None,
+    agg_func: str = None,
+    agg_column: str = None,
+    resample_freq: str = None,
+    top_n_trim_x: int = None,
+    top_n_trim_y: int = None,
+    top_n_trim_color: int = None,
+    sort_axis: bool = True,
+    show_group_size: bool = False,
+    decimal_places: int = 2,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates an area chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    agg_mode : str, optional
+        Aggregation mode. Options:
+        - 'groupby': Group by categorical columns
+        - 'resample': Resample time series data
+        - None: No aggregation (default)
+    agg_func : str, optional
+        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+    agg_column : str, optional
+         Column to aggregate
+    resample_freq : str, optional
+        Resample frequency for resample. Options: 'ME', 'W', D' and others
+    top_n_trim_x : int, optional
+        Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
+    top_n_trim_y : int, optional
+        Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
+    top_n_trim_color : int, optional
+        Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
+    sort_axis : bool, optional
+        Whether to sort numeric axis. Default is True
+    show_group_size : bool, optional
+        Whether to show the group size (only for groupby mode). Default is False
+    decimal_places : int, optional
+        The number of decimal places to display in hover. Default is 2
+    x : str, optional
+        Column to use for the x-axis
+    y : str, optional
+        Column to use for the y-axis
+    color : str, optional
+        Column to use for color encoding
+    line_dash : str, optional
+        Column to use for line dash encoding
+    line_shape : str, optional
+        Column to use for line shape encoding
+    hover_name : str, optional
+        Column to use for hover text
+    hover_data : list, optional
+        List of columns to use for hover data
+    custom_data : list, optional
+        List of columns to use for custom data
+    text : str, optional
+        Column to use for text
+    facet_row : str, optional
+        Column to use for facet row
+    facet_col : str, optional
+        Column to use for facet column
+    facet_col_wrap : int, optional
+        Number of columns to use for facet column wrap
+    error_x : str, optional
+        Column to use for x-axis error bars
+    error_x_minus : str, optional
+        Column to use for x-axis error bars (minus)
+    error_y : str, optional
+        Column to use for y-axis error bars
+    error_y_minus : str, optional
+        Column to use for y-axis error bars (minus)
+    animation_frame : str, optional
+        Column to use for animation frame
+    animation_group : str, optional
+        Column to use for animation group
+    range_x : list, optional
+        List of values to use for x-axis range
+    range_y : list, optional
+        List of values to use for y-axis range
+    log_x : bool, optional
+        Whether to use a logarithmic scale for the x-axis. Default is False
+    log_y : bool, optional
+        Whether to use a logarithmic scale for the y-axis. Default is False
+    range_x_equals : list, optional
+        List of values to use for x-axis range, with equal scaling. Default is None
+    range_y_equals : list, optional
+        List of values to use for y-axis range, with equal scaling. Default is None
+    title : str, optional
+        Title of the chart. Default is None
+    template : str, optional
+        Template to use for the chart. Default is None
+    width : int, optional
+        Width of the chart in pixels. Default is None
+    height : int, optional
+        Height of the chart in pixels. Default is None
+    groupnorm : str, optional
+        Normalization method for groups. Options: 'fraction', 'percent'. Default is None
+    stackgroup : str, optional
+        Method for stacking groups. Options: 'absolute', 'relative', 'percent'. Default is None
+    **kwargs
+        Additional keyword arguments to pass to the Plotly Express function. Default is None
+    Returns
+    -------
+    go.Figure
+        The created chart
+    """
+    config = {
+        'top_n_trim_x': top_n_trim_x,
+        'top_n_trim_y': top_n_trim_y,
+        'top_n_trim_color': top_n_trim_color,
+        'agg_column': agg_column,
+        'sort_axis': sort_axis,
+        'agg_func': agg_func,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'resample_freq': resample_freq,
+        'decimal_places': decimal_places
+    }
+    config = {k: v for k,v in config.items() if v is not None}
+    return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
+
+def histogram(
+    *args,
+    left_quantile: float = 0,
+    right_quantile: float = 1,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a histogram chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    left_quantile : float, optional
+        The left quantile for data filtering (default is 0).
+    right_quantile : float, optional
+        The right quantile for data filtering (default is 1).
+    **kwargs : dict
+        Any additional keyword arguments accepted by `px.histogram`. This includes:
+
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
+    """
+    kwargs.setdefault('histnorm', 'probability')  # Пример дополнительного параметра
+    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('width', 600)
+    kwargs.setdefault('height', 400)
+    kwargs.setdefault('marginal', 'box')
+    if pd.api.types.is_numeric_dtype(kwargs['x']):
+        trimmed_column = kwargs['x'].between(kwargs['x'].quantile(
+            left_quantile), kwargs['x'].quantile(right_quantile))
+        kwargs['x'] = kwargs['x'][trimmed_column]
+    fig = px.histogram(*args, **kwargs)
+    for trace in fig.data:
+        # trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
+        if trace.type == 'histogram':
+            if 'x' in trace:
+                xaxis_title = fig
+                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
+                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+
+    if 'marginal' in kwargs:
+        fig.update_layout(
+            yaxis2 = dict(
+                domain=[0.95, 1]
+                , visible = False
+            )
+            , xaxis2 = dict(
+                visible=False
+            )
+            , yaxis = dict(
+                domain=[0, 0.9]
+            )
+        )
+    fig.update_layout(yaxis_title='Доля')
+    fig = fig_update(fig)
+    return fig
+
+def heatmap(
+    data_frame: pd.DataFrame,
+    x: str = None,
+    y: str = None,
+    z: str = None,
+    is_agg: bool = None,
+    agg_func: str = None,
+    x_top_n: int = None,
+    y_top_n: int = None,
+    x_top_from: str = 'start',
+    y_top_from: str = 'start',
+    sort_x: bool = True,
+    sort_y: bool = True,
+    reverse_x: bool = False,
+    reverse_y: bool = False,
+    skip_first_col_for_cohort: bool = False,
+    texttemplate: str = None,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a heatmap chart using the Plotly Express library. It can accept either a raw DataFrame, in which case aggregation and pivot table creation will be performed internally, or a pre-aggregated pivot table, in which case the data will be plotted directly (x, y, and z parameters are not required). This function is a wrapper around Plotly Express's heatmap functionality and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    x : str, optional
+        Column name in the DataFrame to use for the x-axis
+    y : str, optional
+        Column name in the DataFrame to use for the y-axis
+    z : str, optional
+        Column name in the DataFrame to use for the z-values
+    is_agg : bool, optional
+        Whether to aggregate the data before creating the heatmap
+    agg_func : str, optional
+        Aggregation function to use if is_agg is True. Options:
+        - 'mean': Calculate the mean of the values
+        - 'sum': Calculate the sum of the values
+        - 'count': Count the number of values
+        - 'max': Calculate the maximum of the values
+        - 'min': Calculate the minimum of the values
+    x_top_n : int, optional
+        Number of top columns to display on the x-axis
+    y_top_n : int, optional
+        Number of top rows to display on the y-axis
+    x_top_from : str, optional
+        Whether to start counting from the beginning or end of the x-axis. Options:
+        - 'start': Start counting from the beginning
+        - 'end': Start counting from the end
+    y_top_from : str, optional
+        Whether to start counting from the beginning or end of the y-axis. Options:
+        - 'start': Start counting from the beginning
+        - 'end': Start counting from the end
+    sort_x : bool, optional
+        Whether to sort the x-axis
+    sort_y : bool, optional
+        Whether to sort the y-axis
+    reverse_x : bool, optional
+        Whether to reverse the x-axis
+    reverse_y : bool, optional
+        Whether to reverse the y-axis
+    skip_first_col_for_cohort : bool, optional
+        Whether to skip the first column for cohort analysis
+    texttemplate : str, optional
+        Template for text displayed on the plot.
+        Example: texttemplate='%{z:.1f}%'
+    **kwargs : optional
+        Additional keyword arguments to pass to Plotly Express
+
+    Returns
+    -------
+    go.Figure
+        The created heatmap figure
+    """
+    # Check if data_frame is a pandas DataFrame
+    if not isinstance(data_frame, pd.DataFrame):
+        raise ValueError('data_frame must be pandas DataFrame')
+
+    # Copy the DataFrame for further processing
+    df = data_frame
+
+    # If aggregation is enabled, check that x, y, and z are defined
+    if is_agg:
+        if x is None:
+            raise ValueError('x must be defined')
+        if y is None:
+            raise ValueError('y must be defined')
+        if z is None:
+            raise ValueError('z must be defined')
+        # If aggregation is enabled, check that agg_func is defined
+        if not agg_func:
+            raise ValueError("For agg mode agg_func must be defined")
+
+    # Set default parameters for Plotly Express
+    kwargs.setdefault('aspect', True)      # Set aspect ratio to True
+    kwargs.setdefault('text_auto', True)    # Set text auto to True
+    kwargs.setdefault('color_continuous_scale', colorway_for_heatmap)  # Set color continuous scale
+
+    # Function to create a DataFrame for the figure
+    def make_df_for_fig(df, x, y, z, agg_func):
+        # Create a pivoted DataFrame with aggregated data
+        df_pivoted =  pd.pivot_table(df, index=y, columns=x, values=z, aggfunc=agg_func, observed=True)
+
+        # Sort columns and rows
+        ascending_x = False
+        ascending_y = False
+        if sort_x:
+            df_pivoted.loc['sum'] = df_pivoted.sum(numeric_only=True)
+            df_pivoted = df_pivoted.sort_values(
+                'sum', ascending=ascending_x, axis=1).drop('sum')
+        if sort_y:
+            df_pivoted['sum'] = df_pivoted.sum(axis=1, numeric_only=True)
+            df_pivoted = df_pivoted.sort_values(
+                'sum', ascending=ascending_y).drop('sum', axis=1)
+
+        # Reverse columns and rows if necessary
+        if reverse_x:
+            df_pivoted = df_pivoted.iloc[:, ::-1]
+        if reverse_y:
+            df_pivoted = df_pivoted.iloc[::-1]
+
+        # Skip the first column if necessary
+        if skip_first_col_for_cohort:
+            df_pivoted = df_pivoted.iloc[:, 1:]
+
+        return df_pivoted
+
+    # If aggregation is enabled, create a DataFrame for the figure
+    if is_agg:
+        df_for_fig = make_df_for_fig(df, x, y, z, agg_func)
+
+        # Select top N columns and rows if necessary
+        if x_top_n:
+            if x_top_from == 'end':
+                x_nunique = df[x].nunique()
+                df_for_fig = df_for_fig.iloc[:, x_nunique-x_top_n:]
+            else:
+                df_for_fig = df_for_fig.iloc[:, :x_top_n]
+        if y_top_n:
+            if y_top_from == 'end':
+                y_nunique = df[y].nunique()
+                df_for_fig = df_for_fig.iloc[y_nunique-y_top_n:]
+            else:
+                df_for_fig = df_for_fig.iloc[:y_top_n]
+
+        # Create the figure using Plotly Express
+        fig = px.imshow(df_for_fig, **kwargs)
+    else:
+        # Create the figure using Plotly Express
+        fig = px.imshow(df, **kwargs)
+
+    # Check if the z column is numeric and not integer
+    is_z_numeric = pd.api.types.is_numeric_dtype(df[z])
+    is_z_integer = pd.api.types.is_integer_dtype(df[z])
+    if is_z_numeric and not is_z_integer:
+        # Format the hover text to display two decimal places
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{z}', '{z:.2f}')
+
+    # Update the text template if necessary
+    if texttemplate:
+        fig.update_traces(texttemplate=texttemplate)
+
+    # Return the figure
+    return fig
 
 def heatmap_simple(
     df: pd.DataFrame,
@@ -2592,397 +3431,6 @@ def graph_analysis_gen(df):
 #     )
 #     return fig
             
-def _create_base_fig_for_bar_line_area(config: dict, args: list, kwargs: dict, graph_type: str = 'bar'):
-    """
-    Creates a figure for bar, line or area function using the Plotly Express library.
-    """
-    if config.get('agg_mode') == 'resample' and 'resample_freq' not in config:
-        raise ValueError("For resample mode resample_freq must be define")
-    if config.get('agg_mode')  and 'agg_func' not in config:
-        raise ValueError('resample or groupby mode agg_func must be defined')
-    if len(args) > 1:
-        raise ValueError('params for plotly must be in kwargs')
-    if not isinstance(args[0], pd.DataFrame) and ('data_frame' not in kwargs or not isinstance(kwargs['data_frame'], pd.DataFrame)):
-        raise ValueError('args[0] or kwargs["data_frame"] must be pandas DataFrame')
-    if isinstance(args[0], pd.DataFrame):
-        df = args[0]
-    elif isinstance(kwargs['data_frame'], pd.DataFrame):
-        df = args['data_frame']
-    else:
-        raise ValueError('args[0] or kwargs["data_frame"] must be pandas DataFrame')
-    if config.get('agg_mode') == 'groupby':
-        if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]) or pd.api.types.is_datetime64_any_dtype(df[kwargs['y']]):
-            raise ValueError("For resample mode groupby x and y must not be datetime")
-    if 'x' not in kwargs or 'y' not in kwargs:
-        raise ValueError('x and y must be defined')
-    agg_func = config.get('agg_func')
-    agg_mode = config.get('agg_mode')
-    top_n_trim_x = config.get('top_n_trim_x')
-    top_n_trim_color = config.get('top_n_trim_color')
-    top_n_trim_y = config.get('top_n_trim_y')
-    def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
-        """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
-        mask = None
-
-        # Filter by color
-        if top_n_trim_color:
-            if 'color' not in kwargs:
-                raise ValueError('For top_n_trim_color color must be defined')
-            top_color = (
-                df.groupby(kwargs['color'], observed=True)[num_column]
-                .agg(agg_func)
-                .nlargest(top_n_trim_color)
-                .index
-            )
-            mask = df[kwargs['color']].isin(top_color)
-
-        # Filter by x axis
-        if top_n_trim_x:
-            top_x = (
-                df.groupby(kwargs['x'], observed=True)[num_column]
-                .agg(agg_func)
-                .nlargest(top_n_trim_x)
-                .index
-            )
-            x_mask = df[kwargs['x']].isin(top_x)
-            mask = mask & x_mask if mask is not None else x_mask
-
-        # Filter by y axis
-        if top_n_trim_y:
-            top_y = (
-                df.groupby(kwargs['y'], observed=True)[num_column]
-                .agg(agg_func)
-                .nlargest(top_n_trim_y)
-                .index
-            )
-            y_mask = df[kwargs['y']].isin(top_y)
-            mask = mask & y_mask if mask is not None else y_mask
-        return mask
-    
-    def prepare_df(df: pd.DataFrame, config: dict, kwargs: dict):
-        color = [kwargs['color']] if 'color' in kwargs else []
-        if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
-            raise ValueError('If x and y are numeric, agg_column must be defined')
-        if 'agg_column' in config:
-            num_column = config['agg_column']
-            if kwargs['x'] == num_column:
-                cat_columns = [kwargs['y'] ]+ color
-            else:
-                cat_columns = [kwargs['y'] ]+ color
-        else:
-            if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
-                num_column = kwargs['x']
-                cat_columns = [kwargs['y'] ]+ color
-            else:
-                num_column = kwargs['y']
-                cat_columns = [kwargs['x'] ]+ color
-
-        if kwargs['y'] == num_column:
-            ascending = False
-        else:
-            ascending = True
-        mask = create_filter_mask(df, config, kwargs, num_column)
-        if mask is not None:
-            func_df = df[mask]
-        else:
-            func_df = df
-        func_df = (func_df[[*cat_columns, num_column]]
-                   .groupby(cat_columns, observed=True)
-                   .agg(num=(num_column, agg_func), count=(num_column, 'count'))
-                   .reset_index())
-        if 'sort_axis' in config:
-            func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)[
-                'num'].transform('sum')
-            func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
-                    .drop('temp', axis=1))
-        func_df['count'] = func_df['count'].apply(
-            lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
-        func_df[cat_columns] = func_df[cat_columns].astype('str')
-        return func_df.rename(columns={'num': num_column})
-
-    if agg_mode == 'resample':
-        if 'agg_func' not in config:
-            raise ValueError('agg_func must be defined')
-        if 'resample_freq' not in config:
-            raise ValueError('For resample agg_mode resample_freq must be defined')
-        if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-            raise ValueError('x must be datetime type')
-        columns = [kwargs['x'], kwargs['y']]
-        if top_n_trim_color:
-            if 'color' not in kwargs:
-                raise ValueError('For top_n_trim_color color must be defined')
-            top_color = df.groupby(kwargs['color'], observed=True)[kwargs['y']].agg(agg_func).nlargest(top_n_trim_color).index.to_list()
-        if 'color' in kwargs:
-            columns.append(kwargs['color'])
-            if top_n_trim_color:
-                df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=True)[kwargs['y']].agg(agg_func).reset_index()
-            else:
-                df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=True)[kwargs['y']].agg(agg_func).reset_index()
-        else:
-            df_for_fig = df[columns].set_index(kwargs['x']).resample(config['resample_freq']).agg(agg_func).reset_index()
-        figure_creators = {
-            'bar': px.bar,
-            'line': px.line,
-            'area': px.area
-        }
-        fig = figure_creators[graph_type](df_for_fig, **kwargs)
-    elif agg_mode == 'groupby':
-        df_for_fig = prepare_df(df, config, kwargs)
-        custom_data = [df_for_fig['count']]
-        figure_creators = {
-            'bar': px.bar,
-            'line': px.line,
-            'area': px.area
-        }
-        fig = figure_creators[graph_type](df_for_fig, custom_data=custom_data, **kwargs)
-        color = []
-        for trace in fig.data:
-            color.append(trace.marker.color)
-        if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
-            # Чтобы сортировка была по убыванию вернего значения, нужно отсортировать по последнего значению в x
-            traces = list(fig.data)
-            traces.sort(key=lambda x: x.x[-1])
-            fig.data = traces
-            color = color[::-1]
-            for i, trace in enumerate(fig.data):
-                trace.marker.color = color[i]
-            fig.update_layout(legend={'traceorder': 'reversed'})
-    else:
-        df_sorted = df
-        if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-            if pd.api.types.is_numeric_dtype(df[kwargs['y']]):
-                if config.get('sort_axis'):
-                    num_for_sort = kwargs['y']
-                    ascending_for_sort = False
-                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
-            else:
-                if config.get('sort_axis'):
-                    num_for_sort = kwargs['x']
-                    ascending_for_sort = True
-                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
-        figure_creators = {
-            'bar': px.bar,
-            'line': px.line,
-            'area': px.area
-        }
-        fig = figure_creators[graph_type](df_sorted, **kwargs)
-
-
-    for trace in fig.data:
-        is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
-        is_x_numeric = pd.api.types.is_numeric_dtype(df[kwargs['x']])
-        is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
-        is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
-        is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
-        if agg_mode:
-            if agg_mode == 'resample':
-                if not is_y_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-            if agg_mode == 'groupby':
-                if is_x_numeric and not is_x_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
-                if is_y_numeric and not is_y_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-                if config.get('show_group_size'):
-                    trace.hovertemplate += f'<br>Размер группы: %{customdata[0]}'
-        else:
-            if is_x_numeric and not is_x_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
-            if is_y_numeric and not is_y_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-
-    if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-        fig = fig_update(fig, xaxis_tickformat="%b'%y", width=1000, height=450)
-    else:
-        fig = fig_update(fig, width=600, height=400)
-    return fig
-
-
-def bar(
-    *args,
-    agg_mode: str = None,
-    agg_func: str = None,
-    agg_column: str = None,
-    resample_freq: str = None,
-    top_n_trim_x: int = None,
-    top_n_trim_y: int = None,
-    top_n_trim_color: int = None,
-    sort_axis: bool = True,
-    show_group_size: bool = False,
-    decimal_places: int = 2,
-    **kwargs
-) -> go.Figure:
-    """
-    Creates a bar chart using the Plotly Express library.
-
-    Parameters
-    ----------
-    agg_mode : str, optional
-        Aggregation mode. Options:
-        - 'groupby': Group by categorical columns
-        - 'resample': Resample time series data
-        - None: No aggregation (default)
-    agg_func : str, optional
-        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
-    agg_column : str, optional
-         Column to aggregate
-    resample_freq : str, optional
-        Resample frequency for resample
-    top_n_trim_x : int, optional
-        Ontly for aggregation mode. The number of top categories x axis to include in the chart
-    top_n_trim_y : int, optional
-        Ontly for aggregation mode. The number of top categories y axis to include in the chart
-    top_n_trim_color : int, optional
-        Ontly for aggregation mode. The number of top categories legend to include in the chart
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
-    show_group_size : bool, optional
-        Whether to show the group size (only for groupby mode). Default is False
-    decimal_places : int, optional
-        The number of decimal places to display in hover. Default is 2
-    Returns
-    -------
-    go.Figure
-        The created chart
-    """
-    config = {
-        'top_n_trim_x': top_n_trim_x,
-        'top_n_trim_y': top_n_trim_y,
-        'top_n_trim_color': top_n_trim_color,
-        'agg_column': agg_column,
-        'sort_axis': sort_axis,
-        'agg_func': agg_func,
-        'show_group_size': show_group_size,
-        'agg_mode': agg_mode,
-        'resample_freq': resample_freq,
-        'decimal_places': decimal_places
-    }
-    config = {k: v for k,v in config.items() if v is not None}
-    return _create_base_fig_for_bar_line_area(config=config, args=args, kwargs=kwargs, graph_type='bar')
-
-def line(
-    *args,
-    agg_mode: str = None,
-    agg_func: str = None,
-    agg_column: str = None,
-    resample_freq: str = None,
-    top_n_trim_x: int = None,
-    top_n_trim_y: int = None,
-    top_n_trim_color: int = None,
-    sort_axis: bool = True,
-    show_group_size: bool = False,
-    decimal_places: int = 2,
-    **kwargs
-) -> go.Figure:
-    """
-    Creates a line chart using the Plotly Express library.
-
-    Parameters
-    ----------
-    agg_mode : str, optional
-        Aggregation mode. Options:
-        - 'groupby': Group by categorical columns
-        - 'resample': Resample time series data
-        - None: No aggregation (default)
-    agg_func : str, optional
-        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
-    agg_column : str, optional
-         Column to aggregate
-    resample_freq : str, optional
-        Resample frequency for resample
-    top_n_trim_x : int, optional
-        The number of top categories x axis to include in the chart
-    top_n_trim_y : int, optional
-        The number of top categories y axis to include in the chart
-    top_n_trim_color : int, optional
-        The number of top categories legend to include in the chart
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
-    show_group_size : bool, optional
-        Whether to show the group size (only for groupby mode). Default is False
-    decimal_places : int, optional
-        The number of decimal places to display in hover. Default is 2
-    Returns
-    -------
-    go.Figure
-        The created chart
-    """
-    config = {
-        'top_n_trim_x': top_n_trim_x,
-        'top_n_trim_y': top_n_trim_y,
-        'top_n_trim_color': top_n_trim_color,
-        'agg_column': agg_column,
-        'sort_axis': sort_axis,
-        'agg_func': agg_func,
-        'show_group_size': show_group_size,
-        'agg_mode': agg_mode,
-        'resample_freq': resample_freq,
-        'decimal_places': decimal_places
-    }
-    config = {k: v for k,v in config.items() if v is not None}
-    return _create_base_fig_for_bar_line_area(config=config, args=args, kwargs=kwargs, graph_type='line')
-
-def area(
-    *args,
-    agg_mode: str = None,
-    agg_func: str = None,
-    agg_column: str = None,
-    resample_freq: str = None,
-    top_n_trim_x: int = None,
-    top_n_trim_y: int = None,
-    top_n_trim_color: int = None,
-    sort_axis: bool = True,
-    show_group_size: bool = False,
-    decimal_places: int = 2,
-    **kwargs
-) -> go.Figure:
-    """
-    Creates a area chart using the Plotly Express library.
-
-    Parameters
-    ----------
-    agg_mode : str, optional
-        Aggregation mode. Options:
-        - 'groupby': Group by categorical columns
-        - 'resample': Resample time series data
-        - None: No aggregation (default)
-    agg_func : str, optional
-        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
-    agg_column : str, optional
-         Column to aggregate
-    resample_freq : str, optional
-        Resample frequency for resample
-    top_n_trim_x : int, optional
-        The number of top categories x axis to include in the chart
-    top_n_trim_y : int, optional
-        The number of top categories y axis to include in the chart
-    top_n_trim_color : int, optional
-        The number of top categories legend to include in the chart
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
-    show_group_size : bool, optional
-        Whether to show the group size (only for groupby mode). Default is False
-    decimal_places : int, optional
-        The number of decimal places to display in hover. Default is 2
-    Returns
-    -------
-    go.Figure
-        The created chart
-    """
-    config = {
-        'top_n_trim_x': top_n_trim_x,
-        'top_n_trim_y': top_n_trim_y,
-        'top_n_trim_color': top_n_trim_color,
-        'agg_column': agg_column,
-        'sort_axis': sort_axis,
-        'agg_func': agg_func,
-        'show_group_size': show_group_size,
-        'agg_mode': agg_mode,
-        'resample_freq': resample_freq,
-        'decimal_places': decimal_places
-    }
-    config = {k: v for k,v in config.items() if v is not None}
-    return _create_base_fig_for_bar_line_area(config=config, args=args, kwargs=kwargs, graph_type='area')
 
 # def pairplot_seaborn(df: pd.DataFrame, titles_for_axis: dict = None):
 #     """
@@ -3040,63 +3488,6 @@ def area(
 #     g.fig.suptitle('Зависимости между числовыми переменными', fontsize=15,
 #                    x=0.07, y=1.05, fontfamily='serif', alpha=0.7, ha='left')
 
-def histogram(
-    *args,
-    left_quantile: float = 0,
-    right_quantile: float = 1,
-    **kwargs
-) -> go.Figure:
-    """
-    Creates an interactive histogram using Plotly with additional customizations.
-
-    Parameters
-    ----------
-    left_quantile : float, optional
-        The left quantile for data filtering (default is 0).
-    right_quantile : float, optional
-        The right quantile for data filtering (default is 1).
-    **kwargs : dict
-        Any additional keyword arguments accepted by `px.histogram`. This includes:
-
-    Returns
-    -------
-    go.Figure
-        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
-    """
-    kwargs.setdefault('histnorm', 'probability')  # Пример дополнительного параметра
-    kwargs.setdefault('nbins', 30)
-    kwargs.setdefault('width', 600)
-    kwargs.setdefault('height', 400)
-    kwargs.setdefault('marginal', 'box')
-    if pd.api.types.is_numeric_dtype(kwargs['x']):
-        trimmed_column = kwargs['x'].between(kwargs['x'].quantile(
-            left_quantile), kwargs['x'].quantile(right_quantile))
-        kwargs['x'] = kwargs['x'][trimmed_column]
-    fig = px.histogram(*args, **kwargs)
-    for trace in fig.data:
-        # trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
-        if trace.type == 'histogram':
-            if 'x' in trace:
-                xaxis_title = fig
-                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
-                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-
-    if 'marginal' in kwargs:
-        fig.update_layout(
-            yaxis2 = dict(
-                domain=[0.95, 1]
-                , visible = False
-            )
-            , xaxis2 = dict(
-                visible=False
-            )
-            , yaxis = dict(
-                domain=[0, 0.9]
-            )
-        )
-    fig.update_layout(yaxis_title='Доля')
-    fig = fig_update(fig)
-    return fig
 
 def histogram_go(
     column: pd.Series,
@@ -4107,7 +4498,7 @@ def bar_categories(
             
     return fig_update_layout(fig)
 
-def heatmap(
+def heatmap_no_wrapper(
     df: pd.DataFrame,
     x: str,
     y: str,
