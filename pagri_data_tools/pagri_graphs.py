@@ -1119,7 +1119,7 @@ def histogram(
     color = kwargs.get('color')
 
     # If quantiles are provided, trim the data based on these quantiles
-    if left_quantile or right_quantile:
+    if lower_quantile or upper_quantile:
         if pd.api.types.is_numeric_dtype(x):
             # Trim x based on the specified quantiles
             trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
@@ -1128,7 +1128,8 @@ def histogram(
             # Trim y based on the specified quantiles
             trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
             y = y[trimmed_column]
-
+        kwargs['x'] = x
+        kwargs['y'] = y
     # Set histogram normalization to 'probability' if no color is specified
     if not color:
         kwargs.setdefault('histnorm', 'probability')
