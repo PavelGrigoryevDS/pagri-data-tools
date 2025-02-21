@@ -1050,8 +1050,8 @@ def area(
 
 def histogram(
     data_frame: pd.DataFrame = None,
-    left_quantile: float = 0,
-    right_quantile: float = 1,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
     norm_by: str = None,
     sort: bool = None,
     **kwargs
@@ -1063,10 +1063,10 @@ def histogram(
     ----------
     data_frame : pd.DataFrame, optional
         DataFrame containing the data to be plotted
-    left_quantile : float, optional
-        The left quantile for data filtering (default is 0).
-    right_quantile : float, optional
-        The right quantile for data filtering (default is 1).
+    lower_quantile : float, optional
+        The lower quantile for data filtering (default is 0).
+    upper_quantile : float, optional
+        The upper quantile for data filtering (default is 1).
     norm_by : str, optional
         Column name to normalize the histogram by.
         If specified, the histogram will be normalized based on this column.
@@ -1122,11 +1122,11 @@ def histogram(
     if left_quantile or right_quantile:
         if pd.api.types.is_numeric_dtype(x):
             # Trim x based on the specified quantiles
-            trimmed_column = x.between(x.quantile(left_quantile), x.quantile(right_quantile))
+            trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
             x = x[trimmed_column]
         if pd.api.types.is_numeric_dtype(y):
             # Trim y based on the specified quantiles
-            trimmed_column = y.between(y.quantile(left_quantile), y.quantile(right_quantile))
+            trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
             y = y[trimmed_column]
 
     # Set histogram normalization to 'probability' if no color is specified
