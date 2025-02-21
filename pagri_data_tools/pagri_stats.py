@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 from tqdm.auto import tqdm
-
+import scikit_posthocs
 
 def plot_feature_importances_classifier(df: pd.DataFrame, target: str, titles_for_axis: dict = None, title=None):
     """
@@ -1298,14 +1298,19 @@ def kruskal_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fal
     Perform a Kruskal-Wallis test. The Kruskal-Wallis H-test tests the null hypothesis  
     that the population median of all of the groups are equal. It is a non-parametric version of ANOVA. 
 
-    Parameters:
-    - df (pd.DataFrame): DataFrame containing two columns,
-        where the first column contains labels and
-        the second column contains corresponding values
-    - alpha (float, optional): Significance level (default: 0.05)
-    - return_results (bool, optional): Return (statistic, p_value) instead of printing (default=False).
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing two columns
+        - first column contains labels and
+        - second column contains corresponding values
+    alpha : float, optional
+        Significance level (default: 0.05)
+    return_results : bool, optional
+        Whether to return results (statistic, p_value) instead of printing (default=False).
 
-    Returns:
+    Returns
+    ----------
     - If return_results is False: None
     - If return_results is True
         - statistic : (float)
@@ -2613,3 +2618,73 @@ def bootstrap_single_sample(sample: pd.Series,
             res.append(plot_data(boot_data))
 
         return tuple(res)
+
+def dunn_df(df: pd.DataFrame, p_adjust: str=None) -> None:
+    """
+    Perform a Kruskal-Wallis test. The Kruskal-Wallis H-test tests the null hypothesis
+    that the population median of all of the groups are equal. It is a non-parametric version of ANOVA.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing two columns
+        - first column contains labels and
+        - second column contains corresponding values
+    alpha : float, optional
+        Significance level (default: 0.05)
+    return_results : bool, optional
+        Whether to return results (statistic, p_value) instead of printing (default=False).
+
+    Returns
+    ----------
+    - If return_results is False: None
+    - If return_results is True
+        - statistic : (float)
+            The calculated H-statistic.
+        - pvalue : (float)
+            The associated p-value from the chi-squared distribution
+    """
+
+    if not isinstance(df, pd.DataFrame):
+        raise ValueError("Input df must be pd.DataFrame")
+    if df.shape[1] != 2:
+        raise ValueError("Input DataFrame must have exactly two columns")
+    labels = df.iloc[:, 0]
+    values = df.iloc[:, 1]
+    if not pd.api.types.is_numeric_dtype(values):
+        raise ValueError("Value column must contain numeric values")
+    if labels.isna().sum() or values.isna().sum():
+        raise ValueError(
+            f'labels and values must not have missing values.\nlabels have {labels.isna().sum()} missing values\nvalues have {values.isna().sum()} missing values')
+    unique_labels = labels.unique()
+    if len(unique_labels) < 2:
+        raise ValueError("Labels must contain at least two unique values")
+
+    samples = [values[labels == label] for label in unique_labels]
+    warning_issued = False
+    for sample in samples:
+        if len(sample) < 2:
+            raise ValueError("Each sample must have at least two elements")
+        elif len(sample) < 10:
+            warning_issued = True
+    if warning_issued:
+        print(colored(
+            "Warning: Sample size is less than 10 for one or more samples. Results may be unreliable.", 'red'))
+    group_col, val_col = df.columns
+    p_values = scikit_posthocs.posthoc_dunn(a=df, val_col=val_col, group_col=group_col, p_adjust=p_adjust)
+    display(
+        df.style.set_caption("Тест Данна")
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "18px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
+        )
+        .hide(axis="columns")
+    )
