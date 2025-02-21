@@ -1,5 +1,5 @@
 # import importlib
-# importlib.reload(pagri_data_tools)
+# importlib.reload(pgdt)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -634,12 +634,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
     is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
     is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
-
     for trace in fig.data:
         # Adjust hovertemplate based on aggregation mode
         if agg_mode:
             if agg_mode == 'resample':
-                if not is_y_integer and agg_func not in ['count', 'nunique']:
+                if not is_y_integer or (is_y_integer and agg_func not in ['count', 'nunique']):
                     trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
             if agg_mode == 'groupby':
                 if is_x_numeric and not is_x_integer and agg_func not in ['count', 'nunique']:
@@ -656,10 +655,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
     # Set x-axis format and figure dimensions
     fig_update_config = dict()
-    if not is_x_numeric:
-        fig_update_config['xaxis_showgrid'] = False
-    if not is_y_numeric:
-        fig_update_config['yaxis_showgrid'] = False
+    if graph_type == 'bar':
+        if not is_x_numeric:
+            fig_update_config['xaxis_showgrid'] = False
+        if not is_y_numeric:
+            fig_update_config['yaxis_showgrid'] = False
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
         fig_update_config['xaxis_tickformat'] = "%b'%y"
         if not kwargs.get('width'):
@@ -1203,9 +1203,200 @@ def histogram(
             fig.update_layout(yaxis_title='Количество')  # Set y-axis title to 'Количество' for count
 
     # Update the figure with any additional modifications
-    fig = fig_update(fig)
+    fig_update_config = dict()
+    if  x is not None:
+        if isinstance(x, str):
+            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[x])
+        else:
+            is_x_numeric = pd.api.types.is_numeric_dtype(x)
+        if not is_x_numeric:
+            fig_update_config['xaxis_showgrid'] = False
+    if y is not None:
+        if isinstance(y, str):
+            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[y])
+        else:
+            is_x_numeric = pd.api.types.is_numeric_dtype(y)
+        if not is_x_numeric:
+            fig_update_config['xaxis_showgrid'] = False
+    if kwargs.get('color'):
+        fig_update_config['legend_position'] = 'top'
+        fig_update_config['legend_title'] = ''
+    fig = fig_update(fig, **fig_update_config)
 
     return fig  # Return the final figure
+
+def box(
+    data_frame: pd.DataFrame = None,
+    top_n: int = None,
+    lower_quantile: float = None,
+    upper_quantile: float = None,
+    sort: bool = False,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a box plot using Plotly Express.  This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and
+
+    Parameters:
+    ----------
+    data_frame : pd.DataFrame, optional
+        The DataFrame containing the data to be plotted.
+
+    top_n : int, optional
+        The number of top categories to display. If None, all categories are shown.
+
+    lower_quantile : float, optional
+        The lower quantile for filtering the data. Value should be in the range [0, 1].
+
+    upper_quantile : float, optional
+        The upper quantile for filtering the data. Value should be in the range [0, 1].
+
+    sort : bool, optional
+        If True, sorts categories by median. Default is False.
+
+    x : str, optional
+        Column name to be used for the x-axis.
+
+    y : str, optional
+        Column name to be used for the y-axis.
+
+    color : str, optional
+        Column name to be used for color encoding.
+
+    category_orders : dict, optional
+        A dictionary specifying the order of categories for the x-axis.
+
+    labels : dict, optional
+        A dictionary mapping column names to their display names.
+
+    title : str, optional
+        The title of the plot.
+
+    template : str, optional
+        The template to use for the plot.
+
+    **kwargs :
+        Additional parameters that can be passed to the Plotly Express box function.
+
+    Returns:
+    -------
+    go.Figure
+        A Figure object containing the box plot.
+    """
+
+    # Function to trim the data based on specified quantiles
+    def trim_by_quantiles(group):
+        # Calculate the lower bound using the lower quantile
+        lower_bound = group.quantile(lower_quantile)
+        # Calculate the upper bound using the upper quantile
+        upper_bound = group.quantile(upper_quantile)
+        # Return the group filtered between the lower and upper bounds
+        return group[(group >= lower_bound) & (group <= upper_bound)]
+
+    # Assign the input data frame to a variable
+    df = data_frame
+
+    # Retrieve the orientation parameter from kwargs
+    orientation = kwargs.get('orientation')
+    # Retrieve the x-axis variable from kwargs
+    x = kwargs.get('x')
+    # Retrieve the y-axis variable from kwargs
+    y = kwargs.get('y')
+    # Retrieve the color variable from kwargs
+    color = kwargs.get('color')
+
+    # Determine the categorical and numerical variables based on orientation
+    if orientation is None or orientation == 'v':
+        cat_var = x
+        num_var = y
+    else:
+        cat_var = y
+        num_var = x
+
+    # Initialize categories variable
+    categories = None
+
+    # Check if sorting is not required
+    if not sort:
+        # If top_n is specified, get the top n categories based on value counts
+        if top_n:
+            categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+    else:
+        # If the categorical variable is of type Categorical, get its categories
+        if isinstance(df[cat_var], pd.CategoricalDtype):
+            categories = df[cat_var].cat.categories.tolist()
+        # If the categorical variable is numeric, sort and get unique values
+        elif pd.api.types.is_numeric_dtype(df[cat_var]):
+            categories = sorted(df[cat_var].unique().tolist())
+        # For other types, get unique values directly
+        else:
+            categories = df[cat_var].unique().tolist()
+
+        # If top_n is specified, limit the categories to top_n
+        if top_n:
+            categories = categories[:top_n]
+
+    # Filter the dataframe to include only the selected categories
+    if categories:
+        df = df[df[cat_var].isin(categories)]
+
+    # Initialize trimmed_df with the original dataframe
+    trimmed_df = df
+
+    # Check if quantile trimming is required
+    if upper_quantile or lower_quantile:
+        # Set default upper quantile if not provided
+        if not upper_quantile:
+            upper_quantile = 1
+        # Set default lower quantile if not provided
+        if not lower_quantile:
+            lower_quantile = 0
+
+        # Prepare columns for grouping
+        columns_for_groupby = [cat_var]
+        # If color is specified, include it in the grouping
+        if color:
+            columns_for_groupby.append(color)
+
+        # Apply the trim_by_quantiles function to the grouped data
+        trimmed_df = df.groupby(columns_for_groupby, observed=True)[num_var].apply(trim_by_quantiles).reset_index()
+
+    # Create a box plot using the trimmed dataframe
+    fig = px.box(trimmed_df, **kwargs)
+
+    # Initialize a dictionary to update figure configuration
+    fig_update_config = dict()
+
+    # Configure the figure based on orientation
+    if orientation is None or orientation == 'v':
+        # Disable grid lines for the x-axis
+        fig_update_config['xaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+    else:
+        # Disable grid lines for the y-axis
+        fig_update_config['yaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+
+    # Set default width if not specified
+    if not kwargs.get('width'):
+        fig_update_config['width'] = 800
+    # Set default height if not specified
+    if not kwargs.get('height'):
+        fig_update_config['height'] = 400
+
+    # Configure legend settings if color is specified
+    if kwargs.get('color'):
+        fig_update_config['legend_position'] = 'top'
+        fig_update_config['legend_title'] = ''
+
+    # Update the figure with the specified configurations
+    fig = fig_update(fig, **fig_update_config)
+
+    # Return the final figure
+    return fig
 
 def heatmap(
     data_frame: pd.DataFrame,
