@@ -442,6 +442,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     # Retrieve aggregation function and mode from config
     agg_func = config.get('agg_func')
     agg_mode = config.get('agg_mode')
+    decimal_places = config['decimal_places']
     top_n_trim_x = config.get('top_n_trim_x')
     top_n_trim_color = config.get('top_n_trim_color')
     top_n_trim_y = config.get('top_n_trim_y')
@@ -503,7 +504,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             if kwargs['x'] == num_column:
                 cat_columns = [kwargs['y']] + color
             else:
-                cat_columns = [kwargs['y']] + color
+                cat_columns = [kwargs['x']] + color
         else:
             if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 num_column = kwargs['x']
@@ -528,7 +529,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                    .reset_index())
 
         # Sort data by axis if specified
-        if 'sort_axis' in config:
+        if config.get('sort_axis'):
             func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)['num'].transform('sum')
             func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
                        .drop('temp', axis=1))
@@ -589,20 +590,20 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             'area': px.area
         }
         fig = figure_creators[graph_type](df_for_fig, custom_data=custom_data, **kwargs)
-
-        # Change color order in the figure
-        color = []
-        for trace in fig.data:
-            color.append(trace.marker.color)
-        if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
-            # Sort by the last value in x for descending order
-            traces = list(fig.data)
-            traces.sort(key=lambda x: x.x[-1])
-            fig.data = traces
-            color = color[::-1]
-            for i, trace in enumerate(fig.data):
-                trace.marker.color = color[i]
-            fig.update_layout(legend={'traceorder': 'reversed'})
+        if kwargs.get('color'):
+            # Change color order in the figure
+            color = []
+            for trace in fig.data:
+                color.append(trace.marker.color)
+            if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
+                # Sort by the last value in x for descending order
+                traces = list(fig.data)
+                traces.sort(key=lambda x: x.x[-1])
+                fig.data = traces
+                color = color[::-1]
+                for i, trace in enumerate(fig.data):
+                    trace.marker.color = color[i]
+                fig.update_layout(legend={'traceorder': 'reversed'})
 
     # Handle data in normal mode
     else:
@@ -639,29 +640,33 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         if agg_mode:
             if agg_mode == 'resample':
                 if not is_y_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
             if agg_mode == 'groupby':
                 if is_x_numeric and not is_x_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+                    trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.' + f'{decimal_places}' + 'f}')
                 if is_y_numeric and not is_y_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
                 if config.get('show_group_size'):
                     trace.hovertemplate += f'<br>Group size: %{customdata[0]}'
         else:
             if is_x_numeric and not is_x_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+                trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.' + f'{decimal_places}' + 'f}')
             if is_y_numeric and not is_y_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
 
     # Set x-axis format and figure dimensions
     fig_update_config = dict()
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
         fig_update_config['xaxis_tickformat'] = "%b'%y"
-        fig_update_config['width'] = 1000
-        fig_update_config['height'] = 450
+        if not kwargs.get('width'):
+            fig_update_config['width'] = 1000
+        if not kwargs.get('height'):
+            fig_update_config['height'] = 450
     else:
-        fig_update_config['width'] = 600
-        fig_update_config['height'] = 400
+        if not kwargs.get('width'):
+            fig_update_config['width'] = 600
+        if not kwargs.get('height'):
+            fig_update_config['height'] = 400
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         fig_update_config['opacity'] = 0.7
