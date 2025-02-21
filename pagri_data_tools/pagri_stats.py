@@ -2619,10 +2619,10 @@ def bootstrap_single_sample(sample: pd.Series,
 
         return tuple(res)
 
-def dunn_df(df: pd.DataFrame, p_adjust: str=None) -> None:
+def dunn_df(df: pd.DataFrame, p_adjust: str = 'holm') -> None:
     """
-    Perform a Kruskal-Wallis test. The Kruskal-Wallis H-test tests the null hypothesis
-    that the population median of all of the groups are equal. It is a non-parametric version of ANOVA.
+    Perform a Dunn's test. The Dunn's test is a non-parametric test used to compare the medians of multiple groups.
+    It is a post-hoc test used to determine which pairs of groups are significantly different after a Kruskal-Wallis test.
 
     Parameters
     ----------
@@ -2630,19 +2630,16 @@ def dunn_df(df: pd.DataFrame, p_adjust: str=None) -> None:
         DataFrame containing two columns
         - first column contains labels and
         - second column contains corresponding values
-    alpha : float, optional
-        Significance level (default: 0.05)
-    return_results : bool, optional
-        Whether to return results (statistic, p_value) instead of printing (default=False).
-
+    p_adjust : str, optional
+        Method for adjusting p-values for multiple comparisons (default: None). Available methods are:
+        - 'holm' (Holm-Bonferroni method)
+        - 'bonferroni' (Bonferroni method)
+        - 'fdr_bh' (Benjamini-Hochberg method)
+        - 'fdr_by' (Benjamini-Yekutieli method)
+        - 'none' (no adjustment)
     Returns
     ----------
-    - If return_results is False: None
-    - If return_results is True
-        - statistic : (float)
-            The calculated H-statistic.
-        - pvalue : (float)
-            The associated p-value from the chi-squared distribution
+    None
     """
 
     if not isinstance(df, pd.DataFrame):
@@ -2660,31 +2657,33 @@ def dunn_df(df: pd.DataFrame, p_adjust: str=None) -> None:
     if len(unique_labels) < 2:
         raise ValueError("Labels must contain at least two unique values")
 
-    samples = [values[labels == label] for label in unique_labels]
+    unique_labels = df.iloc[:, 0].unique()
     warning_issued = False
-    for sample in samples:
-        if len(sample) < 2:
+    for label in unique_labels:
+        sample_size = (df.iloc[:, 0] == label).sum()
+        if sample_size < 2:
             raise ValueError("Each sample must have at least two elements")
-        elif len(sample) < 10:
+        elif sample_size < 30:
             warning_issued = True
     if warning_issued:
         print(colored(
-            "Warning: Sample size is less than 10 for one or more samples. Results may be unreliable.", 'red'))
+            "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
+
     group_col, val_col = df.columns
     p_values = scikit_posthocs.posthoc_dunn(a=df, val_col=val_col, group_col=group_col, p_adjust=p_adjust)
     display(
-        df.style.set_caption("Тест Данна")
+        p_values.style.set_caption("Тест Данна")
+        .format("{:.3f}")
         .set_table_styles(
             [
                 {
                     "selector": "caption",
                     "props": [
-                        ("font-size", "18px"),
+                        ("font-size", "14px"),
                         ("text-align", "left"),
                         ("font-weight", "bold"),
                     ],
                 }
             ]
         )
-        .hide(axis="columns")
     )

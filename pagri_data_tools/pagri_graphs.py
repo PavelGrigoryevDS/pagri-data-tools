@@ -634,8 +634,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
     is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
     is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
-    for trace in fig.data:
 
+    for trace in fig.data:
         # Adjust hovertemplate based on aggregation mode
         if agg_mode:
             if agg_mode == 'resample':
@@ -656,6 +656,10 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
     # Set x-axis format and figure dimensions
     fig_update_config = dict()
+    if not is_x_numeric:
+        fig_update_config['xaxis_showgrid'] = False
+    if not is_y_numeric:
+        fig_update_config['yaxis_showgrid'] = False
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
         fig_update_config['xaxis_tickformat'] = "%b'%y"
         if not kwargs.get('width'):
@@ -1045,8 +1049,11 @@ def area(
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
 
 def histogram(
+    data_frame: pd.DataFrame = None,
     left_quantile: float = 0,
     right_quantile: float = 1,
+    norm_by: str = None,
+    sort: bool = None,
     **kwargs
 ) -> go.Figure:
     """
@@ -1054,10 +1061,18 @@ def histogram(
 
     Parameters
     ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
     left_quantile : float, optional
         The left quantile for data filtering (default is 0).
     right_quantile : float, optional
         The right quantile for data filtering (default is 1).
+    norm_by : str, optional
+        Column name to normalize the histogram by.
+        If specified, the histogram will be normalized based on this column.
+    sort: bool, optional
+        Whether to sort the categories in the histogram.
+        If True, categories will be ordered based on their frequency.
     x : str, optional
         The name of the column in `data_frame` to be used for the x-axis. If not provided, the function will attempt to use the first column.
     y : str, optional
@@ -1092,40 +1107,105 @@ def histogram(
     go.Figure
         Interactive Plotly histogram figure with custom hover labels and layout adjustments.
     """
-    kwargs.setdefault('histnorm', 'probability')  # Пример дополнительного параметра
-    kwargs.setdefault('nbins', 30)
+
+    # Set default values for the figure dimensions and bar mode
     kwargs.setdefault('width', 600)
     kwargs.setdefault('height', 400)
-    kwargs.setdefault('marginal', 'box')
-    if pd.api.types.is_numeric_dtype(kwargs['x']):
-        trimmed_column = kwargs['x'].between(kwargs['x'].quantile(
-            left_quantile), kwargs['x'].quantile(right_quantile))
-        kwargs['x'] = kwargs['x'][trimmed_column]
-    fig = px.histogram(**kwargs)
-    for trace in fig.data:
-        # trace.hovertemplate = trace.hovertemplate.replace('=', ' = ')
-        if trace.type == 'histogram':
-            if 'x' in trace:
-                xaxis_title = fig
-                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
-                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+    kwargs.setdefault('barmode', 'group')
 
-    if kwargs.get('marginal'):
-        fig.update_layout(
-            yaxis2 = dict(
-                domain=[0.95, 1]
-                , visible = False
-            )
-            , xaxis2 = dict(
-                visible=False
-            )
-            , yaxis = dict(
-                domain=[0, 0.9]
-            )
-        )
-    fig.update_layout(yaxis_title='Доля')
+    # Extract x, y, and color parameters from kwargs
+    x = kwargs.get('x')
+    y = kwargs.get('y')
+    color = kwargs.get('color')
+
+    # If quantiles are provided, trim the data based on these quantiles
+    if left_quantile or right_quantile:
+        if pd.api.types.is_numeric_dtype(x):
+            # Trim x based on the specified quantiles
+            trimmed_column = x.between(x.quantile(left_quantile), x.quantile(right_quantile))
+            x = x[trimmed_column]
+        if pd.api.types.is_numeric_dtype(y):
+            # Trim y based on the specified quantiles
+            trimmed_column = y.between(y.quantile(left_quantile), y.quantile(right_quantile))
+            y = y[trimmed_column]
+
+    # Set histogram normalization to 'probability' if no color is specified
+    if not color:
+        kwargs.setdefault('histnorm', 'probability')
+
+    # Adjust normalization based on the norm_by parameter and color
+    if norm_by and color:
+        if norm_by in [x, y]:
+            kwargs['barnorm'] = 'fraction'
+        if norm_by == color:
+            kwargs['histnorm'] = 'probability'
+
+    # If sorting is requested, prepare category orders for x and y
+    if sort:
+        category_orders = dict()
+        if x is not None:
+            if isinstance(x, str):
+                x = data_frame[x]
+            x_name = x.name
+            # Get the order of categories based on value counts
+            category_orders_x = x.value_counts().index.tolist()
+            category_orders[x_name] = category_orders_x
+
+            # If color is specified, get the order of categories for color based on the top x category
+            if color:
+                top_x = category_orders_x[0]
+                category_orders_color = data_frame[data_frame[x_name] == top_x][color].value_counts().index.tolist()
+                category_orders[color] = category_orders_color
+
+        if y is not None:
+            if isinstance(y, str):
+                y = data_frame[y]
+            y_name = y.name
+            # Get the order of categories for y based on value counts
+            category_orders_y = y.value_counts().index.tolist()
+            category_orders[y_name] = category_orders_y
+
+            # If color is specified, get the order of categories for color based on the top y category
+            if color:
+                top_y = category_orders_y[0]
+                category_orders_color = data_frame[data_frame[y_name] == top_y][color].value_counts().index.tolist()
+                category_orders[color] = category_orders_color
+
+        # Set the category orders in kwargs
+        kwargs['category_orders'] = category_orders
+
+    # Create the histogram figure using Plotly Express
+    fig = px.histogram(data_frame, **kwargs)
+
+    # Update hover templates for better readability
+    for trace in fig.data:
+        trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')  # Replace 'probability' with 'Доля'
+        trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')  # Replace 'count' with 'Количество'
+        if x is not None:
+            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')  # Format y values
+        if y is not None:
+            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')  # Format x values
+
+    # Update axis titles based on normalization and sorting
+    if y is not None:
+        if kwargs.get('histnorm') == 'probability':
+            fig.update_layout(xaxis_title='Доля')  # Set x-axis title to 'Доля' for probability
+        if not kwargs.get('histnorm'):
+            fig.update_layout(xaxis_title='Количество')  # Set x-axis title to 'Количество' for count
+        if sort:
+            fig.data = fig.data[::-1]  # Reverse the order of traces if sorting
+            fig.update_layout(legend={'traceorder': 'reversed'})  # Reverse legend order
+
+    if x is not None:
+        if kwargs.get('histnorm') == 'probability':
+            fig.update_layout(yaxis_title='Доля')  # Set y-axis title to 'Доля' for probability
+        if not kwargs.get('histnorm'):
+            fig.update_layout(yaxis_title='Количество')  # Set y-axis title to 'Количество' for count
+
+    # Update the figure with any additional modifications
     fig = fig_update(fig)
-    return fig
+
+    return fig  # Return the final figure
 
 def heatmap(
     data_frame: pd.DataFrame,
