@@ -2624,7 +2624,7 @@ def dunn_df(df: pd.DataFrame, p_adjust: str = 'holm') -> None:
     Perform a Dunn's test. The Dunn's test is a non-parametric test used to compare the medians of multiple groups.
     It is a post-hoc test used to determine which pairs of groups are significantly different after a Kruskal-Wallis test.
 
-    Parameters
+    Parameters:
     ----------
     df : pd.DataFrame
         DataFrame containing two columns
@@ -2637,7 +2637,8 @@ def dunn_df(df: pd.DataFrame, p_adjust: str = 'holm') -> None:
         - 'fdr_bh' (Benjamini-Hochberg method)
         - 'fdr_by' (Benjamini-Yekutieli method)
         - 'none' (no adjustment)
-    Returns
+
+    Returns:
     ----------
     None
     """

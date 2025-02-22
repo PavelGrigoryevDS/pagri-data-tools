@@ -13,7 +13,9 @@ from scipy.stats import gaussian_kde
 import plotly.figure_factory as ff
 from scipy.stats import t
 import re
+from matplotlib.colors import LinearSegmentedColormap
 
+pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
 pio.renderers.default = "notebook"
 # colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
 #                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
@@ -1552,12 +1554,13 @@ def heatmap(
         fig = px.imshow(df, **kwargs)
 
     # Check if the z column is numeric and not integer
-    is_z_numeric = pd.api.types.is_numeric_dtype(df[z])
-    is_z_integer = pd.api.types.is_integer_dtype(df[z])
-    if is_z_numeric and not is_z_integer:
-        # Format the hover text to display two decimal places
-        for trace in fig.data:
-            trace.hovertemplate = trace.hovertemplate.replace('{z}', '{z:.2f}')
+    if z:
+        is_z_numeric = pd.api.types.is_numeric_dtype(df[z])
+        is_z_integer = pd.api.types.is_integer_dtype(df[z])
+        if is_z_numeric and not is_z_integer:
+            # Format the hover text to display two decimal places
+            for trace in fig.data:
+                trace.hovertemplate = trace.hovertemplate.replace('{z}', '{z:.2f}')
 
     # Update the text template if necessary
     if texttemplate:
