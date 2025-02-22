@@ -662,6 +662,10 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['xaxis_showgrid'] = False
         if not is_y_numeric:
             fig_update_config['yaxis_showgrid'] = False
+        if config.get('agg_column') == kwargs['x']:
+            fig_update_config['xaxis_showgrid'] = True
+        if config.get('agg_column') == kwargs['y']:
+            fig_update_config['yaxis_showgrid'] = True
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
         fig_update_config['xaxis_tickformat'] = "%b'%y"
         if not kwargs.get('width'):
@@ -1152,8 +1156,10 @@ def histogram(
             x_name = x.name
             # Get the order of categories based on value counts
             category_orders_x = x.value_counts().index.tolist()
-            category_orders[x_name] = category_orders_x
-
+            if isinstance(x, str):
+                category_orders[x_name] = category_orders_x
+            else:
+                category_orders['x'] = category_orders_x
             # If color is specified, get the order of categories for color based on the top x category
             if color:
                 top_x = category_orders_x[0]
@@ -1166,8 +1172,10 @@ def histogram(
             y_name = y.name
             # Get the order of categories for y based on value counts
             category_orders_y = y.value_counts().index.tolist()
-            category_orders[y_name] = category_orders_y
-
+            if isinstance(y, str):
+                category_orders[y_name] = category_orders_y
+            else:
+                category_orders['y'] = category_orders_y
             # If color is specified, get the order of categories for color based on the top y category
             if color:
                 top_y = category_orders_y[0]
@@ -1220,7 +1228,7 @@ def histogram(
         else:
             is_x_numeric = pd.api.types.is_numeric_dtype(y)
         if not is_x_numeric:
-            fig_update_config['xaxis_showgrid'] = False
+            fig_update_config['yaxis_showgrid'] = False
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         fig_update_config['legend_title'] = ''
