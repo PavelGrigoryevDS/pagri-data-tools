@@ -448,10 +448,14 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     top_n_trim_x = config.get('top_n_trim_x')
     top_n_trim_color = config.get('top_n_trim_color')
     top_n_trim_y = config.get('top_n_trim_y')
+    norm_by = config.get('norm_by')
+    num_column_for_hover = []
     if graph_type in ['line', 'area']:
         if kwargs.get('color'):
             kwargs.setdefault('color_discrete_sequence', colorway_for_line)
         kwargs.setdefault('line_shape', 'spline')
+    if graph_type == 'bar':
+        kwargs.setdefault('barmode', 'group')
     # Function to create a combined filter mask
     def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
         """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
@@ -493,9 +497,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         return mask
 
     # Function to prepare the DataFrame for plotting
-    def prepare_df(df: pd.DataFrame, config: dict, kwargs: dict):
-        color = [kwargs['color']] if 'color' in kwargs else []
-
+    def prepare_df(df: pd.DataFrame, config: dict, kwargs: dict, num_column_for_hover):
+        color = [kwargs['color']] if kwargs.get('color') else []
+        facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
+        facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
+        animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
         # Check for 'agg_column' in config
         if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
             raise ValueError('If x and y are numeric, agg_column must be defined')
@@ -503,18 +509,25 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         # Determine numeric and categorical columns
         if 'agg_column' in config:
             num_column = config['agg_column']
+            config['num_column'] = num_column
+            num_column_for_hover.append(num_column)
             if kwargs['x'] == num_column:
-                cat_columns = [kwargs['y']] + color
+                cat_columns = [kwargs['y']]
             else:
-                cat_columns = [kwargs['x']] + color
+                cat_columns = [kwargs['x']]
         else:
             if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 num_column = kwargs['x']
-                cat_columns = [kwargs['y']] + color
+                config['num_column'] = num_column
+                num_column_for_hover.append(num_column)
+                cat_columns = [kwargs['y']]
             else:
                 num_column = kwargs['y']
-                cat_columns = [kwargs['x']] + color
-
+                config['num_column'] = num_column
+                num_column_for_hover.append(num_column)
+                cat_columns = [kwargs['x']]
+        columns_for_groupby_share = cat_columns[0]
+        cat_columns += color + facet_col + facet_row + animation_frame
         # Determine sorting order
         ascending = False if kwargs['y'] == num_column else True
 
@@ -523,18 +536,44 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Apply mask to DataFrame
         func_df = df[mask] if mask is not None else df
-
         # Aggregate data
         func_df = (func_df[[*cat_columns, num_column]]
                    .groupby(cat_columns, observed=True)
                    .agg(num=(num_column, agg_func), count=(num_column, 'count'))
                    .reset_index())
-
+        if norm_by:
+            if norm_by == 'all':
+                columns_for_groupby_share = facet_col + facet_row + animation_frame
+                func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=True)['num'].transform('sum')
+                func_df['origin_num'] = func_df['num']
+                func_df['num'] = func_df['num'] / func_df['all_sum']
+                func_df = func_df.drop('all_sum', axis=1)
+            if norm_by == columns_for_groupby_share:
+                columns_for_groupby_share = [columns_for_groupby_share] + facet_col + facet_row + animation_frame
+                func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=True)['num'].transform('sum')
+                func_df['origin_num'] = func_df['num']
+                func_df['num'] = func_df['num'] / func_df['category_sum']
+                func_df = func_df.drop('category_sum', axis=1)
+            if color and norm_by == color[0]:
+                columns_for_groupby_share = [color[0]] + facet_col + facet_row + animation_frame
+                func_df['color_sum'] = func_df.groupby(columns_for_groupby_share, observed=True)['num'].transform('sum')
+                func_df['origin_num'] = func_df['num']
+                func_df['num'] = func_df['num'] / func_df['color_sum']
+                func_df = func_df.drop('color_sum', axis=1)
         # Sort data by axis if specified
+        # display(func_df.head())
+        # чтобы использовать одновременно и facet и animation_frame нам нужно чтобы в датафрейме были все комбинации занчений срезов
+        # Иначе будут баги, нужно чтобы в plotly передались все возможные комбинации, чтоыб он их поставил на свои места, пусть там и будет None
+        all_combinations = pd.MultiIndex.from_product([func_df[col].unique().tolist() for col in cat_columns], names=cat_columns)
+        all_combinations = all_combinations.to_list()
+        temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
+        func_df = temp_df.merge(func_df, on=cat_columns, how='left')
+        # print()
         if config.get('sort_axis'):
-            func_df['temp'] = func_df.groupby(cat_columns[0], observed=True)['num'].transform('sum')
+            columns_for_sort_groupby = animation_frame + facet_col + facet_row + [cat_columns[0]]
+            func_df['temp'] = func_df.groupby(columns_for_sort_groupby, observed=True)['num'].transform('sum')
             func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
-                       .drop('temp', axis=1))
+                    .drop('temp', axis=1))
 
         # Format the 'count' column
         func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
@@ -580,18 +619,33 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             'line': px.line,
             'area': px.area
         }
+        kwargs['custom_data'] = custom_data
+        if kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[kwargs['y']]):
+            kwargs['hover_data'] = {kwargs['y']: ':.2f'}
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
 
     # Handle data in 'groupby' mode
     elif agg_mode == 'groupby':
-        df_for_fig = prepare_df(df, config, kwargs)
+        df_for_fig = prepare_df(df, config, kwargs, num_column_for_hover)
         custom_data = [df_for_fig['count']]
+        # display(df_for_fig.head())
+        if norm_by:
+            custom_data += [df_for_fig['origin_num']]
+            if kwargs['labels'] is not None:
+                num_column_for_hover_label = kwargs['labels'][num_column_for_hover[0]]
+                kwargs['labels'][num_column_for_hover] = 'Доля'
+            is_num_integer = False
+        else:
+            is_num_integer = pd.api.types.is_integer_dtype(df_for_fig[config['num_column']])
         figure_creators = {
             'bar': px.bar,
             'line': px.line,
             'area': px.area
         }
-        fig = figure_creators[graph_type](df_for_fig, custom_data=custom_data, **kwargs)
+        if kwargs.get('hover_data') is None and not is_num_integer:
+            kwargs['hover_data'] = {config['num_column']: ':.2f'}
+        kwargs['custom_data'] = custom_data
+        fig = figure_creators[graph_type](df_for_fig, **kwargs)
         if kwargs.get('color'):
             # Change color order in the figure
             color = []
@@ -628,35 +682,18 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             'line': px.line,
             'area': px.area
         }
-        fig = figure_creators[graph_type](df_sorted, **kwargs)
+        if kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[num_for_sort]):
+            kwargs['hover_data'] = {num_for_sort: ':.2f'}
+        kwargs['custom_data'] = custom_data
+        fig = figure_creators[graph_type](df_for_fig, **kwargs)
 
-    # Configure hovertemplate for the figures
+    # Set x-axis format and figure dimensions
+    fig_update_config = dict()
     is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
     is_x_numeric = pd.api.types.is_numeric_dtype(df[kwargs['x']])
     is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
     is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
     is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
-    for trace in fig.data:
-        # Adjust hovertemplate based on aggregation mode
-        if agg_mode:
-            if agg_mode == 'resample':
-                if not is_y_integer or (is_y_integer and agg_func not in ['count', 'nunique']):
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
-            if agg_mode == 'groupby':
-                if is_x_numeric and not is_x_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.' + f'{decimal_places}' + 'f}')
-                if is_y_numeric and not is_y_integer and agg_func not in ['count', 'nunique']:
-                    trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
-                if config.get('show_group_size'):
-                    trace.hovertemplate += f'<br>Group size: %{customdata[0]}'
-        else:
-            if is_x_numeric and not is_x_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.' + f'{decimal_places}' + 'f}')
-            if is_y_numeric and not is_y_integer:
-                trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.' + f'{decimal_places}' + 'f}')
-
-    # Set x-axis format and figure dimensions
-    fig_update_config = dict()
     if graph_type == 'bar':
         if not is_x_numeric:
             fig_update_config['xaxis_showgrid'] = False
@@ -679,9 +716,10 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['height'] = 400
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
-        fig_update_config['opacity'] = 0.7
+        if graph_type in ['line', 'area']:
+            fig_update_config['opacity'] = 0.7
         fig_update_config['legend_title'] = ''
-    fig = fig_update(fig, **fig_update_config)
+    # fig = fig_update(fig, **fig_update_config)
 
     return fig
 
@@ -692,6 +730,7 @@ def bar(
     agg_func: str = None,
     agg_column: str = None,
     resample_freq: str = None,
+    norm_by: str = None,
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
@@ -718,6 +757,8 @@ def bar(
          Column to aggregate
     resample_freq : str, optional
         Resample frequency for resample. Options: 'ME', 'W', D' and others
+    norm_by: str, optional
+        The name of the column to normalize by. If set to 'all', normalization will be performed based on the sum of all values in the dataset.
     top_n_trim_x : int, optional
         Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
     top_n_trim_y : int, optional
@@ -801,7 +842,8 @@ def bar(
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
         'resample_freq': resample_freq,
-        'decimal_places': decimal_places
+        'decimal_places': decimal_places,
+        'norm_by': norm_by,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -812,6 +854,7 @@ def line(
     agg_func: str = None,
     agg_column: str = None,
     resample_freq: str = None,
+    norm_by: str = None,
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
@@ -838,6 +881,8 @@ def line(
          Column to aggregate
     resample_freq : str, optional
         Resample frequency for resample. Options: 'ME', 'W', D' and others
+    norm_by: str, optional
+        The name of the column to normalize by. If set to 'all', normalization will be performed based on the sum of all values in the dataset.
     top_n_trim_x : int, optional
         Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
     top_n_trim_y : int, optional
@@ -923,7 +968,8 @@ def line(
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
         'resample_freq': resample_freq,
-        'decimal_places': decimal_places
+        'decimal_places': decimal_places,
+        'norm_by': norm_by,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
@@ -934,6 +980,7 @@ def area(
     agg_func: str = None,
     agg_column: str = None,
     resample_freq: str = None,
+    norm_by: str = None,
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
@@ -960,6 +1007,8 @@ def area(
          Column to aggregate
     resample_freq : str, optional
         Resample frequency for resample. Options: 'ME', 'W', D' and others
+    norm_by: str, optional
+        The name of the column to normalize by. If set to 'all', normalization will be performed based on the sum of all values in the dataset.
     top_n_trim_x : int, optional
         Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
     top_n_trim_y : int, optional
@@ -1049,7 +1098,8 @@ def area(
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
         'resample_freq': resample_freq,
-        'decimal_places': decimal_places
+        'decimal_places': decimal_places,
+        'norm_by': norm_by,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
