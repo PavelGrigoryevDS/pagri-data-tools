@@ -445,9 +445,6 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     agg_func = config.get('agg_func')
     agg_mode = config.get('agg_mode')
     decimal_places = config['decimal_places']
-    top_n_trim_x = config.get('top_n_trim_x')
-    top_n_trim_color = config.get('top_n_trim_color')
-    top_n_trim_y = config.get('top_n_trim_y')
     norm_by = config.get('norm_by')
     num_column_for_hover = []
     if graph_type in ['line', 'area']:
@@ -460,10 +457,15 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
         """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
         mask = None
-
+        top_n_trim_x = config.get('top_n_trim_x')
+        top_n_trim_color = config.get('top_n_trim_color')
+        top_n_trim_y = config.get('top_n_trim_y')
+        top_n_trim_facet_col = config.get('top_n_trim_facet_col')
+        top_n_trim_facet_row = config.get('top_n_trim_facet_row')
+        top_n_trim_facet_animation_frame = config.get('top_n_trim_facet_animation_frame')
         # Filter by color
         if top_n_trim_color:
-            if 'color' not in kwargs:
+            if kwargs.get('color') is None:
                 raise ValueError('For top_n_trim_color color must be defined')
             top_color = (
                 df.groupby(kwargs['color'], observed=True)[num_column]
@@ -475,6 +477,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by x axis
         if top_n_trim_x:
+            if kwargs.get('x') is None
+                raise ValueError('For top_n_trim_x x must be defined')
             top_x = (
                 df.groupby(kwargs['x'], observed=True)[num_column]
                 .agg(agg_func)
@@ -486,6 +490,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by y axis
         if top_n_trim_y:
+            if kwargs.get('y') is None
+                raise ValueError('For top_n_trim_y y must be defined')
             top_y = (
                 df.groupby(kwargs['y'], observed=True)[num_column]
                 .agg(agg_func)
@@ -494,6 +500,46 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             )
             y_mask = df[kwargs['y']].isin(top_y)
             mask = mask & y_mask if mask is not None else y_mask
+
+        # Filter by facet_col
+        if top_n_trim_facet_col:
+            if kwargs.get('facet_col') is None
+                raise ValueError('For top_n_trim_facet_col facet_col must be defined')
+            top_facet_col = (
+                df.groupby(kwargs['facet_col'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_facet_col)
+                .index
+            )
+            facet_col_mask = df[kwargs['facet_col']].isin(top_facet_col)
+            mask = mask & facet_col_mask if mask is not None else facet_col_mask
+
+        # Filter by facet_row
+        if top_n_trim_facet_row:
+            if kwargs.get('facet_row') is None
+                raise ValueError('For top_n_trim_facet_row facet_row must be defined')
+            top_facet_row = (
+                df.groupby(kwargs['facet_row'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_facet_row)
+                .index
+            )
+            facet_row_mask = df[kwargs['facet_row']].isin(top_facet_row)
+            mask = mask & facet_row_mask if mask is not None else facet_row_mask
+
+        # Filter by facet_col
+        if top_n_trim_facet_animation_frame:
+            if kwargs.get('animation_frame') is None
+                raise ValueError('For top_n_trim_facet_animation_frame animation_frame must be defined')
+            top_animation_frame = (
+                df.groupby(kwargs['animation_frame'], observed=True)[num_column]
+                .agg(agg_func)
+                .nlargest(top_n_trim_facet_animation_frame)
+                .index
+            )
+            animation_frame_mask = df[kwargs['facet_col']].isin(top_animation_frame)
+            mask = mask & animation_frame_mask if mask is not None else animation_frame_mask
+
         return mask
 
     # Function to prepare the DataFrame for plotting
@@ -568,27 +614,45 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
             func_df = temp_df.merge(func_df, on=cat_columns, how='left')
         # print()
-        if config.get('sort_axis') or config.get('sort_legend'):
-            # if config.get('sort_axis')
-            columns_for_sort_groupby = animation_frame + facet_col + facet_row + [cat_columns[0]]
-            columns_for_sort = animation_frame + facet_col
-            # 'temp_for_sort', 'num'
+        sort_axis = config.get('sort_axis')
+        sort_color = config.get('sort_color')
+        sort_facet_row = config.get('sort_facet_row')
+        sort_facet_col = config.get('sort_facet_col')
+        sort_animation_frame = config.get('sort_animation_frame')
+        if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
             # Determine sorting order
-            display(func_df.head())
-            ascending = False if kwargs['y'] == num_column else True
-            if sort_animation_frame == True:
-                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=True)['num'].transform('sum')
-            if sort_facet_col == True:
-                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=True)['num'].transform('sum')
-            if sort_facet_row == True:
-                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=True)['num'].transform('sum')
-            if sort_color == True:
-                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=True)['num'].transform('sum')
-            if sort_axis == True:
-                func_df['sum_for_sort_axis'] = func_df.groupby(color, observed=True)['num'].transform('sum')
-            func_df = (func_df.sort_values('sum_for_sort_animation_frame', ascending=ascending))
+            # display(func_df.head())
+            ascending_for_axis = False if kwargs['y'] == num_column else True
+            ascending_for_color = False
+            ascending_for_facet_col = False
+            ascending_for_facet_row = False
+            ascending_for_animation_frame = False
+            columns_for_sort = []
+            ascending = []
+            func_for_sort = 'sum' if agg_func in ['count', 'nunique'] else agg_func
+            if sort_animation_frame == True and animation_frame:
+                ascending.append(ascending_for_animation_frame)
+                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=True)['origin_num'].transform(func_for_sort)
+                columns_for_sort.append('sum_for_sort_animation_frame')
+            if sort_facet_col == True and facet_col:
+                ascending.append(ascending_for_facet_col)
+                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=True)['origin_num'].transform(func_for_sort)
+                columns_for_sort.append('sum_for_sort_facet_col')
+            if sort_facet_row == True and facet_row:
+                ascending.append(ascending_for_facet_row)
+                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=True)['origin_num'].transform(func_for_sort)
+                columns_for_sort.append('sum_for_sort_facet_row')
+            if sort_axis == True and cat_column_axis:
+                ascending.append(ascending_for_axis)
+                func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=True)['origin_num'].transform(func_for_sort)
+                columns_for_sort.append('sum_for_sort_axis')
+            if sort_color == True and color:
+                ascending.append(ascending_for_color)
+                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=True)['origin_num'].transform(func_for_sort)
+                columns_for_sort.append('sum_for_sort_color')
+            func_df = (func_df.sort_values(columns_for_sort, ascending=ascending))
                     # .drop('temp_for_sort', axis=1))
-            display(func_df.head())
+            # display(func_df.head())
         # Format the 'count' column
         func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
@@ -749,8 +813,11 @@ def bar(
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
+    top_n_trim_facet_col: int = None,
+    top_n_trim_facet_row: int = None,
+    top_n_trim_facet_animation_frame: int = None,
     sort_axis: bool = True,
-    sort_legend: bool = True,
+    sort_color: bool = True,
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
@@ -784,8 +851,14 @@ def bar(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
-        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
+    top_n_trim_facet_col : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_col to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_row : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_animation_frame : int, optional
+        Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -855,9 +928,12 @@ def bar(
         'top_n_trim_x': top_n_trim_x,
         'top_n_trim_y': top_n_trim_y,
         'top_n_trim_color': top_n_trim_color,
+        'top_n_trim_facet_col': top_n_trim_facet_col,
+        'top_n_trim_facet_row': top_n_trim_facet_row,
+        'top_n_trim_facet_animation_frame': top_n_trim_facet_animation_frame,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
-        'sort_legend': sort_legend,
+        'sort_color': sort_color,
         'sort_facet_col': sort_facet_col,
         'sort_facet_row': sort_facet_row,
         'sort_animation_frame': sort_animation_frame,
@@ -881,8 +957,11 @@ def line(
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
+    top_n_trim_facet_col: int = None,
+    top_n_trim_facet_row: int = None,
+    top_n_trim_facet_animation_frame: int = None,
     sort_axis: bool = True,
-    sort_legend: bool = True,
+    sort_color: bool = True,
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
@@ -916,8 +995,14 @@ def line(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
-        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
+    top_n_trim_facet_col : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_col to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_row : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_animation_frame : int, optional
+        Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -989,9 +1074,12 @@ def line(
         'top_n_trim_x': top_n_trim_x,
         'top_n_trim_y': top_n_trim_y,
         'top_n_trim_color': top_n_trim_color,
+        'top_n_trim_facet_col': top_n_trim_facet_col,
+        'top_n_trim_facet_row': top_n_trim_facet_row,
+        'top_n_trim_facet_animation_frame': top_n_trim_facet_animation_frame,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
-        'sort_legend': sort_legend,
+        'sort_color': sort_color,
         'sort_facet_col': sort_facet_col,
         'sort_facet_row': sort_facet_row,
         'sort_animation_frame': sort_animation_frame,
@@ -1015,8 +1103,11 @@ def area(
     top_n_trim_x: int = None,
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
+    top_n_trim_facet_col: int = None,
+    top_n_trim_facet_row: int = None,
+    top_n_trim_facet_animation_frame: int = None,
     sort_axis: bool = True,
-    sort_legend: bool = True,
+    sort_color: bool = True,
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
@@ -1050,8 +1141,14 @@ def area(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
-        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
+    top_n_trim_facet_col : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_col to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_row : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_animation_frame : int, optional
+        Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -1127,9 +1224,12 @@ def area(
         'top_n_trim_x': top_n_trim_x,
         'top_n_trim_y': top_n_trim_y,
         'top_n_trim_color': top_n_trim_color,
+        'top_n_trim_facet_col': top_n_trim_facet_col,
+        'top_n_trim_facet_row': top_n_trim_facet_row,
+        'top_n_trim_facet_animation_frame': top_n_trim_facet_animation_frame,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
-        'sort_legend': sort_legend,
+        'sort_color': sort_color,
         'sort_facet_col': sort_facet_col,
         'sort_facet_row': sort_facet_row,
         'sort_animation_frame': sort_animation_frame,
