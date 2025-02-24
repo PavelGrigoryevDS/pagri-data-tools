@@ -512,24 +512,22 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             config['num_column'] = num_column
             num_column_for_hover.append(num_column)
             if kwargs['x'] == num_column:
-                cat_columns = [kwargs['y']]
+                cat_column_axis = [kwargs['y']]
             else:
-                cat_columns = [kwargs['x']]
+                cat_column_axis = [kwargs['x']]
         else:
             if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 num_column = kwargs['x']
                 config['num_column'] = num_column
                 num_column_for_hover.append(num_column)
-                cat_columns = [kwargs['y']]
+                cat_column_axis = [kwargs['y']]
             else:
                 num_column = kwargs['y']
                 config['num_column'] = num_column
                 num_column_for_hover.append(num_column)
-                cat_columns = [kwargs['x']]
-        columns_for_groupby_share = cat_columns[0]
-        cat_columns += color + facet_col + facet_row + animation_frame
-        # Determine sorting order
-        ascending = False if kwargs['y'] == num_column else True
+                cat_column_axis = [kwargs['x']]
+        columns_for_groupby_share = cat_column_axis[0]
+        cat_columns = facet_col + facet_row + cat_column_axis + color + animation_frame
 
         # Create filter mask
         mask = create_filter_mask(df, config, kwargs, num_column)
@@ -564,19 +562,35 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         # display(func_df.head())
         # чтобы использовать одновременно и facet и animation_frame нам нужно чтобы в датафрейме были все комбинации занчений срезов
         # Иначе будут баги, нужно чтобы в plotly передались все возможные комбинации, чтоыб он их поставил на свои места, пусть там и будет None
-        all_combinations = pd.MultiIndex.from_product([func_df[col].unique().tolist() for col in cat_columns], names=cat_columns)
-        all_combinations = all_combinations.to_list()
-        temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
-        func_df = temp_df.merge(func_df, on=cat_columns, how='left')
+        if (kwargs.get('facet_col') or kwargs.get('facet_row')) and kwargs.get('animation_frame'):
+            all_combinations = pd.MultiIndex.from_product([func_df[col].unique().tolist() for col in cat_columns], names=cat_columns)
+            all_combinations = all_combinations.to_list()
+            temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
+            func_df = temp_df.merge(func_df, on=cat_columns, how='left')
         # print()
-        if config.get('sort_axis'):
+        if config.get('sort_axis') or config.get('sort_legend'):
+            # if config.get('sort_axis')
             columns_for_sort_groupby = animation_frame + facet_col + facet_row + [cat_columns[0]]
-            func_df['temp'] = func_df.groupby(columns_for_sort_groupby, observed=True)['num'].transform('sum')
-            func_df = (func_df.sort_values(['temp', 'num'], ascending=ascending)
-                    .drop('temp', axis=1))
-
+            columns_for_sort = animation_frame + facet_col
+            # 'temp_for_sort', 'num'
+            # Determine sorting order
+            display(func_df.head())
+            ascending = False if kwargs['y'] == num_column else True
+            if sort_animation_frame == True:
+                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=True)['num'].transform('sum')
+            if sort_facet_col == True:
+                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=True)['num'].transform('sum')
+            if sort_facet_row == True:
+                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=True)['num'].transform('sum')
+            if sort_color == True:
+                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=True)['num'].transform('sum')
+            if sort_axis == True:
+                func_df['sum_for_sort_axis'] = func_df.groupby(color, observed=True)['num'].transform('sum')
+            func_df = (func_df.sort_values('sum_for_sort_animation_frame', ascending=ascending))
+                    # .drop('temp_for_sort', axis=1))
+            display(func_df.head())
         # Format the 'count' column
-        func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000')
+        func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num': num_column})
 
@@ -646,20 +660,21 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             kwargs['hover_data'] = {config['num_column']: ':.2f'}
         kwargs['custom_data'] = custom_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
-        if kwargs.get('color'):
-            # Change color order in the figure
-            color = []
-            for trace in fig.data:
-                color.append(trace.marker.color)
-            if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
-                # Sort by the last value in x for descending order
-                traces = list(fig.data)
-                traces.sort(key=lambda x: x.x[-1])
-                fig.data = traces
-                color = color[::-1]
-                for i, trace in enumerate(fig.data):
-                    trace.marker.color = color[i]
-                fig.update_layout(legend={'traceorder': 'reversed'})
+        # if kwargs.get('color'):
+        #     # Change color order in the figure
+        #     color = []
+        #     for trace in fig.data:
+        #         color.append(trace.marker.color)
+        #     if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
+        #         # Sort by the last value in x for descending order
+        #         traces = list(fig.data)
+        #         traces.sort(key=lambda x: x.x[-1])
+        #         fig.data = traces
+        #         color = color[::-1]
+        #         for i, trace in enumerate(fig.data):
+        #             trace.marker.color = color[i]
+        #         fig.update_layout(legend={'traceorder': 'reversed'})
+
 
     # Handle data in normal mode
     else:
@@ -735,6 +750,10 @@ def bar(
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
     sort_axis: bool = True,
+    sort_legend: bool = True,
+    sort_facet_col: bool = True,
+    sort_facet_row: bool = True,
+    sort_animation_frame: bool = True,
     show_group_size: bool = False,
     decimal_places: int = 2,
     **kwargs
@@ -765,8 +784,8 @@ def bar(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
+    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -838,6 +857,10 @@ def bar(
         'top_n_trim_color': top_n_trim_color,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'sort_facet_col': sort_facet_col,
+        'sort_facet_row': sort_facet_row,
+        'sort_animation_frame': sort_animation_frame,
         'agg_func': agg_func,
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
@@ -859,6 +882,10 @@ def line(
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
     sort_axis: bool = True,
+    sort_legend: bool = True,
+    sort_facet_col: bool = True,
+    sort_facet_row: bool = True,
+    sort_animation_frame: bool = True,
     show_group_size: bool = False,
     decimal_places: int = 2,
     **kwargs
@@ -889,8 +916,8 @@ def line(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
+    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -964,6 +991,10 @@ def line(
         'top_n_trim_color': top_n_trim_color,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'sort_facet_col': sort_facet_col,
+        'sort_facet_row': sort_facet_row,
+        'sort_animation_frame': sort_animation_frame,
         'agg_func': agg_func,
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
@@ -985,6 +1016,10 @@ def area(
     top_n_trim_y: int = None,
     top_n_trim_color: int = None,
     sort_axis: bool = True,
+    sort_legend: bool = True,
+    sort_facet_col: bool = True,
+    sort_facet_row: bool = True,
+    sort_animation_frame: bool = True,
     show_group_size: bool = False,
     decimal_places: int = 2,
     **kwargs
@@ -1015,8 +1050,8 @@ def area(
         Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
     top_n_trim_color : int, optional
         Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
-    sort_axis : bool, optional
-        Whether to sort numeric axis. Default is True
+    sort_axis, sort_legend, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, legend, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
     decimal_places : int, optional
@@ -1094,6 +1129,10 @@ def area(
         'top_n_trim_color': top_n_trim_color,
         'agg_column': agg_column,
         'sort_axis': sort_axis,
+        'sort_legend': sort_legend,
+        'sort_facet_col': sort_facet_col,
+        'sort_facet_row': sort_facet_row,
+        'sort_animation_frame': sort_animation_frame,
         'agg_func': agg_func,
         'show_group_size': show_group_size,
         'agg_mode': agg_mode,
