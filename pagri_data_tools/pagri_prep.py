@@ -1,5 +1,5 @@
 # import importlib
-# importlib.reload(pagri_data_tools)
+# importlib.reload(pgdt)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -2495,7 +2495,7 @@ def get_non_matching_rows(df, col1, col2):
     pd.DataFrame: Строки DataFrame, для которых значения в col1 имеют разные значения в col2
     """
     non_unique_values = (
-        df.groupby(col1, observed=True)[col2].nunique()[lambda x: x > 1].index
+        df.groupby(col1, observed=False)[col2].nunique()[lambda x: x > 1].index
     )
     non_matching_rows = df[df[col1].isin(non_unique_values)]
     if non_matching_rows.empty:
@@ -4539,3 +4539,65 @@ def haversine_vectorized(lat1, lon1, lat2, lon2):
 
     r = 6371  # Radius of Earth in kilometers
     return c * r  # Distance in kilometers
+
+def df_summary(dataframes: list | pd.DataFrame):
+    # Create a list to hold the information
+    info = []
+    if isinstance(dataframes, pd.DataFrame):
+        dataframes = [dataframes]
+    # List of DataFrames and their names
+    names = [f'DataFrame {i+1}' for i in range(len(dataframes))]
+
+    for df, name in zip(dataframes, names):
+        rows = df.shape[0]
+        rows = f"{rows:,}".replace(',', ' ')
+        cols = df.shape[1]
+        ram = df.memory_usage(deep=True).sum() / (1024 ** 2)  # Convert bytes to MB and round
+        duplicates = df.duplicated().sum()
+
+        if duplicates == 0:
+            duplicates = "---"
+        else:
+            dupl = duplicates
+            duplicates = format_number(duplicates)
+            duplicates_pct = dupl * 100 / df.shape[0]
+            if 0 < duplicates_pct < 1:
+                duplicates_pct = "<1"
+            elif duplicates_pct > 99 and duplicates_pct < 100:
+                duplicates_pct = round(duplicates_pct, 1)
+                if duplicates_pct == 100:
+                    duplicates_pct = 99.9
+            else:
+                duplicates_pct = round(duplicates_pct)
+            duplicates = f"{duplicates} ({duplicates_pct}%)"
+        info.append({
+            'DataFrame': name,
+            'Rows': rows,
+            'Cols': cols,
+            'RAM (Mb)': ram,
+            'Duplicates': duplicates
+        })
+
+    # Create a DataFrame from the info list
+    result_df = pd.DataFrame(info)
+    return (
+        result_df.style
+        .set_caption("DataFrame info")
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "16px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
+        )
+        .format('{:.2f}', subset='RAM (Mb)')
+        # .set_properties(**{"text-align": "left"})
+        # .hide(axis="columns")
+        .hide(axis="index")
+    )
+    return result_df
