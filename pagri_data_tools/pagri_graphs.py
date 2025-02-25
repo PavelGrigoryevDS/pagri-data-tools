@@ -122,7 +122,8 @@ def fig_update(
     yaxis_range: list = None,
     margin: dict = dict(l=50, r=50, b=50, t=50),
     xgap: int = None,
-    ygap: int = None
+    ygap: int = None,
+    is_facet: bool = False
 ) -> go.Figure:
     """
     Apply consistent styling settings to a Plotly figure.
@@ -289,25 +290,25 @@ def fig_update(
 
 
     # Layout updates
-    layout_updates = {
-        'title_text': title,
-        'width': width,
-        'height': height,
-        'legend_title_text': legend_title,
-        'showlegend': showlegend,
-        'template': template,
-        'hoverlabel': {'bgcolor': HOVER_BGCOLOR, 'align': hoverlabel_align},
-        'hovermode': hovermode,
-        'bargap': bargap,
-        'bargroupgap': bargroupgap,
-        'margin': margin,
-        'font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
-        'title_font': {'size': TITLE_FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR}
-    }
-    # Update layout only if there are updates
-    layout_updates = {k: v for k, v in layout_updates.items() if v is not None}
-    if layout_updates:
-        fig.update_layout(**layout_updates)
+    # layout_updates = {
+    #     'title_text': title,
+    #     'width': width,
+    #     'height': height,
+    #     'legend_title_text': legend_title,
+    #     'showlegend': showlegend,
+    #     'template': template,
+    #     'hoverlabel': {'bgcolor': HOVER_BGCOLOR, 'align': hoverlabel_align},
+    #     'hovermode': hovermode,
+    #     'bargap': bargap,
+    #     'bargroupgap': bargroupgap,
+    #     'margin': margin,
+    #     'font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+    #     'title_font': {'size': TITLE_FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR}
+    # }
+    # # Update layout only if there are updates
+    # layout_updates = {k: v for k, v in layout_updates.items() if v is not None}
+    # if layout_updates:
+    #     fig.update_layout(**layout_updates)
 
     # X-axis settings
     xaxis_updates = {
@@ -382,34 +383,34 @@ def fig_update(
         trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
         # trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
         # trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-    if legend_position == 'top':
-        fig.update_layout(
-            yaxis = dict(
-                domain=[0, 0.92]
-            )
-            , legend = dict(
-                orientation="h"  # Горизонтальное расположение
-                , yanchor="top"    # Привязка к верхней части
-                , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-                , xanchor="center" # Привязка к центру
-                , x=0.5              # Центрирование по горизонтали
-            )
-        )
-    elif legend_position == 'right':
-        fig.update_layout(
-                yaxis = dict(
-                    domain=[0, 1]
-                )
-                , legend = dict(
-                    title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , xanchor=None
-                    , yanchor=None
-                    , orientation="v"  # Горизонтальное расположение
-                    , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
-                    , x=None              # Центрирование по горизонтали
-                )
-        )
+    # if legend_position == 'top':
+    #     fig.update_layout(
+    #         yaxis = dict(
+    #             domain=[0, 0.92]
+    #         )
+    #         , legend = dict(
+    #             orientation="h"  # Горизонтальное расположение
+    #             , yanchor="top"    # Привязка к верхней части
+    #             , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+    #             , xanchor="center" # Привязка к центру
+    #             , x=0.5              # Центрирование по горизонтали
+    #         )
+    #     )
+    # elif legend_position == 'right':
+    #     fig.update_layout(
+    #             yaxis = dict(
+    #                 domain=[0, 1]
+    #             )
+    #             , legend = dict(
+    #                 title_font_color='rgba(0, 0, 0, 0.7)'
+    #                 , font_color='rgba(0, 0, 0, 0.7)'
+    #                 , xanchor=None
+    #                 , yanchor=None
+    #                 , orientation="v"  # Горизонтальное расположение
+    #                 , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
+    #                 , x=None              # Центрирование по горизонтали
+    #             )
+    #     )
     return fig
 
 def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: dict, graph_type: str = 'bar'):
@@ -477,7 +478,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by x axis
         if top_n_trim_x:
-            if kwargs.get('x') is None
+            if kwargs.get('x') is None:
                 raise ValueError('For top_n_trim_x x must be defined')
             top_x = (
                 df.groupby(kwargs['x'], observed=True)[num_column]
@@ -490,7 +491,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by y axis
         if top_n_trim_y:
-            if kwargs.get('y') is None
+            if kwargs.get('y') is None:
                 raise ValueError('For top_n_trim_y y must be defined')
             top_y = (
                 df.groupby(kwargs['y'], observed=True)[num_column]
@@ -503,7 +504,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by facet_col
         if top_n_trim_facet_col:
-            if kwargs.get('facet_col') is None
+            if kwargs.get('facet_col') is None:
                 raise ValueError('For top_n_trim_facet_col facet_col must be defined')
             top_facet_col = (
                 df.groupby(kwargs['facet_col'], observed=True)[num_column]
@@ -516,7 +517,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by facet_row
         if top_n_trim_facet_row:
-            if kwargs.get('facet_row') is None
+            if kwargs.get('facet_row') is None:
                 raise ValueError('For top_n_trim_facet_row facet_row must be defined')
             top_facet_row = (
                 df.groupby(kwargs['facet_row'], observed=True)[num_column]
@@ -529,7 +530,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Filter by facet_col
         if top_n_trim_facet_animation_frame:
-            if kwargs.get('animation_frame') is None
+            if kwargs.get('animation_frame') is None:
                 raise ValueError('For top_n_trim_facet_animation_frame animation_frame must be defined')
             top_animation_frame = (
                 df.groupby(kwargs['animation_frame'], observed=True)[num_column]
@@ -537,7 +538,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 .nlargest(top_n_trim_facet_animation_frame)
                 .index
             )
-            animation_frame_mask = df[kwargs['facet_col']].isin(top_animation_frame)
+            animation_frame_mask = df[kwargs['animation_frame']].isin(top_animation_frame)
             mask = mask & animation_frame_mask if mask is not None else animation_frame_mask
 
         return mask
@@ -580,11 +581,14 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         # Apply mask to DataFrame
         func_df = df[mask] if mask is not None else df
+        # display(func_df[func_df.order_status == 'unavailable'].head())
         # Aggregate data
+        # print(cat_columns)
         func_df = (func_df[[*cat_columns, num_column]]
                    .groupby(cat_columns, observed=True)
                    .agg(num=(num_column, agg_func), count=(num_column, 'count'))
                    .reset_index())
+        # display(func_df[kwargs['animation_frame']].unique())
         if norm_by:
             if norm_by == 'all':
                 columns_for_groupby_share = facet_col + facet_row + animation_frame
@@ -619,6 +623,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         sort_facet_row = config.get('sort_facet_row')
         sort_facet_col = config.get('sort_facet_col')
         sort_animation_frame = config.get('sort_animation_frame')
+        num_column_for_sort = 'origin_num' if norm_by else 'num'
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
             # Determine sorting order
             # display(func_df.head())
@@ -632,26 +637,26 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             func_for_sort = 'sum' if agg_func in ['count', 'nunique'] else agg_func
             if sort_animation_frame == True and animation_frame:
                 ascending.append(ascending_for_animation_frame)
-                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=True)['origin_num'].transform(func_for_sort)
+                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=True)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_animation_frame')
             if sort_facet_col == True and facet_col:
                 ascending.append(ascending_for_facet_col)
-                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=True)['origin_num'].transform(func_for_sort)
+                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=True)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_col')
             if sort_facet_row == True and facet_row:
                 ascending.append(ascending_for_facet_row)
-                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=True)['origin_num'].transform(func_for_sort)
+                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=True)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_row')
             if sort_axis == True and cat_column_axis:
                 ascending.append(ascending_for_axis)
-                func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=True)['origin_num'].transform(func_for_sort)
+                func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=True)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_axis')
             if sort_color == True and color:
                 ascending.append(ascending_for_color)
-                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=True)['origin_num'].transform(func_for_sort)
+                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=True)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_color')
-            func_df = (func_df.sort_values(columns_for_sort, ascending=ascending))
-                    # .drop('temp_for_sort', axis=1))
+            func_df = func_df.sort_values(columns_for_sort, ascending=ascending)
+            func_df = func_df.drop(columns_for_sort, axis=1)
             # display(func_df.head())
         # Format the 'count' column
         func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
@@ -790,15 +795,22 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['height'] = 450
     else:
         if not kwargs.get('width'):
-            fig_update_config['width'] = 600
-        if not kwargs.get('height'):
-            fig_update_config['height'] = 400
+            if not kwargs.get('height'):
+                fig_update_config['height'] = 400
+            if kwargs.get('color'):
+                fig_update_config['width'] = 800
+            else:
+                fig_update_config['width'] = 600
+            if kwargs.get('facet_col'):
+                fig_update_config['width'] = 1000
+            if kwargs.get('facet_row') or kwargs.get('facet_col_wrap'):
+                fig_update_config['height'] = 600
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         if graph_type in ['line', 'area']:
             fig_update_config['opacity'] = 0.7
         fig_update_config['legend_title'] = ''
-    # fig = fig_update(fig, **fig_update_config)
+    fig = fig_update(fig, is_facet=True, **fig_update_config)
 
     return fig
 

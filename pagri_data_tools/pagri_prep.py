@@ -2099,6 +2099,37 @@ def check_duplicated_combinations_gen(df, n=2):
         if n < col_n + 1:
             return
 
+def show_missings(df) -> None:
+    """
+    Функция выводит количество пропусков в датафрейме
+    """
+    cnt_missing = pd.Series(dtype=int)
+    size = df.shape[0]
+    for col in df.columns:
+        na_cnt = df[col].isna().sum()
+        if na_cnt:
+            cnt_missing[col] = na_cnt
+    if cnt_missing.empty:
+        print('There are no missing values')
+    else:
+        display(
+            cnt_missing.apply(lambda x: f"{x} ({(x / size):.2%})")
+            .to_frame()
+            .style.set_caption("Missings")
+            .set_table_styles(
+                [
+                    {
+                        "selector": "caption",
+                        "props": [
+                            ("font-size", "18px"),
+                            ("text-align", "left"),
+                            ("font-weight", "bold"),
+                        ],
+                    }
+                ]
+            )
+            .hide(axis="columns")
+        )
 
 def find_columns_with_missing_values(df, is_display=True) -> pd.Series:
     """
@@ -4395,7 +4426,7 @@ def detect_df_relationship(left_df, right_df, on=None, left_on=None, right_on=No
     else:
         return "many-to-many"
 
-def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_on=None):
+def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_on=None, return_diffs=False):
     """
     Compares values in the specified field of two DataFrames and returns the count
     of mismatched values.
@@ -4408,9 +4439,8 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     right_on (str): The column name in right_df to check for relationships.
 
     Returns:
-    tuple: A tuple containing two values:
-        - The count of rows that are in the left DataFrame but not in the right.
-        - The count of rows that are in the right DataFrame but not in the left.
+    if return_diffs is True
+    tuple (mismatches_left_dif_right, count_right_dif_left_mismatches)
     """
     # Check if DataFrames are empty
     if left_df.empty or right_df.empty:
@@ -4424,9 +4454,14 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     # Check if left_on and right_on are provided
     if left_on is None or right_on is None:
         return "Please provide either 'on' or both 'left_on' and 'right_on'."
-
-    left_values = set(left_df[left_on])
-    right_values = set(right_df[right_on])
+    left_key_missting = left_df[left_on].isna().sum()
+    right_key_missting = right_df[right_on].isna().sum()
+    if left_key_missting:
+        print(f'В левом датафрейме в ключе есть пропуски: {left_key_missting}')
+    if right_key_missting:
+        print(f'В правом датафрейме в ключе есть пропуски: {right_key_missting}')
+    left_values = set(left_df[left_on].dropna())
+    right_values = set(right_df[right_on].dropna())
 
     mismatches_left_dif_right = left_values - right_values
     mismatches_right_dif_left = right_values - left_values
@@ -4434,6 +4469,8 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     count_right_dif_left_mismatches = len(mismatches_right_dif_left)
     print('Строки в левой таблице, отсутствующие в правой: ', count_left_dif_right_mismatches)
     print('Строки в правой таблице, отсутствующие в левой: ', count_right_dif_left_mismatches)
+    if return_diffs:
+        return mismatches_left_dif_right, count_right_dif_left_mismatches
 
 def haversine(lat1, lon1, lat2, lon2):
     """
