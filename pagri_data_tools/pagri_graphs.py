@@ -561,6 +561,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 cat_column_axis = [kwargs['y']]
             else:
                 cat_column_axis = [kwargs['x']]
+            config['cat_column_axis'] = cat_column_axis
         else:
             if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 num_column = kwargs['x']
@@ -572,6 +573,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 config['num_column'] = num_column
                 num_column_for_hover.append(num_column)
                 cat_column_axis = [kwargs['x']]
+                config['cat_column_axis'] = cat_column_axis
         columns_for_groupby_share = cat_column_axis[0]
         cat_columns = facet_col + facet_row + cat_column_axis + color + animation_frame
 
@@ -727,6 +729,58 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             kwargs['hover_data'] = {config['num_column']: ':.2f'}
         kwargs['custom_data'] = custom_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
+        if graph_type == 'bar' and config['show_box']:
+            upper_quantile = config.get('upper_quantile_for_box')
+            lower_quantile = config.get('lower_quantile_for_box')
+            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=False)
+            if config.get('agg_column') == kwargs['x'] or pd.api.types.is_numeric_dtype(df[kwargs['x']]):
+                orientation = 'h'
+            else:
+                orientation = 'v'
+            if upper_quantile or lower_quantile:
+                # Set default upper quantile if not provided
+                if upper_quantile is None:
+                    upper_quantile= 1
+                # Set default lower quantile if not provided
+                if lower_quantile is None:
+                    lower_quantile = 0
+
+                # Prepare columns for grouping
+                columns_for_groupby_for_range = config['cat_column_axis']
+                # If color is specified, include it in the grouping
+                if kwargs.get('color'):
+                    columns_for_groupby_for_range.append(kwargs['color'])
+
+                # Apply the trim_by_quantiles function to the grouped data
+                temp_for_range = df.groupby(columns_for_groupby_for_range, observed=False)[config['num_column']].quantile([lower_quantile, upper_quantile]).unstack()
+                lower_range = temp_for_range.iloc[:, 0].min()
+                upper_range = temp_for_range.iloc[:, 1].max()
+                lower_range -= (upper_range - lower_range) * 0.05
+            if orientation == 'h':
+                categories = fig.data[0].y
+            else:
+                categories = fig.data[0].x
+            # print(categories)
+            category_orders_for_box = {config['cat_column_axis'][0]: categories}
+            df['temp'] = pd.Categorical(df[config['cat_column_axis'][0]], categories=[2,1,3,4,5], ordered=True)
+            fig_box = box(df
+                            , x=kwargs['x']
+                            , y='temp' #kwargs['y']
+                            , labels=kwargs.get('labels')
+                            , orientation=orientation
+                            # , category_orders = category_orders_for_box
+                        )
+            fig_subplots.add_trace(fig.data[0], row=1, col=1)
+            fig_subplots.add_trace(fig_box.data[0], row=1, col=2)
+            fig = fig_subplots
+            fig.update_xaxes(title_text="Оценка", row=1, col=2, categoryorder='array', categoryarray=category_order)
+            # print(fig)
+            if upper_quantile or lower_quantile:
+                    if orientation == 'h':
+                        fig.update_layout(xaxis2_range=[lower_range, upper_range])
+                    else:
+                        fig.update_layout(yaxis2_range=[lower_range, upper_range])
+            return fig
         # if kwargs.get('color'):
         #     # Change color order in the figure
         #     color = []
@@ -782,7 +836,9 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['yaxis_showgrid'] = False
         if config.get('agg_column') == kwargs['x']:
             fig_update_config['xaxis_showgrid'] = True
+            fig_update_config['yaxis_showgrid'] = False
         if config.get('agg_column') == kwargs['y']:
+            fig_update_config['xaxis_showgrid'] = False
             fig_update_config['yaxis_showgrid'] = True
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
         fig_update_config['xaxis_tickformat'] = "%b'%y"
@@ -830,6 +886,9 @@ def bar(
     show_group_size: bool = False,
     decimal_places: int = 2,
     update_layout: bool = True,
+    show_box: bool = False,
+    lower_quantile_for_box: float = None,
+    upper_quantile_for_box: float = None,
     **kwargs
 ) -> go.Figure:
     """
@@ -924,6 +983,13 @@ def bar(
         Width of the chart in pixels. Default is None
     height : int, optional
         Height of the chart in pixels. Default is None
+    show_box : bool, optional
+        Whether to show boxplot in subplots
+    lower_quantile : float, optional
+        The lower quantile for filtering the data. Value should be in the range [0, 1].
+
+    upper_quantile : float, optional
+        The upper quantile for filtering the data. Value should be in the range [0, 1].
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -951,6 +1017,9 @@ def bar(
         'decimal_places': decimal_places,
         'norm_by': norm_by,
         'update_layout': update_layout,
+        'show_box': show_box,
+        'lower_quantile_for_box': lower_quantile_for_box,
+        'upper_quantile_for_box': upper_quantile_for_box,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1495,13 +1564,13 @@ def box(
     """
 
     # Function to trim the data based on specified quantiles
-    def trim_by_quantiles(group):
-        # Calculate the lower bound using the lower quantile
-        lower_bound = group.quantile(lower_quantile)
-        # Calculate the upper bound using the upper quantile
-        upper_bound = group.quantile(upper_quantile)
-        # Return the group filtered between the lower and upper bounds
-        return group[(group >= lower_bound) & (group <= upper_bound)]
+    # def trim_by_quantiles(group):
+    #     # Calculate the lower bound using the lower quantile
+    #     lower_bound = group.quantile(lower_quantile)
+    #     # Calculate the upper bound using the upper quantile
+    #     upper_bound = group.quantile(upper_quantile)
+    #     # Return the group filtered between the lower and upper bounds
+    #     return group[(group >= lower_bound) & (group <= upper_bound)]
 
     # Assign the input data frame to a variable
     df = data_frame
@@ -1525,22 +1594,24 @@ def box(
 
     # Initialize categories variable
     categories = None
-
     # Check if sorting is not required
     if not sort:
         # If top_n is specified, get the top n categories based on value counts
         if top_n:
-            categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+            # categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+            categories = df.groupby(cat_var, observed=False)[num_var].median().nlargest(top_n).index.tolist()
     else:
         # If the categorical variable is of type Categorical, get its categories
-        if isinstance(df[cat_var], pd.CategoricalDtype):
-            categories = df[cat_var].cat.categories.tolist()
-        # If the categorical variable is numeric, sort and get unique values
-        elif pd.api.types.is_numeric_dtype(df[cat_var]):
-            categories = sorted(df[cat_var].unique().tolist())
-        # For other types, get unique values directly
-        else:
-            categories = df[cat_var].unique().tolist()
+        # if isinstance(df[cat_var], pd.CategoricalDtype):
+        #     categories = df[cat_var].cat.categories.tolist()
+        # # If the categorical variable is numeric, sort and get unique values
+        # elif pd.api.types.is_numeric_dtype(df[cat_var]):
+        #     categories = sorted(df[cat_var].unique().tolist())
+        # # For other types, get unique values directly
+        # else:
+        #     categories = df[cat_var].unique().tolist()
+        categories = df.groupby(cat_var, observed=False)[num_var].median().sort_values(ascending=False).index.tolist()
+        kwargs['category_orders'] = {cat_var: categories}
 
         # If top_n is specified, limit the categories to top_n
         if top_n:
@@ -1569,7 +1640,10 @@ def box(
             columns_for_groupby.append(color)
 
         # Apply the trim_by_quantiles function to the grouped data
-        trimmed_df = df.groupby(columns_for_groupby, observed=False)[num_var].apply(trim_by_quantiles).reset_index()
+        temp_for_range = df.groupby(columns_for_groupby, observed=False)[num_var].quantile([lower_quantile, upper_quantile]).unstack()
+        lower_range = temp_for_range.iloc[:, 0].min()
+        upper_range = temp_for_range.iloc[:, 1].max()
+        lower_range -= (upper_range - lower_range) * 0.05
 
     # Create a box plot using the trimmed dataframe
     fig = px.box(trimmed_df, **kwargs)
@@ -1602,7 +1676,194 @@ def box(
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         fig_update_config['legend_title'] = ''
+    if upper_quantile or lower_quantile:
+        if kwargs.get('orientation') == 'h':
+            fig.update_xaxes(range=[lower_range, upper_range])
+        else:
+            fig.update_yaxes(range=[lower_range, upper_range])
+    # Update the figure with the specified configurations
+    fig = fig_update(fig, **fig_update_config)
 
+    # Return the final figure
+    return fig
+
+def violin(
+    data_frame: pd.DataFrame = None,
+    top_n: int = None,
+    lower_quantile: float = None,
+    upper_quantile: float = None,
+    sort: bool = False,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a violin plot using Plotly Express.  This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and
+
+    Parameters:
+    ----------
+    data_frame : pd.DataFrame, optional
+        The DataFrame containing the data to be plotted.
+
+    top_n : int, optional
+        The number of top categories to display. If None, all categories are shown.
+
+    lower_quantile : float, optional
+        The lower quantile for filtering the data. Value should be in the range [0, 1].
+
+    upper_quantile : float, optional
+        The upper quantile for filtering the data. Value should be in the range [0, 1].
+
+    sort : bool, optional
+        If True, sorts categories by median. Default is False.
+
+    x : str, optional
+        Column name to be used for the x-axis.
+
+    y : str, optional
+        Column name to be used for the y-axis.
+
+    color : str, optional
+        Column name to be used for color encoding.
+
+    category_orders : dict, optional
+        A dictionary specifying the order of categories for the x-axis.
+
+    labels : dict, optional
+        A dictionary mapping column names to their display names.
+
+    title : str, optional
+        The title of the plot.
+
+    template : str, optional
+        The template to use for the plot.
+
+    **kwargs :
+        Additional parameters that can be passed to the Plotly Express box function.
+
+    Returns:
+    -------
+    go.Figure
+        A Figure object containing the box plot.
+    """
+
+    # Function to trim the data based on specified quantiles
+    # def trim_by_quantiles(group):
+    #     # Calculate the lower bound using the lower quantile
+    #     lower_bound = group.quantile(lower_quantile)
+    #     # Calculate the upper bound using the upper quantile
+    #     upper_bound = group.quantile(upper_quantile)
+    #     # Return the group filtered between the lower and upper bounds
+    #     return group[(group >= lower_bound) & (group <= upper_bound)]
+
+    # Assign the input data frame to a variable
+    df = data_frame
+
+    # Retrieve the orientation parameter from kwargs
+    orientation = kwargs.get('orientation')
+    kwargs.setdefault('box', True)
+    # Retrieve the x-axis variable from kwargs
+    x = kwargs.get('x')
+    # Retrieve the y-axis variable from kwargs
+    y = kwargs.get('y')
+    # Retrieve the color variable from kwargs
+    color = kwargs.get('color')
+
+    # Determine the categorical and numerical variables based on orientation
+    if orientation is None or orientation == 'v':
+        cat_var = x
+        num_var = y
+    else:
+        cat_var = y
+        num_var = x
+
+    # Initialize categories variable
+    categories = None
+    # Check if sorting is not required
+    if not sort:
+        # If top_n is specified, get the top n categories based on value counts
+        if top_n:
+            # categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
+            categories = df.groupby(cat_var, observed=False)[num_var].median().nlargest(top_n).index.tolist()
+    else:
+        # If the categorical variable is of type Categorical, get its categories
+        # if isinstance(df[cat_var], pd.CategoricalDtype):
+        #     categories = df[cat_var].cat.categories.tolist()
+        # # If the categorical variable is numeric, sort and get unique values
+        # elif pd.api.types.is_numeric_dtype(df[cat_var]):
+        #     categories = sorted(df[cat_var].unique().tolist())
+        # # For other types, get unique values directly
+        # else:
+        #     categories = df[cat_var].unique().tolist()
+        categories = df.groupby(cat_var, observed=False)[num_var].median().sort_values(ascending=False).index.tolist()
+        kwargs['category_orders'] = {cat_var: categories}
+
+        # If top_n is specified, limit the categories to top_n
+        if top_n:
+            categories = categories[:top_n]
+
+    # Filter the dataframe to include only the selected categories
+    if categories:
+        df = df[df[cat_var].isin(categories)]
+
+    # Initialize trimmed_df with the original dataframe
+    trimmed_df = df
+
+    # Check if quantile trimming is required
+    if upper_quantile or lower_quantile:
+        # Set default upper quantile if not provided
+        if not upper_quantile:
+            upper_quantile = 1
+        # Set default lower quantile if not provided
+        if not lower_quantile:
+            lower_quantile = 0
+
+        # Prepare columns for grouping
+        columns_for_groupby = [cat_var]
+        # If color is specified, include it in the grouping
+        if color:
+            columns_for_groupby.append(color)
+
+        # Apply the trim_by_quantiles function to the grouped data
+        temp_for_range = df.groupby(columns_for_groupby, observed=False)[num_var].quantile([lower_quantile, upper_quantile]).unstack()
+        lower_range = temp_for_range.iloc[:, 0].min()
+        upper_range = temp_for_range.iloc[:, 1].max()
+        lower_range -= (upper_range - lower_range) * 0.05
+
+    # Create a box plot using the trimmed dataframe
+    fig = px.box(trimmed_df, **kwargs)
+
+    # Initialize a dictionary to update figure configuration
+    fig_update_config = dict()
+
+    # Configure the figure based on orientation
+    if orientation is None or orientation == 'v':
+        # Disable grid lines for the x-axis
+        fig_update_config['xaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+    else:
+        # Disable grid lines for the y-axis
+        fig_update_config['yaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+
+    # Set default width if not specified
+    if not kwargs.get('width'):
+        fig_update_config['width'] = 800
+    # Set default height if not specified
+    if not kwargs.get('height'):
+        fig_update_config['height'] = 400
+
+    # Configure legend settings if color is specified
+    if kwargs.get('color'):
+        fig_update_config['legend_position'] = 'top'
+        fig_update_config['legend_title'] = ''
+    if upper_quantile or lower_quantile:
+        if kwargs.get('orientation') == 'h':
+            fig.update_xaxes(range=[lower_range, upper_range])
+        else:
+            fig.update_yaxes(range=[lower_range, upper_range])
     # Update the figure with the specified configurations
     fig = fig_update(fig, **fig_update_config)
 
@@ -4434,13 +4695,14 @@ def categorical_graph_analys_gen(df, titles_for_axis: dict = None, width=None, h
 def pairplot(
     df: pd.DataFrame,
     title: str = None,
-    width: int = 800,
-    height: int = 800,
+    labels: str = None,
+    width: int = None,
+    height: int = None,
     horizontal_spacing: float = None,
     vertical_spacing: float = None,
     rows: int = None,
     cols: int = None,
-    category: str = None,
+    color: str = None,
     legend_position: str = 'top',
     titles_for_axis: dict = None
 ) -> go.Figure:
@@ -4465,12 +4727,10 @@ def pairplot(
         Number of rows in the subplot grid
     cols : int, optional
         Number of columns in the subplot grid
-    category : str, optional
+    color : str, optional
         Category column for coloring the scatter plots
     legend_position : str, optional
         Position of the legend ('top' or 'right'). Default is 'top'
-    titles_for_axis : dict, optional
-        Dictionary of custom axis titles. For example dict(price='Price', quantity='Quantity'), where price and quantity are column names in the dataframe
 
     Returns
     -------
@@ -4505,92 +4765,49 @@ def pairplot(
                         '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4']
     for i, (col1, col2) in enumerate(combinations):
         row, col = divmod(i, cols)
-        if titles_for_axis:
-            xaxes_title = titles_for_axis[col1]
-            yaxes_title = titles_for_axis[col2]
-        else:
-            xaxes_title = col1
-            yaxes_title = col2
-        fig_scatter = px.scatter(df, x=col1, y=col2, color=category)
+        fig_scatter = px.scatter(df, x=col1, y=col2, color=color, labels=labels)
         fig_scatter.update_traces(marker=dict(
             line=dict(color='white', width=0.5)))
-        fig_scatter.update_traces(
-            hovertemplate=xaxes_title + ' = %{x}<br>' + yaxes_title + ' = %{y}')
-        for trace, color in  zip(fig_scatter.data, colorway_for_line):    
-            trace.marker.color = color
+
+        for trace, color_for_line in  zip(fig_scatter.data, colorway_for_line):
+            trace.marker.color = color_for_line
             fig.add_trace(trace, row=row+1, col=col+1)
         fig.update_xaxes(
-            title_text=xaxes_title,
-            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
-            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-            linecolor="rgba(0, 0, 0, 0.5)",
-            row=row+1, col=col+1,
-            showgrid=True,
-            gridwidth=1,
-            gridcolor="rgba(0, 0, 0, 0.1)"
+            title_text=labels[col1],
         )
         fig.update_yaxes(
-            title_text=yaxes_title,
-            title_font=dict(size=16, color="rgba(0, 0, 0, 0.5)"),
-            tickfont=dict(size=14, color="rgba(0, 0, 0, 0.5)"),
-            linecolor="rgba(0, 0, 0, 0.5)",
-            row=row+1, col=col+1,
-            showgrid=True,
-            gridwidth=1,
-            gridcolor="rgba(0, 0, 0, 0.07)"
+            title_text=labels[col2],
         )
-
-    # # Update the layout
-    fig.update_layout(
-        height=height,
-        width=width,
-        margin=dict(l=50, r=50, t=90, b=50),
-        title={'text': title if title else 'Зависимости между числовыми переменными'},
-        # Для подписей и меток
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)", 
-        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",  
-        legend_title_font_color='rgba(0, 0, 0, 0.7)',
-        legend_title_font_size = 14,
-        legend_font_color='rgba(0, 0, 0, 0.7)',
-        hoverlabel=dict(bgcolor="white"),
-    )
-    if category:
-        if legend_position == 'top':
-            fig.update_layout(
-                legend = dict(
-                    title_text=titles_for_axis[category]
-                    , title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , orientation="h"  # Горизонтальное расположение
-                    , yanchor="top"    # Привязка к верхней части
-                    , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
-                    , xanchor="center" # Привязка к центру
-                    , x=0.1              # Центрирование по горизонтали
-                )
-            )
-        elif legend_position == 'right':
-            fig.update_layout(
-                    legend = dict(
-                    title_text=titles_for_axis[category]
-                    , title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , orientation="v"  # Горизонтальное расположение
-                    # , yanchor="bottom"    # Привязка к верхней части
-                    , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
-                    # , xanchor="center" # Привязка к центру
-                    # , x=0.5              # Центрирование по горизонтали
-                )
-            )
-        else:
-            raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
+    # if color:
+    #     if legend_position == 'top':
+    #         fig.update_layout(
+    #             legend = dict(
+    #                 title_text=labels[color]
+    #                 , title_font_color='rgba(0, 0, 0, 0.7)'
+    #                 , font_color='rgba(0, 0, 0, 0.7)'
+    #                 , orientation="h"  # Горизонтальное расположение
+    #                 , yanchor="top"    # Привязка к верхней части
+    #                 , y=1.05         # Положение по вертикали (отрицательное значение переместит вниз)
+    #                 , xanchor="center" # Привязка к центру
+    #                 , x=0.1              # Центрирование по горизонтали
+    #             )
+    #         )
+    #     elif legend_position == 'right':
+    #         fig.update_layout(
+    #                 legend = dict(
+    #                 title_text=labels[color]
+    #                 , title_font_color='rgba(0, 0, 0, 0.7)'
+    #                 , font_color='rgba(0, 0, 0, 0.7)'
+    #                 , orientation="v"  # Горизонтальное расположение
+    #                 # , yanchor="bottom"    # Привязка к верхней части
+    #                 , y=0.8         # Положение по вертикали (отрицательное значение переместит вниз)
+    #                 # , xanchor="center" # Привязка к центру
+    #                 # , x=0.5              # Центрирование по горизонтали
+    #             )
+    #         )
+    #     else:
+    #         raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")
+    fig_update(fig, height=height, width=width)
     return fig
             
 def heatmap_categories(
