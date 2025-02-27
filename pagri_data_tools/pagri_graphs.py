@@ -762,7 +762,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 categories = fig.data[0].x
             # print(categories)
             category_orders_for_box = {config['cat_column_axis'][0]: categories}
-            df['temp'] = pd.Categorical(df[config['cat_column_axis'][0]], categories=[2,1,3,4,5], ordered=True)
+            df['temp'] = pd.Categorical(df[config['cat_column_axis'][0]].astype(str), ordered=True)
+            display(df['temp'].value_counts())
             fig_box = box(df
                             , x=kwargs['x']
                             , y='temp' #kwargs['y']

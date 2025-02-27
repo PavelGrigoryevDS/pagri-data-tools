@@ -1963,20 +1963,26 @@ def check_duplicated(df, is_return_df=True):
     )
 
 
-def find_columns_with_duplicates(df) -> pd.Series:
+def find_columns_with_duplicates(df, keep: str='first') -> pd.Series:
     """
     Фукнция проверяет каждый столбец в таблице,
     если есть дубликаты, то помещает строки исходного
     дата фрейма с этими дубликатами в Series.
     Индекс - название колонки.
     Если нужно соеденить фреймы в один, то используем
+    keep : {'first', 'last', False}, default 'first'
+    Determines which duplicates (if any) to mark.
+
+    - ``first`` : Mark duplicates as ``True`` except for the first occurrence.
+    - ``last`` : Mark duplicates as ``True`` except for the last occurrence.
+    - False : Mark all duplicates as ``True``.
     pd.concat(res.to_list())
     """
     dfs_duplicated = pd.Series(dtype=int)
     cnt_duplicated = pd.Series(dtype=int)
     size = df.shape[0]
     for col in df.columns:
-        is_duplicated = df[col].duplicated()
+        is_duplicated = df[col].duplicated(keep=keep)
         if is_duplicated.any():
             dfs_duplicated[col] = df[is_duplicated]
             cnt_duplicated[col] = dfs_duplicated[col].shape[0]
