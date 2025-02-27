@@ -551,31 +551,30 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         # Check for 'agg_column' in config
         if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
             raise ValueError('If x and y are numeric, agg_column must be defined')
-
         # Determine numeric and categorical columns
         if 'agg_column' in config:
             num_column = config['agg_column']
             config['num_column'] = num_column
             num_column_for_hover.append(num_column)
             if kwargs['x'] == num_column:
-                cat_column_axis = [kwargs['y']]
+                cat_column_axis = kwargs['y']
             else:
-                cat_column_axis = [kwargs['x']]
+                cat_column_axis = kwargs['x']
             config['cat_column_axis'] = cat_column_axis
         else:
             if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 num_column = kwargs['x']
                 config['num_column'] = num_column
                 num_column_for_hover.append(num_column)
-                cat_column_axis = [kwargs['y']]
+                cat_column_axis = kwargs['y']
             else:
                 num_column = kwargs['y']
                 config['num_column'] = num_column
                 num_column_for_hover.append(num_column)
-                cat_column_axis = [kwargs['x']]
-                config['cat_column_axis'] = cat_column_axis
-        columns_for_groupby_share = cat_column_axis[0]
-        cat_columns = facet_col + facet_row + cat_column_axis + color + animation_frame
+                cat_column_axis = kwargs['x']
+            config['cat_column_axis'] = cat_column_axis
+        columns_for_groupby_share = cat_column_axis
+        cat_columns = facet_col + facet_row + [cat_column_axis] + color + animation_frame
 
         # Create filter mask
         mask = create_filter_mask(df, config, kwargs, num_column)
@@ -587,8 +586,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         # print(cat_columns)
         func_df = (func_df[[*cat_columns, num_column]]
                    .groupby(cat_columns, observed=False)
-                   .agg(num=(num_column, agg_func), count=(num_column, 'count'))
+                   .agg(num=(num_column, agg_func)
+                        , count=(num_column, 'count')
+                        , margin_of_error = (num_column, 'sem'))
                    .reset_index())
+        func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
         # display(func_df[kwargs['animation_frame']].unique())
         if norm_by:
             if norm_by == 'all':
@@ -725,14 +727,23 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             'line': px.line,
             'area': px.area
         }
+        hover_data = dict()
         if kwargs.get('hover_data') is None and not is_num_integer:
-            kwargs['hover_data'] = {config['num_column']: ':.2f'}
+            hover_data[config['num_column']] =  ':.2f'
         kwargs['custom_data'] = custom_data
+        if graph_type == 'bar' and config.get('show_ci') == True:
+            if config['num_column'] == kwargs['x']:
+                kwargs['error_x'] = 'margin_of_error'
+            else:
+                kwargs['error_y'] = 'margin_of_error'
+            hover_data['margin_of_error'] =  ':.2f'
+        kwargs['hover_data'] = hover_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
+        fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         if graph_type == 'bar' and config['show_box']:
             upper_quantile = config.get('upper_quantile_for_box')
             lower_quantile = config.get('lower_quantile_for_box')
-            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=False)
+            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=True)
             if config.get('agg_column') == kwargs['x'] or pd.api.types.is_numeric_dtype(df[kwargs['x']]):
                 orientation = 'h'
             else:
@@ -761,27 +772,28 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             else:
                 categories = fig.data[0].x
             # print(categories)
-            category_orders_for_box = {config['cat_column_axis'][0]: categories}
-            df['temp'] = pd.Categorical(df[config['cat_column_axis'][0]].astype(str), ordered=True)
-            display(df['temp'].value_counts())
+            # category_orders_for_box = {config['cat_column_axis']: categories}
+            df[config['cat_column_axis']] = df[config['cat_column_axis']].astype(str).astype('category')
             fig_box = box(df
                             , x=kwargs['x']
-                            , y='temp' #kwargs['y']
+                            , y=kwargs['y']
                             , labels=kwargs.get('labels')
                             , orientation=orientation
                             # , category_orders = category_orders_for_box
                         )
             fig_subplots.add_trace(fig.data[0], row=1, col=1)
             fig_subplots.add_trace(fig_box.data[0], row=1, col=2)
+            fig_subplots.update_layout(title_text=kwargs.get('title'))
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
+            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
             fig = fig_subplots
-            fig.update_xaxes(title_text="Оценка", row=1, col=2, categoryorder='array', categoryarray=category_order)
             # print(fig)
             if upper_quantile or lower_quantile:
-                    if orientation == 'h':
-                        fig.update_layout(xaxis2_range=[lower_range, upper_range])
-                    else:
-                        fig.update_layout(yaxis2_range=[lower_range, upper_range])
-            return fig
+                if orientation == 'h':
+                    fig.update_layout(xaxis2_range=[lower_range, upper_range])
+                else:
+                    fig.update_layout(yaxis2_range=[lower_range, upper_range])
         # if kwargs.get('color'):
         #     # Change color order in the figure
         #     color = []
@@ -849,12 +861,13 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['height'] = 450
     else:
         if not kwargs.get('width'):
-            if not kwargs.get('height'):
-                fig_update_config['height'] = 400
-            if kwargs.get('color'):
-                fig_update_config['width'] = 800
-            else:
-                fig_update_config['width'] = 600
+            fig_update_config['width'] = 600
+        if not kwargs.get('height'):
+            fig_update_config['height'] = 400
+        if kwargs.get('color'):
+            fig_update_config['width'] = 800
+        if config.get('show_box'):
+            fig_update_config['width'] = 1000
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         if graph_type in ['line', 'area']:
@@ -890,6 +903,7 @@ def bar(
     show_box: bool = False,
     lower_quantile_for_box: float = None,
     upper_quantile_for_box: float = None,
+    show_ci: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -988,9 +1002,10 @@ def bar(
         Whether to show boxplot in subplots
     lower_quantile : float, optional
         The lower quantile for filtering the data. Value should be in the range [0, 1].
-
     upper_quantile : float, optional
         The upper quantile for filtering the data. Value should be in the range [0, 1].
+    show_ci : bool, optional
+        Whether to show confidence intervals. Default is False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1021,6 +1036,7 @@ def bar(
         'show_box': show_box,
         'lower_quantile_for_box': lower_quantile_for_box,
         'upper_quantile_for_box': upper_quantile_for_box,
+        'show_ci': show_ci,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
