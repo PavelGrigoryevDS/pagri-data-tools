@@ -584,13 +584,21 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         # display(func_df[func_df.order_status == 'unavailable'].head())
         # Aggregate data
         # print(cat_columns)
-        func_df = (func_df[[*cat_columns, num_column]]
-                   .groupby(cat_columns, observed=False)
-                   .agg(num=(num_column, agg_func)
-                        , count=(num_column, 'count')
-                        , margin_of_error = (num_column, 'sem'))
-                   .reset_index())
-        func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
+        if pd.api.types.is_numeric_dtype(df[num_column]):
+            func_df = (func_df[[*cat_columns, num_column]]
+                    .groupby(cat_columns, observed=False)
+                    .agg(num=(num_column, agg_func)
+                            , count_for_subplots=(num_column, 'count')
+                            , margin_of_error = (num_column, 'sem'))
+                    .reset_index())
+            func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
+        else:
+            func_df = (func_df[[*cat_columns, num_column]]
+                    .groupby(cat_columns, observed=False)
+                    .agg(num=(num_column, agg_func)
+                            , count_for_subplots=(num_column, 'count'))
+                    .reset_index())
+            func_df['margin_of_error'] = None
         # display(func_df[kwargs['animation_frame']].unique())
         if norm_by:
             if norm_by == 'all':
@@ -662,7 +670,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             func_df = func_df.drop(columns_for_sort, axis=1)
             # display(func_df.head())
         # Format the 'count' column
-        func_df['count'] = func_df['count'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
+        func_df['count_for_show_group_size'] = func_df['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num': num_column})
 
@@ -712,7 +720,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     # Handle data in 'groupby' mode
     elif agg_mode == 'groupby':
         df_for_fig = prepare_df(df, config, kwargs, num_column_for_hover)
-        custom_data = [df_for_fig['count']]
+        custom_data = [df_for_fig['count_for_show_group_size']]
         # display(df_for_fig.head())
         if norm_by:
             custom_data += [df_for_fig['origin_num']]
@@ -740,6 +748,35 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         kwargs['hover_data'] = hover_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
+        if graph_type == 'bar' and config['show_count']:
+            kwargs_for_count = kwargs.copy()
+            kwargs_for_count['error_x'] = None
+            kwargs_for_count['error_y'] = None
+            if 'count_for_subplots' not in kwargs_for_count['labels']:
+                kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
+            if config['num_column'] == kwargs['x']:
+                kwargs_for_count['x'] = 'count_for_subplots'
+                count_xaxis_title = kwargs_for_count['labels']['count_for_subplots']
+                count_yaxis_title = None
+                shared_yaxes = True
+                horizontal_spacing = 0.05
+            else:
+                kwargs_for_count['y'] = 'count_for_subplots'
+                count_yaxis_title = kwargs_for_count['labels']['count_for_subplots']
+                count_xaxis_title = kwargs_for_count.get('labels')[kwargs_for_count['x']]
+                shared_yaxes = False
+                horizontal_spacing = None
+            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
+            fig_subplots.add_trace(fig.data[0], row=1, col=1)
+            fig_subplots.update_layout(title_text=kwargs.get('title'))
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+            fig_count = px.bar(df_for_fig, **kwargs_for_count)
+            fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
+            fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
+            fig_subplots.update_yaxes(title_text=count_yaxis_title, row=1, col=2)
+            fig = fig_subplots
+
         if graph_type == 'bar' and config['show_box']:
             upper_quantile = config.get('upper_quantile_for_box')
             lower_quantile = config.get('lower_quantile_for_box')
@@ -814,13 +851,16 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     else:
         df_sorted = df
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-            if pd.api.types.is_numeric_dtype(df[kwargs['y']]):
+            orientation = kwargs.get('orientation')
+            if pd.api.types.is_numeric_dtype(df[kwargs['y']]) and (orientation is None or orientation == 'v'):
                 if config.get('sort_axis'):
+                    df_sorted[kwargs['y']] = df_sorted[kwargs['y']].astype(str)
                     num_for_sort = kwargs['y']
                     ascending_for_sort = False
                     df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
             else:
                 if config.get('sort_axis'):
+                    df_sorted[kwargs['x']] = df_sorted[kwargs['x']].astype(str)
                     num_for_sort = kwargs['x']
                     ascending_for_sort = True
                     df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
@@ -868,6 +908,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['width'] = 800
         if config.get('show_box'):
             fig_update_config['width'] = 1000
+        if config.get('show_count'):
+            fig_update_config['width'] = 900
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         if graph_type in ['line', 'area']:
@@ -901,6 +943,7 @@ def bar(
     decimal_places: int = 2,
     update_layout: bool = True,
     show_box: bool = False,
+    show_count: bool = False,
     lower_quantile_for_box: float = None,
     upper_quantile_for_box: float = None,
     show_ci: bool = False,
@@ -1000,6 +1043,8 @@ def bar(
         Height of the chart in pixels. Default is None
     show_box : bool, optional
         Whether to show boxplot in subplots
+    show_count : bool, optional
+            Whether to show countplot in subplots
     lower_quantile : float, optional
         The lower quantile for filtering the data. Value should be in the range [0, 1].
     upper_quantile : float, optional
@@ -1034,6 +1079,7 @@ def bar(
         'norm_by': norm_by,
         'update_layout': update_layout,
         'show_box': show_box,
+        'show_count': show_count,
         'lower_quantile_for_box': lower_quantile_for_box,
         'upper_quantile_for_box': upper_quantile_for_box,
         'show_ci': show_ci,
@@ -6863,3 +6909,4 @@ def subplots(
     )
 
     return fig
+
