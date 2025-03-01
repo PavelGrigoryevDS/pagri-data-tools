@@ -751,6 +751,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         kwargs['hover_data'] = hover_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
+        if graph_type == 'bar' and config['top_and_bottom']:
+            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
+            fig_subplots.add_trace(fig.data[0], row=1, col=1)
+            df_for_fig = df_for_fig.iloc[::-1]
+            fig_bottom = px.bar(df_for_fig, **kwargs)
         if graph_type == 'bar' and config['show_count']:
             kwargs_for_count = kwargs.copy()
             kwargs_for_count['error_x'] = None
@@ -980,6 +985,7 @@ def bar(
     show_count: bool = False,
     lower_quantile_for_box: float = None,
     upper_quantile_for_box: float = None,
+    top_and_bottom: bool = False,
     show_ci: bool = False,
     **kwargs
 ) -> go.Figure:
@@ -1085,6 +1091,8 @@ def bar(
         The upper quantile for filtering the data. Value should be in the range [0, 1].
     show_ci : bool, optional
         Whether to show confidence intervals. Default is False
+    top_and_bottom : bool, optional
+        Whether to show only top or both top and bottom
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1117,6 +1125,7 @@ def bar(
         'lower_quantile_for_box': lower_quantile_for_box,
         'upper_quantile_for_box': upper_quantile_for_box,
         'show_ci': show_ci,
+        'top_and_bottom': top_and_bottom
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1655,7 +1664,20 @@ def histogram(
         fig = fig_subplots
         fig.update_traces(showlegend=False)
         fig.update_layout(height=kwargs['height'], width=kwargs['width'])
-
+    else:
+        if kwargs.get('marginal') is not None:
+            fig.update_layout(
+                 yaxis2 = dict(
+                    domain=[0.93, 1]
+                    , visible = False
+                )
+                , yaxis = dict(
+                    domain=[0, 0.9]
+                )
+                , xaxis2 = dict(
+                    visible=False
+                )
+            )
     # Update axis titles based on normalization and sorting
     if y is not None:
         if kwargs.get('histnorm') == 'probability':
