@@ -850,31 +850,62 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     # Handle data in normal mode
     else:
         df_sorted = df
+        num_column_for_subplots = None
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-            orientation = kwargs.get('orientation')
-            if pd.api.types.is_numeric_dtype(df[kwargs['y']]) and (orientation is None or orientation == 'v'):
+            orientation = kwargs.get('orientation') if kwargs.get('orientation') is not None else 'h'
+            if pd.api.types.is_numeric_dtype(df[kwargs['y']]) and orientation == 'v':
                 if config.get('sort_axis'):
-                    df_sorted[kwargs['y']] = df_sorted[kwargs['y']].astype(str)
+                    df_sorted[kwargs['x']] = df_sorted[kwargs['x']].astype(str)
                     num_for_sort = kwargs['y']
+                    num_column_for_subplots = kwargs['y']
                     ascending_for_sort = False
                     df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
             else:
                 if config.get('sort_axis'):
-                    df_sorted[kwargs['x']] = df_sorted[kwargs['x']].astype(str)
+                    df_sorted[kwargs['y']] = df_sorted[kwargs['y']].astype(str)
                     num_for_sort = kwargs['x']
+                    num_column_for_subplots = kwargs['x']
                     ascending_for_sort = True
-                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
-
+                    df_sorted = df_sorted.sort_values(num_for_sort, ascending=ascending_for_sort)
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
             'line': px.line,
             'area': px.area
         }
-        if kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[num_for_sort]):
+        if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
+            kwargs['hover_data'] = {kwargs['y']: ':.2f'}
+        elif kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[num_for_sort]):
             kwargs['hover_data'] = {num_for_sort: ':.2f'}
         fig = figure_creators[graph_type](df_sorted, **kwargs)
-
+        if graph_type == 'bar' and config['show_count']:
+            kwargs_for_count = kwargs.copy()
+            kwargs_for_count['error_x'] = None
+            kwargs_for_count['error_y'] = None
+            if 'count_for_subplots' not in kwargs_for_count['labels']:
+                kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
+            if num_column_for_subplots == kwargs['x']:
+                kwargs_for_count['x'] = 'count_for_subplots'
+                count_xaxis_title = kwargs_for_count['labels']['count_for_subplots']
+                count_yaxis_title = None
+                shared_yaxes = True
+                horizontal_spacing = 0.05
+            else:
+                kwargs_for_count['y'] = 'count_for_subplots'
+                count_yaxis_title = kwargs_for_count['labels']['count_for_subplots']
+                count_xaxis_title = kwargs_for_count.get('labels')[kwargs_for_count['x']]
+                shared_yaxes = False
+                horizontal_spacing = None
+            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
+            fig_subplots.add_trace(fig.data[0], row=1, col=1)
+            fig_subplots.update_layout(title_text=kwargs.get('title'))
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+            fig_count = px.bar(df_sorted, **kwargs_for_count)
+            fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
+            fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
+            fig_subplots.update_yaxes(title_text=count_yaxis_title, row=1, col=2)
+            fig = fig_subplots
     # Set x-axis format and figure dimensions
     fig_update_config = dict()
     is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
@@ -894,7 +925,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['xaxis_showgrid'] = False
             fig_update_config['yaxis_showgrid'] = True
     if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-        fig_update_config['xaxis_tickformat'] = "%b'%y"
+        # fig_update_config['xaxis_tickformat'] = "%b'%y"
         if not kwargs.get('width'):
             fig_update_config['width'] = 1000
         if not kwargs.get('height'):
@@ -1393,6 +1424,7 @@ def histogram(
     upper_quantile: float = 1,
     norm_by: str = None,
     sort: bool = None,
+    dual: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1438,6 +1470,8 @@ def histogram(
         The title of the histogram. Default is None.
     labels : dict, optional
         A dictionary mapping column names to labels for the axes and legend.
+    dual: bool, optional
+        Whether to show 2 graphs, left origin, right trimmed by quantile
     **kwargs : dict
         Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
 
@@ -1448,27 +1482,18 @@ def histogram(
     """
 
     # Set default values for the figure dimensions and bar mode
-    kwargs.setdefault('width', 600)
+    if dual:
+        kwargs.setdefault('width', 900)
+    else:
+        kwargs.setdefault('width', 600)
     kwargs.setdefault('height', 400)
     kwargs.setdefault('barmode', 'group')
-
+    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('marginal', 'box')
     # Extract x, y, and color parameters from kwargs
     x = kwargs.get('x')
     y = kwargs.get('y')
     color = kwargs.get('color')
-
-    # If quantiles are provided, trim the data based on these quantiles
-    if lower_quantile or upper_quantile:
-        if pd.api.types.is_numeric_dtype(x):
-            # Trim x based on the specified quantiles
-            trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
-            x = x[trimmed_column]
-        if pd.api.types.is_numeric_dtype(y):
-            # Trim y based on the specified quantiles
-            trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
-            y = y[trimmed_column]
-        kwargs['x'] = x
-        kwargs['y'] = y
     # Set histogram normalization to 'probability' if no color is specified
     if not color:
         kwargs.setdefault('histnorm', 'probability')
@@ -1479,7 +1504,24 @@ def histogram(
             kwargs['barnorm'] = 'fraction'
         if norm_by == color:
             kwargs['histnorm'] = 'probability'
-
+    if dual:
+        kwargs_dual = kwargs.copy()
+    # If quantiles are provided, trim the data based on these quantiles
+    if lower_quantile or upper_quantile:
+        if pd.api.types.is_numeric_dtype(x):
+            # Trim x based on the specified quantiles
+            trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
+            x = x[trimmed_column]
+        if pd.api.types.is_numeric_dtype(y):
+            # Trim y based on the specified quantiles
+            trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
+            y = y[trimmed_column]
+        if dual:
+            kwargs_dual['x'] = x
+            kwargs_dual['y'] = y
+        else:
+            kwargs['x'] = x
+            kwargs['y'] = y
     # If sorting is requested, prepare category orders for x and y
     if sort:
         category_orders = dict()
@@ -1524,16 +1566,98 @@ def histogram(
     for trace in fig.data:
         trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')  # Replace 'probability' with 'Доля'
         trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')  # Replace 'count' with 'Количество'
-        if x is not None:
+        if x is not None and kwargs.get('histnorm') is not None:
             trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')  # Format y values
-        if y is not None:
+        if y is not None and kwargs.get('histnorm') is not None:
             trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')  # Format x values
+    if dual == True:
+        if kwargs.get('marginal') is None:
+            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
+            fig_subplots.add_trace(fig.data[0], row=1, col=2)
+            fig_subplots.add_trace(
+                go.Histogram(
+                    x=kwargs_dual['x'],
+                    nbinsx=kwargs['nbins'],
+                    histnorm=kwargs['histnorm'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=fig.data[0].hovertemplate
+                ),
+                row=1, col=1
+            )
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=1)
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=2)
+            if kwargs.get('histnorm') == 'probability':
+                fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
+            if kwargs.get('histnorm') is None:
+                fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+        else:
+            fig_subplots = make_subplots(rows=2, cols=2, horizontal_spacing=0.07)
+            fig_subplots.add_trace(fig.data[0], row=2, col=2)
+            x_for_box_hovertemplate = kwargs['labels']['x'] if kwargs.get('labels') is not None else 'x'
+            fig_subplots.add_trace(
+                go.Box(
+                    x=kwargs['x'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
+                ),
+                row=1, col=2
+            )
+            fig_subplots.add_trace(
+                go.Histogram(
+                    x=kwargs_dual['x'],
+                    nbinsx=kwargs['nbins'],
+                    histnorm=kwargs['histnorm'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=fig.data[0].hovertemplate
+                ),
+                row=2, col=1
+            )
+            fig_subplots.add_trace(
+                go.Box(
+                    x=kwargs_dual['x'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
+                ),
+                row=1, col=1
+            )
+            fig_subplots.update_layout(
+                yaxis1 = dict(
+                    domain=[0.93, 1]
+                    , visible = False
+                )
+                , yaxis2 = dict(
+                    domain=[0.93, 1]
+                    , visible = False
+                )
+                , yaxis3 = dict(
+                    domain=[0, 0.9]
+                )
+                , yaxis4 = dict(
+                    domain=[0, 0.9]
+                )
+                , xaxis2 = dict(
+                    visible=False
+                )
+                , xaxis1 = dict(
+                    visible=False
+                )
+            )
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=1)
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=2)
+            if kwargs.get('histnorm') == 'probability':
+                fig_subplots.update_yaxes(title_text='Доля', row=2, col=1)  # Set x-axis title to 'Доля' for probability
+            if kwargs.get('histnorm') is None:
+                fig_subplots.update_yaxes(title_text='Количество', row=2, col=1)  # Set x-axis title to 'Количество' for count
+        fig_subplots.update_layout(title_text=kwargs.get('title'))
+        fig = fig_subplots
+        fig.update_traces(showlegend=False)
+        fig.update_layout(height=kwargs['height'], width=kwargs['width'])
 
     # Update axis titles based on normalization and sorting
     if y is not None:
         if kwargs.get('histnorm') == 'probability':
             fig.update_layout(xaxis_title='Доля')  # Set x-axis title to 'Доля' for probability
-        if not kwargs.get('histnorm'):
+        if kwargs.get('histnorm') is None:
             fig.update_layout(xaxis_title='Количество')  # Set x-axis title to 'Количество' for count
         if sort:
             fig.data = fig.data[::-1]  # Reverse the order of traces if sorting
@@ -1542,9 +1666,8 @@ def histogram(
     if x is not None:
         if kwargs.get('histnorm') == 'probability':
             fig.update_layout(yaxis_title='Доля')  # Set y-axis title to 'Доля' for probability
-        if not kwargs.get('histnorm'):
+        if kwargs.get('histnorm') is None:
             fig.update_layout(yaxis_title='Количество')  # Set y-axis title to 'Количество' for count
-
     # Update the figure with any additional modifications
     fig_update_config = dict()
     if  x is not None:
