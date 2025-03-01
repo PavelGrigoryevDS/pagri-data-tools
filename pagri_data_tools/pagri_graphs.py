@@ -378,6 +378,9 @@ def fig_update(
     if fig.data and fig.data[0].type == 'heatmap':
         fig.update_traces(xgap=xgap, ygap=ygap)
         fig.update_layout(xaxis_showgrid=False, yaxis_showgrid=False, coloraxis_colorbar_title_text=None)
+    if fig.data and fig.data[0].type == 'scattergl':
+        fig.update_traces(marker=dict(
+                line=dict(color='white', width=0.5)))
     for trace in fig.data:
         trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
         # trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
