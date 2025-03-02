@@ -416,9 +416,30 @@ def fig_update(
         )
     return fig
 
-def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: dict, graph_type: str = 'bar'):
+def _create_base_fig_for_bar_line_area(
+    df: pd.DataFrame
+    , config: dict
+    , kwargs: dict
+    , graph_type: str = 'bar'
+    ) -> go.Figure:
     """
     Creates a figure for bar, line or area function using the Plotly Express library.
+
+    Parameters
+    ----------
+    df : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    config: dict
+        Settings that are not passed to functions for creating Plotly graphs.
+    kwargs: dict
+        Settings that are passed to functions for creating Plotly graphs.
+    graph_type: str
+        Type of graphics
+
+    Returns
+    -------
+    go.Figure
+        The created chart
     """
     # Check for 'resample_freq' in config if aggregation mode is 'resample'
     if config.get('agg_mode') == 'resample' and 'resample_freq' not in config:
@@ -445,34 +466,60 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     if 'x' not in kwargs or 'y' not in kwargs:
         raise ValueError('x and y must be defined')
 
-    # Retrieve aggregation function and mode from config
-    agg_func = config.get('agg_func')
+    # Retrieve mode from config
     agg_mode = config.get('agg_mode')
-    decimal_places = config['decimal_places']
     norm_by = config.get('norm_by')
-    num_column_for_hover = []
     if graph_type in ['line', 'area']:
         if kwargs.get('color'):
             kwargs.setdefault('color_discrete_sequence', colorway_for_line)
         kwargs.setdefault('line_shape', 'spline')
     if graph_type == 'bar':
         kwargs.setdefault('barmode', 'group')
-    # Function to create a combined filter mask
-    def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str, mode_top_or_bottom: str):
-        """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
-        if mode_top_or_bottom == 'top':
-            ascendign = False
-        elif mode_top_or_bottom == 'bottom':
-            ascendign = True
+
+    # Determine numeric and categorical columns
+    def _determine_numeric_and_categorical_columns(config: dict, kwargs: dict):
+        color = [kwargs['color']] if kwargs.get('color') else []
+        facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
+        facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
+        animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
+        if 'agg_column' in config:
+            num_column = config['agg_column']
+            if kwargs['x'] == num_column:
+                cat_column_axis = kwargs['y']
+            else:
+                cat_column_axis = kwargs['x']
         else:
-            raise ValueError('unknown mask_func')
+            if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
+                num_column = kwargs['x']
+                cat_column_axis = kwargs['y']
+            else:
+                num_column = kwargs['y']
+                cat_column_axis = kwargs['x']
+        config['cat_column_axis'] = cat_column_axis
+        columns_for_groupby_share = cat_column_axis
+        config['num_column'] = num_column
+        cat_columns = facet_col + facet_row + [cat_column_axis] + color + animation_frame
+        return num_column, cat_columns, columns_for_groupby_share
+
+    # Function to create a combined filter mask
+    def _create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict):
+        """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
         mask = None
+        num_column  = config.get('num_column')
+        mode_top_or_bottom = config['trim_top_or_bottom']
+        agg_func = config.get('agg_func')
         top_n_trim_x = config.get('top_n_trim_x')
         top_n_trim_color = config.get('top_n_trim_color')
         top_n_trim_y = config.get('top_n_trim_y')
         top_n_trim_facet_col = config.get('top_n_trim_facet_col')
         top_n_trim_facet_row = config.get('top_n_trim_facet_row')
         top_n_trim_facet_animation_frame = config.get('top_n_trim_facet_animation_frame')
+        if mode_top_or_bottom == 'top':
+            ascendign = False
+        elif mode_top_or_bottom == 'bottom':
+            ascendign = True
+        else:
+            raise ValueError('unknown mask_func')
         # Filter by color
         if top_n_trim_color:
             if kwargs.get('color') is None:
@@ -552,102 +599,49 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
         return mask
 
-    # Function to prepare the DataFrame for plotting
-    def prepare_df(df: pd.DataFrame, config: dict, kwargs: dict, num_column_for_hover):
+    def _normalize_data(func_df, norm_by: str, config: dict, kwargs: dict):
+        norm_by = config.get('norm_by')
         color = [kwargs['color']] if kwargs.get('color') else []
         facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
         facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
         animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
-        # Check for 'agg_column' in config
-        if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
-            raise ValueError('If x and y are numeric, agg_column must be defined')
-        # Determine numeric and categorical columns
-        if 'agg_column' in config:
-            num_column = config['agg_column']
-            config['num_column'] = num_column
-            num_column_for_hover.append(num_column)
-            if kwargs['x'] == num_column:
-                cat_column_axis = kwargs['y']
-            else:
-                cat_column_axis = kwargs['x']
-            config['cat_column_axis'] = cat_column_axis
-        else:
-            if pd.api.types.is_numeric_dtype(df[kwargs['x']]):
-                num_column = kwargs['x']
-                config['num_column'] = num_column
-                num_column_for_hover.append(num_column)
-                cat_column_axis = kwargs['y']
-            else:
-                num_column = kwargs['y']
-                config['num_column'] = num_column
-                num_column_for_hover.append(num_column)
-                cat_column_axis = kwargs['x']
-            config['cat_column_axis'] = cat_column_axis
-        columns_for_groupby_share = cat_column_axis
-        cat_columns = facet_col + facet_row + [cat_column_axis] + color + animation_frame
+        if norm_by == 'all':
+            columns_for_groupby_share = facet_col + facet_row + animation_frame
+            func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
+            func_df['origin_num'] = func_df['num']
+            func_df['num'] = func_df['num'] / func_df['all_sum']
+            func_df = func_df.drop('all_sum', axis=1)
+        if norm_by == columns_for_groupby_share:
+            columns_for_groupby_share = [columns_for_groupby_share] + facet_col + facet_row + animation_frame
+            func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
+            func_df['origin_num'] = func_df['num']
+            func_df['num'] = func_df['num'] / func_df['category_sum']
+            func_df = func_df.drop('category_sum', axis=1)
+        if color and norm_by == color[0]:
+            columns_for_groupby_share = [color[0]] + facet_col + facet_row + animation_frame
+            func_df['color_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
+            func_df['origin_num'] = func_df['num']
+            func_df['num'] = func_df['num'] / func_df['color_sum']
+            func_df = func_df.drop('color_sum', axis=1)
+        return func_df
 
-        # Create filter mask
-        mask = create_filter_mask(df, config, kwargs, num_column, config['trim_top_or_bottom'])
-
-        # Apply mask to DataFrame
-        func_df = df[mask] if mask is not None else df
-        # display(func_df[func_df.order_status == 'unavailable'].head())
-        # Aggregate data
-        # print(cat_columns)
-        if pd.api.types.is_numeric_dtype(df[num_column]):
-            func_df = (func_df[[*cat_columns, num_column]]
-                    .groupby(cat_columns, observed=False)
-                    .agg(num=(num_column, agg_func)
-                            , count_for_subplots=(num_column, 'count')
-                            , margin_of_error = (num_column, 'sem'))
-                    .reset_index())
-            func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
-        else:
-            func_df = (func_df[[*cat_columns, num_column]]
-                    .groupby(cat_columns, observed=False)
-                    .agg(num=(num_column, agg_func)
-                            , count_for_subplots=(num_column, 'count'))
-                    .reset_index())
-            func_df['margin_of_error'] = None
-        # display(func_df[kwargs['animation_frame']].unique())
-        if norm_by:
-            if norm_by == 'all':
-                columns_for_groupby_share = facet_col + facet_row + animation_frame
-                func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-                func_df['origin_num'] = func_df['num']
-                func_df['num'] = func_df['num'] / func_df['all_sum']
-                func_df = func_df.drop('all_sum', axis=1)
-            if norm_by == columns_for_groupby_share:
-                columns_for_groupby_share = [columns_for_groupby_share] + facet_col + facet_row + animation_frame
-                func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-                func_df['origin_num'] = func_df['num']
-                func_df['num'] = func_df['num'] / func_df['category_sum']
-                func_df = func_df.drop('category_sum', axis=1)
-            if color and norm_by == color[0]:
-                columns_for_groupby_share = [color[0]] + facet_col + facet_row + animation_frame
-                func_df['color_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-                func_df['origin_num'] = func_df['num']
-                func_df['num'] = func_df['num'] / func_df['color_sum']
-                func_df = func_df.drop('color_sum', axis=1)
-        # Sort data by axis if specified
-        # display(func_df.head())
-        # чтобы использовать одновременно и facet и animation_frame нам нужно чтобы в датафрейме были все комбинации занчений срезов
-        # Иначе будут баги, нужно чтобы в plotly передались все возможные комбинации, чтоыб он их поставил на свои места, пусть там и будет None
-        if (kwargs.get('facet_col') or kwargs.get('facet_row')) and kwargs.get('animation_frame'):
-            all_combinations = pd.MultiIndex.from_product([func_df[col].unique().tolist() for col in cat_columns], names=cat_columns)
-            all_combinations = all_combinations.to_list()
-            temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
-            func_df = temp_df.merge(func_df, on=cat_columns, how='left')
-        # print()
+    def _sort_data(func_df, config: dict, kwargs: dict):
+        num_column = config.get('num_column')
         sort_axis = config.get('sort_axis')
         sort_color = config.get('sort_color')
         sort_facet_row = config.get('sort_facet_row')
         sort_facet_col = config.get('sort_facet_col')
         sort_animation_frame = config.get('sort_animation_frame')
-        num_column_for_sort = 'origin_num' if norm_by else 'num'
+        cat_column_axis = config['cat_column_axis']
+        color = [kwargs['color']] if kwargs.get('color') else []
+        facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
+        facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
+        animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
+        norm_by = config.get('norm_by')
+        agg_func = config.get('agg_func')
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
+            num_column_for_sort = 'origin_num' if norm_by else 'num'
             # Determine sorting order
-            # display(func_df.head())
             if config['trim_top_or_bottom'] == 'top':
                 ascending_for_axis = False if kwargs['y'] == num_column else True
             elif config['trim_top_or_bottom'] == 'bottom':
@@ -683,11 +677,222 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
                 columns_for_sort.append('sum_for_sort_color')
             func_df = func_df.sort_values(columns_for_sort, ascending=ascending)
             func_df = func_df.drop(columns_for_sort, axis=1)
-            # display(func_df.head())
+        return func_df
+
+    # Function to prepare the DataFrame for plotting
+    def _prepare_df(df: pd.DataFrame, config: dict, kwargs: dict):
+        # Check for 'agg_column' in config
+        if 'agg_column' not in config and pd.api.types.is_numeric_dtype(df[kwargs['x']]) and pd.api.types.is_numeric_dtype(df[kwargs['y']]):
+            raise ValueError('If x and y are numeric, agg_column must be defined')
+        norm_by = config.get('norm_by')
+        agg_func = config.get('agg_func')
+        num_column, cat_columns, columns_for_groupby_share = _determine_numeric_and_categorical_columns(config, kwargs)
+        # Create filter mask
+        mask = _create_filter_mask(df, config, kwargs)
+
+        # Apply mask to DataFrame
+        func_df = df[mask] if mask is not None else df
+        # display(func_df[func_df.order_status == 'unavailable'].head())
+        # Aggregate data
+        # print(cat_columns)
+        if pd.api.types.is_numeric_dtype(df[num_column]):
+            func_df = (func_df[[*cat_columns, num_column]]
+                    .groupby(cat_columns, observed=False)
+                    .agg(num=(num_column, agg_func)
+                            , count_for_subplots=(num_column, 'count')
+                            , margin_of_error = (num_column, 'sem'))
+                    .reset_index())
+            func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
+        else:
+            func_df = (func_df[[*cat_columns, num_column]]
+                    .groupby(cat_columns, observed=False)
+                    .agg(num=(num_column, agg_func)
+                            , count_for_subplots=(num_column, 'count'))
+                    .reset_index())
+            func_df['margin_of_error'] = None
+        # display(func_df[kwargs['animation_frame']].unique())
+        if norm_by:
+            func_df = _normalize_data(func_df, config, kwargs)
+        # Sort data by axis if specified
+        # display(func_df.head())
+        # чтобы использовать одновременно и facet и animation_frame нам нужно чтобы в датафрейме были все комбинации занчений срезов
+        # Иначе будут баги, нужно чтобы в plotly передались все возможные комбинации, чтоыб он их поставил на свои места, пусть там и будет None
+        if (kwargs.get('facet_col') or kwargs.get('facet_row')) and kwargs.get('animation_frame'):
+            all_combinations = pd.MultiIndex.from_product([func_df[col].unique().tolist() for col in cat_columns], names=cat_columns)
+            all_combinations = all_combinations.to_list()
+            temp_df = pd.DataFrame(all_combinations, columns=cat_columns)
+            func_df = temp_df.merge(func_df, on=cat_columns, how='left')
+        # print()
+        func_df = _sort_data(func_df, config, kwargs)
         # Format the 'count' column
         func_df['count_for_show_group_size'] = func_df['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num': num_column})
+
+    def _create_top_and_bottom_fig(fig, df, config: dict, kwargs: dict):
+        fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.15)
+        fig_subplots.add_trace(fig.data[0], row=1, col=1)
+        config['trim_top_or_bottom'] = 'bottom'
+        df_for_fig_bottom = _prepare_df(df, config, kwargs)
+        custom_data = [df_for_fig_bottom['count_for_show_group_size']]
+        # display(df_for_fig.head())
+        if norm_by:
+            custom_data += [df_for_fig_bottom['origin_num']]
+            # if kwargs['labels'] is not None:
+            #     num_column_for_hover_label = kwargs['labels'][num_column_for_hover[0]]
+            #     kwargs['labels'][num_column_for_hover] = 'Доля'
+            is_num_integer = False
+        else:
+            is_num_integer = pd.api.types.is_integer_dtype(df_for_fig_bottom[config['num_column']])
+        kwargs['custom_data'] = custom_data
+        if graph_type == 'bar' and config.get('show_ci') == True:
+            if config['num_column'] == kwargs['x']:
+                kwargs['error_x'] = 'margin_of_error'
+            else:
+                kwargs['error_y'] = 'margin_of_error'
+            hover_data['margin_of_error'] =  ':.2f'
+        fig_bottom = px.bar(df_for_fig_bottom, **kwargs)
+        fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
+        fig_subplots.add_trace(fig_bottom.data[0], row=1, col=2)
+        fig_subplots.update_layout(title_text=kwargs.get('title'))
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
+        fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+        fig = fig_subplots
+        return fig
+
+    def _create_base_fig_and_countplot(fig, df_for_fig, config: dict, kwargs: dict):
+        kwargs_for_count = kwargs.copy()
+        kwargs_for_count['error_x'] = None
+        kwargs_for_count['error_y'] = None
+        if 'count_for_subplots' not in kwargs_for_count['labels']:
+            kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
+        if config['num_column'] == kwargs['x']:
+            kwargs_for_count['x'] = 'count_for_subplots'
+            count_xaxis_title = kwargs_for_count['labels']['count_for_subplots']
+            count_yaxis_title = None
+            shared_yaxes = True
+            horizontal_spacing = 0.05
+        else:
+            kwargs_for_count['y'] = 'count_for_subplots'
+            count_yaxis_title = kwargs_for_count['labels']['count_for_subplots']
+            count_xaxis_title = kwargs_for_count.get('labels')[kwargs_for_count['x']]
+            shared_yaxes = False
+            horizontal_spacing = None
+        fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
+        fig_subplots.add_trace(fig.data[0], row=1, col=1)
+        fig_subplots.update_layout(title_text=kwargs.get('title'))
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+        fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+        fig_count = px.bar(df_for_fig, **kwargs_for_count)
+        fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
+        fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
+        fig_subplots.update_yaxes(title_text=count_yaxis_title, row=1, col=2)
+        fig = fig_subplots
+        return fig
+
+    def _add_boxplot(fig, df, config: dict, kwargs: dict):
+        upper_quantile = config.get('upper_quantile_for_box')
+        lower_quantile = config.get('lower_quantile_for_box')
+        fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=True)
+        if config.get('agg_column') == kwargs['x'] or pd.api.types.is_numeric_dtype(df[kwargs['x']]):
+            orientation = 'h'
+        else:
+            orientation = 'v'
+        if upper_quantile or lower_quantile:
+            # Set default upper quantile if not provided
+            if upper_quantile is None:
+                upper_quantile= 1
+            # Set default lower quantile if not provided
+            if lower_quantile is None:
+                lower_quantile = 0
+
+            # Prepare columns for grouping
+            columns_for_groupby_for_range = config['cat_column_axis']
+            # If color is specified, include it in the grouping
+            if kwargs.get('color'):
+                columns_for_groupby_for_range.append(kwargs['color'])
+
+            # Apply the trim_by_quantiles function to the grouped data
+            temp_for_range = df.groupby(columns_for_groupby_for_range, observed=False)[config['num_column']].quantile([lower_quantile, upper_quantile]).unstack()
+            lower_range = temp_for_range.iloc[:, 0].min()
+            upper_range = temp_for_range.iloc[:, 1].max()
+            lower_range -= (upper_range - lower_range) * 0.05
+        if orientation == 'h':
+            categories = fig.data[0].y
+        else:
+            categories = fig.data[0].x
+        # print(categories)
+        # category_orders_for_box = {config['cat_column_axis']: categories}
+        df[config['cat_column_axis']] = df[config['cat_column_axis']].astype(str).astype('category')
+        fig_box = box(df
+                        , x=kwargs['x']
+                        , y=kwargs['y']
+                        , labels=kwargs.get('labels')
+                        , orientation=orientation
+                        # , category_orders = category_orders_for_box
+                    )
+        fig_subplots.add_trace(fig.data[0], row=1, col=1)
+        fig_subplots.add_trace(fig_box.data[0], row=1, col=2)
+        fig_subplots.update_layout(title_text=kwargs.get('title'))
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
+        fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+        fig = fig_subplots
+        # print(fig)
+        if upper_quantile or lower_quantile:
+            if orientation == 'h':
+                fig.update_layout(xaxis2_range=[lower_range, upper_range])
+            else:
+                fig.update_layout(yaxis2_range=[lower_range, upper_range])
+        return fig
+
+    def _update_fig(fig, config: dict, kwargs: dict):
+        # Set x-axis format and figure dimensions
+        fig_update_config = dict()
+        is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
+        is_x_numeric = pd.api.types.is_numeric_dtype(df[kwargs['x']])
+        is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
+        is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
+        is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
+        if graph_type == 'bar':
+            if not is_x_numeric:
+                fig_update_config['xaxis_showgrid'] = False
+            if not is_y_numeric:
+                fig_update_config['yaxis_showgrid'] = False
+            if config.get('agg_column') == kwargs['x']:
+                fig_update_config['xaxis_showgrid'] = True
+                fig_update_config['yaxis_showgrid'] = False
+            if config.get('agg_column') == kwargs['y']:
+                fig_update_config['xaxis_showgrid'] = False
+                fig_update_config['yaxis_showgrid'] = True
+        if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
+            # fig_update_config['xaxis_tickformat'] = "%b'%y"
+            if not kwargs.get('width'):
+                fig_update_config['width'] = 1000
+            if not kwargs.get('height'):
+                fig_update_config['height'] = 450
+        else:
+            if not kwargs.get('width'):
+                fig_update_config['width'] = 600
+            if not kwargs.get('height'):
+                fig_update_config['height'] = 400
+            if kwargs.get('color'):
+                fig_update_config['width'] = 800
+            if config.get('show_box'):
+                fig_update_config['width'] = 1000
+            if config.get('top_and_bottom'):
+                fig_update_config['width'] = 900
+            if config.get('show_count'):
+                fig_update_config['width'] = 900
+        if kwargs.get('color'):
+            fig_update_config['legend_position'] = 'top'
+            if graph_type in ['line', 'area']:
+                fig_update_config['opacity'] = 0.7
+            fig_update_config['legend_title'] = ''
+        if config['update_layout'] == True:
+            fig = fig_update(fig, **fig_update_config)
+        return fig
 
     # Handle data in 'resample' mode
     if agg_mode == 'resample':
@@ -734,14 +939,14 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
 
     # Handle data in 'groupby' mode
     elif agg_mode == 'groupby':
-        df_for_fig = prepare_df(df, config, kwargs, num_column_for_hover)
+        df_for_fig = _prepare_df(df, config, kwargs)
         custom_data = [df_for_fig['count_for_show_group_size']]
         # display(df_for_fig.head())
         if norm_by:
             custom_data += [df_for_fig['origin_num']]
-            if kwargs['labels'] is not None:
-                num_column_for_hover_label = kwargs['labels'][num_column_for_hover[0]]
-                kwargs['labels'][num_column_for_hover] = 'Доля'
+            # if kwargs['labels'] is not None:
+            #     num_column_for_hover_label = kwargs['labels'][config['num_column']]
+            #     kwargs['labels'][num_column_for_hover] = 'Доля'
             is_num_integer = False
         else:
             is_num_integer = pd.api.types.is_integer_dtype(df_for_fig[config['num_column']])
@@ -764,154 +969,33 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         if graph_type == 'bar' and config['top_and_bottom']:
-            fig_subplots = make_subplots(rows=1, cols=2) #, horizontal_spacing=0.05)
-            fig_subplots.add_trace(fig.data[0], row=1, col=1)
-            config['trim_top_or_bottom']='bottom'
-            df_for_fig = prepare_df(df, config, kwargs, num_column_for_hover)
-            custom_data = [df_for_fig['count_for_show_group_size']]
-            # display(df_for_fig.head())
-            if norm_by:
-                custom_data += [df_for_fig['origin_num']]
-                if kwargs['labels'] is not None:
-                    num_column_for_hover_label = kwargs['labels'][num_column_for_hover[0]]
-                    kwargs['labels'][num_column_for_hover] = 'Доля'
-                is_num_integer = False
-            else:
-                is_num_integer = pd.api.types.is_integer_dtype(df_for_fig[config['num_column']])
-            kwargs['custom_data'] = custom_data
-            if graph_type == 'bar' and config.get('show_ci') == True:
-                if config['num_column'] == kwargs['x']:
-                    kwargs['error_x'] = 'margin_of_error'
-                else:
-                    kwargs['error_y'] = 'margin_of_error'
-                hover_data['margin_of_error'] =  ':.2f'
-            fig_bottom = px.bar(df_for_fig, **kwargs)
-            fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
-            fig_subplots.add_trace(fig_bottom.data[0], row=1, col=2)
-            fig_subplots.update_layout(title_text=kwargs.get('title'))
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
-            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
-            fig = fig_subplots
+            fig = _create_top_and_bottom_fig(fig, df, config, kwargs)
+
         if graph_type == 'bar' and config['show_count']:
-            kwargs_for_count = kwargs.copy()
-            kwargs_for_count['error_x'] = None
-            kwargs_for_count['error_y'] = None
-            if 'count_for_subplots' not in kwargs_for_count['labels']:
-                kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
-            if config['num_column'] == kwargs['x']:
-                kwargs_for_count['x'] = 'count_for_subplots'
-                count_xaxis_title = kwargs_for_count['labels']['count_for_subplots']
-                count_yaxis_title = None
-                shared_yaxes = True
-                horizontal_spacing = 0.05
-            else:
-                kwargs_for_count['y'] = 'count_for_subplots'
-                count_yaxis_title = kwargs_for_count['labels']['count_for_subplots']
-                count_xaxis_title = kwargs_for_count.get('labels')[kwargs_for_count['x']]
-                shared_yaxes = False
-                horizontal_spacing = None
-            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
-            fig_subplots.add_trace(fig.data[0], row=1, col=1)
-            fig_subplots.update_layout(title_text=kwargs.get('title'))
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
-            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
-            fig_count = px.bar(df_for_fig, **kwargs_for_count)
-            fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
-            fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
-            fig_subplots.update_yaxes(title_text=count_yaxis_title, row=1, col=2)
-            fig = fig_subplots
+            fig  = _create_base_fig_and_countplot(fig, df_for_fig, config, kwargs)
 
         if graph_type == 'bar' and config['show_box']:
-            upper_quantile = config.get('upper_quantile_for_box')
-            lower_quantile = config.get('lower_quantile_for_box')
-            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=True)
-            if config.get('agg_column') == kwargs['x'] or pd.api.types.is_numeric_dtype(df[kwargs['x']]):
-                orientation = 'h'
-            else:
-                orientation = 'v'
-            if upper_quantile or lower_quantile:
-                # Set default upper quantile if not provided
-                if upper_quantile is None:
-                    upper_quantile= 1
-                # Set default lower quantile if not provided
-                if lower_quantile is None:
-                    lower_quantile = 0
-
-                # Prepare columns for grouping
-                columns_for_groupby_for_range = config['cat_column_axis']
-                # If color is specified, include it in the grouping
-                if kwargs.get('color'):
-                    columns_for_groupby_for_range.append(kwargs['color'])
-
-                # Apply the trim_by_quantiles function to the grouped data
-                temp_for_range = df.groupby(columns_for_groupby_for_range, observed=False)[config['num_column']].quantile([lower_quantile, upper_quantile]).unstack()
-                lower_range = temp_for_range.iloc[:, 0].min()
-                upper_range = temp_for_range.iloc[:, 1].max()
-                lower_range -= (upper_range - lower_range) * 0.05
-            if orientation == 'h':
-                categories = fig.data[0].y
-            else:
-                categories = fig.data[0].x
-            # print(categories)
-            # category_orders_for_box = {config['cat_column_axis']: categories}
-            df[config['cat_column_axis']] = df[config['cat_column_axis']].astype(str).astype('category')
-            fig_box = box(df
-                            , x=kwargs['x']
-                            , y=kwargs['y']
-                            , labels=kwargs.get('labels')
-                            , orientation=orientation
-                            # , category_orders = category_orders_for_box
-                        )
-            fig_subplots.add_trace(fig.data[0], row=1, col=1)
-            fig_subplots.add_trace(fig_box.data[0], row=1, col=2)
-            fig_subplots.update_layout(title_text=kwargs.get('title'))
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
-            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
-            fig = fig_subplots
-            # print(fig)
-            if upper_quantile or lower_quantile:
-                if orientation == 'h':
-                    fig.update_layout(xaxis2_range=[lower_range, upper_range])
-                else:
-                    fig.update_layout(yaxis2_range=[lower_range, upper_range])
-        # if kwargs.get('color'):
-        #     # Change color order in the figure
-        #     color = []
-        #     for trace in fig.data:
-        #         color.append(trace.marker.color)
-        #     if pd.api.types.is_numeric_dtype(df_for_fig[kwargs['x']]):
-        #         # Sort by the last value in x for descending order
-        #         traces = list(fig.data)
-        #         traces.sort(key=lambda x: x.x[-1])
-        #         fig.data = traces
-        #         color = color[::-1]
-        #         for i, trace in enumerate(fig.data):
-        #             trace.marker.color = color[i]
-        #         fig.update_layout(legend={'traceorder': 'reversed'})
-
+            fig = _add_boxplot(fig, df, config, kwargs)
 
     # Handle data in normal mode
     else:
-        df_sorted = df
         num_column_for_subplots = None
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
             orientation = kwargs.get('orientation') if kwargs.get('orientation') is not None else 'h'
             if pd.api.types.is_numeric_dtype(df[kwargs['y']]) and orientation == 'v':
                 if config.get('sort_axis'):
-                    df_sorted[kwargs['x']] = df_sorted[kwargs['x']].astype(str)
+                    df[kwargs['x']] = df[kwargs['x']].astype(str)
                     num_for_sort = kwargs['y']
-                    num_column_for_subplots = kwargs['y']
+                    # num_column_for_subplots = kwargs['y']
                     ascending_for_sort = False
-                    df_sorted = df.sort_values(num_for_sort, ascending=ascending_for_sort)
+                    df = df.sort_values(num_for_sort, ascending=ascending_for_sort)
             else:
                 if config.get('sort_axis'):
-                    df_sorted[kwargs['y']] = df_sorted[kwargs['y']].astype(str)
+                    df[kwargs['y']] = df[kwargs['y']].astype(str)
                     num_for_sort = kwargs['x']
-                    num_column_for_subplots = kwargs['x']
+                    # num_column_for_subplots = kwargs['x']
                     ascending_for_sort = True
-                    df_sorted = df_sorted.sort_values(num_for_sort, ascending=ascending_for_sort)
+                    df = df.sort_values(num_for_sort, ascending=ascending_for_sort)
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
@@ -922,79 +1006,11 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             kwargs['hover_data'] = {kwargs['y']: ':.2f'}
         elif kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[num_for_sort]):
             kwargs['hover_data'] = {num_for_sort: ':.2f'}
-        fig = figure_creators[graph_type](df_sorted, **kwargs)
+        fig = figure_creators[graph_type](df, **kwargs)
         if graph_type == 'bar' and config['show_count']:
-            kwargs_for_count = kwargs.copy()
-            kwargs_for_count['error_x'] = None
-            kwargs_for_count['error_y'] = None
-            if 'count_for_subplots' not in kwargs_for_count['labels']:
-                kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
-            if num_column_for_subplots == kwargs['x']:
-                kwargs_for_count['x'] = 'count_for_subplots'
-                count_xaxis_title = kwargs_for_count['labels']['count_for_subplots']
-                count_yaxis_title = None
-                shared_yaxes = True
-                horizontal_spacing = 0.05
-            else:
-                kwargs_for_count['y'] = 'count_for_subplots'
-                count_yaxis_title = kwargs_for_count['labels']['count_for_subplots']
-                count_xaxis_title = kwargs_for_count.get('labels')[kwargs_for_count['x']]
-                shared_yaxes = False
-                horizontal_spacing = None
-            fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
-            fig_subplots.add_trace(fig.data[0], row=1, col=1)
-            fig_subplots.update_layout(title_text=kwargs.get('title'))
-            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
-            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
-            fig_count = px.bar(df_sorted, **kwargs_for_count)
-            fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
-            fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
-            fig_subplots.update_yaxes(title_text=count_yaxis_title, row=1, col=2)
-            fig = fig_subplots
-    # Set x-axis format and figure dimensions
-    fig_update_config = dict()
-    is_x_datetime = pd.api.types.is_datetime64_any_dtype(df[kwargs['x']])
-    is_x_numeric = pd.api.types.is_numeric_dtype(df[kwargs['x']])
-    is_x_integer = pd.api.types.is_integer_dtype(df[kwargs['x']])
-    is_y_numeric = pd.api.types.is_numeric_dtype(df[kwargs['y']])
-    is_y_integer = pd.api.types.is_integer_dtype(df[kwargs['y']])
-    if graph_type == 'bar':
-        if not is_x_numeric:
-            fig_update_config['xaxis_showgrid'] = False
-        if not is_y_numeric:
-            fig_update_config['yaxis_showgrid'] = False
-        if config.get('agg_column') == kwargs['x']:
-            fig_update_config['xaxis_showgrid'] = True
-            fig_update_config['yaxis_showgrid'] = False
-        if config.get('agg_column') == kwargs['y']:
-            fig_update_config['xaxis_showgrid'] = False
-            fig_update_config['yaxis_showgrid'] = True
-    if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-        # fig_update_config['xaxis_tickformat'] = "%b'%y"
-        if not kwargs.get('width'):
-            fig_update_config['width'] = 1000
-        if not kwargs.get('height'):
-            fig_update_config['height'] = 450
-    else:
-        if not kwargs.get('width'):
-            fig_update_config['width'] = 600
-        if not kwargs.get('height'):
-            fig_update_config['height'] = 400
-        if kwargs.get('color'):
-            fig_update_config['width'] = 800
-        if config.get('show_box'):
-            fig_update_config['width'] = 1000
-        if config.get('top_and_bottom'):
-            fig_update_config['width'] = 1000
-        if config.get('show_count'):
-            fig_update_config['width'] = 900
-    if kwargs.get('color'):
-        fig_update_config['legend_position'] = 'top'
-        if graph_type in ['line', 'area']:
-            fig_update_config['opacity'] = 0.7
-        fig_update_config['legend_title'] = ''
-    if config['update_layout'] == True:
-        fig = fig_update(fig, **fig_update_config)
+            fig  = _create_base_fig_and_countplot(fig, df_sorted)
+
+    fig = _update_fig(fig, config, kwargs)
 
     return fig
 
