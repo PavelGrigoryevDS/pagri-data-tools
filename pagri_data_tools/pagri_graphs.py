@@ -123,6 +123,7 @@ def fig_update(
     margin: dict = dict(l=50, r=50, b=50, t=50),
     xgap: int = None,
     ygap: int = None,
+    yaxis_domain: list = None
 ) -> go.Figure:
     """
     Apply consistent styling settings to a Plotly figure.
@@ -388,7 +389,7 @@ def fig_update(
     if legend_position == 'top':
         fig.update_layout(
             yaxis = dict(
-                domain=[0, 0.92]
+                domain=yaxis_domain if yaxis_domain else [0, 0.92]
             )
             , legend = dict(
                 orientation="h"  # Горизонтальное расположение
@@ -457,8 +458,14 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
     if graph_type == 'bar':
         kwargs.setdefault('barmode', 'group')
     # Function to create a combined filter mask
-    def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str):
+    def create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict, num_column: str, mode_top_or_bottom: str):
         """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
+        if mode_top_or_bottom == 'top':
+            ascendign = False
+        elif mode_top_or_bottom == 'bottom':
+            ascendign = True
+        else:
+            raise ValueError('unknown mask_func')
         mask = None
         top_n_trim_x = config.get('top_n_trim_x')
         top_n_trim_color = config.get('top_n_trim_color')
@@ -473,7 +480,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_color = (
                 df.groupby(kwargs['color'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_color)
+                .sort_values(ascending=ascendign)[:top_n_trim_color]
                 .index
             )
             mask = df[kwargs['color']].isin(top_color)
@@ -485,7 +492,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_x = (
                 df.groupby(kwargs['x'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_x)
+                .sort_values(ascending=ascendign)[:top_n_trim_x]
                 .index
             )
             x_mask = df[kwargs['x']].isin(top_x)
@@ -498,7 +505,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_y = (
                 df.groupby(kwargs['y'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_y)
+                .sort_values(ascending=ascendign)[:top_n_trim_y]
                 .index
             )
             y_mask = df[kwargs['y']].isin(top_y)
@@ -511,7 +518,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_facet_col = (
                 df.groupby(kwargs['facet_col'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_facet_col)
+                .sort_values(ascending=ascendign)[:top_n_trim_facet_col]
                 .index
             )
             facet_col_mask = df[kwargs['facet_col']].isin(top_facet_col)
@@ -524,7 +531,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_facet_row = (
                 df.groupby(kwargs['facet_row'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_facet_row)
+                .sort_values(ascending=ascendign)[:top_n_trim_facet_row]
                 .index
             )
             facet_row_mask = df[kwargs['facet_row']].isin(top_facet_row)
@@ -537,7 +544,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             top_animation_frame = (
                 df.groupby(kwargs['animation_frame'], observed=False)[num_column]
                 .agg(agg_func)
-                .nlargest(top_n_trim_facet_animation_frame)
+                .sort_values(ascending=ascendign)[:top_n_trim_facet_animation_frame]
                 .index
             )
             animation_frame_mask = df[kwargs['animation_frame']].isin(top_animation_frame)
@@ -580,7 +587,7 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         cat_columns = facet_col + facet_row + [cat_column_axis] + color + animation_frame
 
         # Create filter mask
-        mask = create_filter_mask(df, config, kwargs, num_column)
+        mask = create_filter_mask(df, config, kwargs, num_column, config['trim_top_or_bottom'])
 
         # Apply mask to DataFrame
         func_df = df[mask] if mask is not None else df
@@ -641,7 +648,12 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
             # Determine sorting order
             # display(func_df.head())
-            ascending_for_axis = False if kwargs['y'] == num_column else True
+            if config['trim_top_or_bottom'] == 'top':
+                ascending_for_axis = False if kwargs['y'] == num_column else True
+            elif config['trim_top_or_bottom'] == 'bottom':
+                ascending_for_axis = True if kwargs['y'] == num_column else False
+            else:
+                raise ValueError('Unknown trim_top_or_bottom. Must be "top" or "bottom"')
             ascending_for_color = False
             ascending_for_facet_col = False
             ascending_for_facet_row = False
@@ -752,10 +764,35 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         if graph_type == 'bar' and config['top_and_bottom']:
-            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.05)
+            fig_subplots = make_subplots(rows=1, cols=2) #, horizontal_spacing=0.05)
             fig_subplots.add_trace(fig.data[0], row=1, col=1)
-            df_for_fig = df_for_fig.iloc[::-1]
+            config['trim_top_or_bottom']='bottom'
+            df_for_fig = prepare_df(df, config, kwargs, num_column_for_hover)
+            custom_data = [df_for_fig['count_for_show_group_size']]
+            # display(df_for_fig.head())
+            if norm_by:
+                custom_data += [df_for_fig['origin_num']]
+                if kwargs['labels'] is not None:
+                    num_column_for_hover_label = kwargs['labels'][num_column_for_hover[0]]
+                    kwargs['labels'][num_column_for_hover] = 'Доля'
+                is_num_integer = False
+            else:
+                is_num_integer = pd.api.types.is_integer_dtype(df_for_fig[config['num_column']])
+            kwargs['custom_data'] = custom_data
+            if graph_type == 'bar' and config.get('show_ci') == True:
+                if config['num_column'] == kwargs['x']:
+                    kwargs['error_x'] = 'margin_of_error'
+                else:
+                    kwargs['error_y'] = 'margin_of_error'
+                hover_data['margin_of_error'] =  ':.2f'
             fig_bottom = px.bar(df_for_fig, **kwargs)
+            fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
+            fig_subplots.add_trace(fig_bottom.data[0], row=1, col=2)
+            fig_subplots.update_layout(title_text=kwargs.get('title'))
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
+            fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=2)
+            fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+            fig = fig_subplots
         if graph_type == 'bar' and config['show_count']:
             kwargs_for_count = kwargs.copy()
             kwargs_for_count['error_x'] = None
@@ -947,6 +984,8 @@ def _create_base_fig_for_bar_line_area(df: pd.DataFrame, config: dict, kwargs: d
             fig_update_config['width'] = 800
         if config.get('show_box'):
             fig_update_config['width'] = 1000
+        if config.get('top_and_bottom'):
+            fig_update_config['width'] = 1000
         if config.get('show_count'):
             fig_update_config['width'] = 900
     if kwargs.get('color'):
@@ -987,6 +1026,7 @@ def bar(
     upper_quantile_for_box: float = None,
     top_and_bottom: bool = False,
     show_ci: bool = False,
+    trim_top_or_bottom: str = 'top',
     **kwargs
 ) -> go.Figure:
     """
@@ -1021,6 +1061,8 @@ def bar(
         Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
     top_n_trim_facet_animation_frame : int, optional
         Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    trim_top_or_bottom : str, optional
+        Trim from bottom or from top. Default is 'top'
     sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
@@ -1125,7 +1167,8 @@ def bar(
         'lower_quantile_for_box': lower_quantile_for_box,
         'upper_quantile_for_box': upper_quantile_for_box,
         'show_ci': show_ci,
-        'top_and_bottom': top_and_bottom
+        'top_and_bottom': top_and_bottom,
+        'trim_top_or_bottom': trim_top_or_bottom,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1151,6 +1194,7 @@ def line(
     show_group_size: bool = False,
     decimal_places: int = 2,
     update_layout: bool = True,
+    trim_top_or_bottom: str = 'top',
     **kwargs
 ) -> go.Figure:
     """
@@ -1185,6 +1229,8 @@ def line(
         Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
     top_n_trim_facet_animation_frame : int, optional
         Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    trim_top_or_bottom : str, optional
+        Trim from bottom or from top. Default is 'top'
     sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
@@ -1274,6 +1320,8 @@ def line(
         'decimal_places': decimal_places,
         'norm_by': norm_by,
         'update_layout': update_layout,
+        'trim_top_or_bottom': trim_top_or_bottom,
+
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
@@ -1299,6 +1347,7 @@ def area(
     show_group_size: bool = False,
     decimal_places: int = 2,
     update_layout: bool = True,
+    trim_top_or_bottom: str = 'top',
     **kwargs
 ) -> go.Figure:
     """
@@ -1333,6 +1382,8 @@ def area(
         Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
     top_n_trim_facet_animation_frame : int, optional
         Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    trim_top_or_bottom : str, optional
+        Trim from bottom or from top. Default is 'top'
     sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
@@ -1426,6 +1477,7 @@ def area(
         'decimal_places': decimal_places,
         'norm_by': norm_by,
         'update_layout': update_layout,
+        'trim_top_or_bottom': trim_top_or_bottom,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
@@ -1502,6 +1554,7 @@ def histogram(
     kwargs.setdefault('barmode', 'group')
     kwargs.setdefault('nbins', 30)
     kwargs.setdefault('marginal', 'box')
+    yaxis_domain = None
     # Extract x, y, and color parameters from kwargs
     x = kwargs.get('x')
     y = kwargs.get('y')
@@ -1520,14 +1573,28 @@ def histogram(
         kwargs_dual = kwargs.copy()
     # If quantiles are provided, trim the data based on these quantiles
     if lower_quantile or upper_quantile:
-        if pd.api.types.is_numeric_dtype(x):
-            # Trim x based on the specified quantiles
-            trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
-            x = x[trimmed_column]
-        if pd.api.types.is_numeric_dtype(y):
-            # Trim y based on the specified quantiles
-            trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
-            y = y[trimmed_column]
+        if isinstance(x, str):
+            if pd.api.types.is_numeric_dtype(data_frame[x]):
+                # Trim x based on the specified quantiles
+                lower_quantile_x = data_frame[x].quantile(lower_quantile)
+                upper_quantile_x = data_frame[x].quantile(upper_quantile)
+                data_frame = data_frame[data_frame[x].between(lower_quantile_x, upper_quantile_x)]
+        else:
+            if pd.api.types.is_numeric_dtype(x):
+                # Trim x based on the specified quantiles
+                trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
+                x = x[trimmed_column]
+        if isinstance(y, str):
+            if pd.api.types.is_numeric_dtype(data_frame[y]):
+                # Trim x based on the specified quantiles
+                lower_quantile_y = data_frame[y].quantile(lower_quantile)
+                upper_quantile_y = data_frame[y].quantile(upper_quantile)
+                data_frame = data_frame[data_frame[y].between(lower_quantile_y, upper_quantile_y)]
+        else:
+            if pd.api.types.is_numeric_dtype(y):
+                # Trim x based on the specified quantiles
+                trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
+                y = y[trimmed_column]
         if dual:
             kwargs_dual['x'] = x
             kwargs_dual['y'] = y
@@ -1666,18 +1733,28 @@ def histogram(
         fig.update_layout(height=kwargs['height'], width=kwargs['width'])
     else:
         if kwargs.get('marginal') is not None:
-            fig.update_layout(
-                 yaxis2 = dict(
-                    domain=[0.93, 1]
-                    , visible = False
+            if kwargs.get('color'):
+                yaxis_domain = [0, 0.8]
+                fig.update_layout(
+                    yaxis2 = dict(
+                        domain=[0.85, 0.93]
+                        , visible = False
+                    )
+                    , xaxis2 = dict(
+                        visible=False
+                    )
                 )
-                , yaxis = dict(
-                    domain=[0, 0.9]
+            else:
+                yaxis_domain = [0, 0.9]
+                fig.update_layout(
+                    yaxis2 = dict(
+                        domain=[0.93, 1]
+                        , visible = False
+                    )
+                    , xaxis2 = dict(
+                        visible=False
+                    )
                 )
-                , xaxis2 = dict(
-                    visible=False
-                )
-            )
     # Update axis titles based on normalization and sorting
     if y is not None:
         if kwargs.get('histnorm') == 'probability':
@@ -1712,6 +1789,8 @@ def histogram(
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         fig_update_config['legend_title'] = ''
+    if yaxis_domain:
+        fig_update_config['yaxis_domain'] = yaxis_domain
     fig = fig_update(fig, **fig_update_config)
 
     return fig  # Return the final figure
@@ -5934,6 +6013,7 @@ def histograms_stacked(
     category: str,
     xaxis_title: str = None,
     yaxis_title: str = None,
+    legend_title: str = None,
     title: str = None,
     top_n: int = 20,
     lower_quantile: float = 0,
@@ -6149,8 +6229,7 @@ def histograms_stacked(
         upper_quantile = df[num_var].quantile(upper_quantile)  # 75-й процентиль
         # Фильтруем DataFrame по квантилям
         filtered_df = df[(df[num_var] >= lower_quantile) & (df[num_var] <= upper_quantile)]
-        if use_contrast_colors:    
-            fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins, histnorm='percent')
+        fig = px.histogram(filtered_df, x=num_var, color=cat_var, marginal=marginal, barmode=barmode, nbins=bins, histnorm='percent')
         # fig.update_traces(hovertemplate = xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>')     
         # Обновление hovertemplate для гистограммы
         fig.update_traces(hovertemplate=xaxis_title + ' = %{x}<br>Частота = %{y:.2f}<extra></extra>', 
