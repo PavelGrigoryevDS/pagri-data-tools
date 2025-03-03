@@ -1,3 +1,5 @@
+# import importlib
+# importlib.reload(pgdt)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -413,7 +415,7 @@ def chi2_pearson(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, re
         return chi2, p_value, dof, expected
 
 
-def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alternative: str = 'two-sided', return_results: bool = False) -> None:
+def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alternative: str = 'two-sided', first_for_alternative: str = None, return_results: bool = False) -> None:
     """
     Perform t-test for independent samples.
 
@@ -425,6 +427,7 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     - equal_var (bool, optional): If True (default), perform a standard independent 2 sample test that assumes equal population variances.  
         If False, perform Welch's t-test, which does not assume equal population variance.
     - alternative (str, optional): Alternative hypothesis ('two-sided', '2s', 'larger', 'l', 'smaller', 's') (default: 'two-sided')
+    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - return_results (bool, optional): Return (statistic, p_value, beta, cohens_d) instead of printing (default=False).
 
     Returns:
@@ -469,7 +472,11 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     if len(unique_samples) != 2:
         raise ValueError(
             "Sample column must contain exactly two unique labels")
-
+    if first_for_alternative:
+        if first_for_alternative not in unique_samples:
+            raise ValueError('first_for_alternative must be a lable in first column of df')
+        if first_for_alternative != unique_samples[0]:
+            unique_samples = unique_samples[::-1]
     sample1 = value_column[sample_column == unique_samples[0]]
     sample2 = value_column[sample_column == unique_samples[1]]
     warning_issued = False
@@ -492,14 +499,19 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     # Calculate the type II error rate (β)
     beta = 1 - power
 
-    statistic, p_value = stats.ttest_ind(
+    res = stats.ttest_ind(
         sample1, sample2, equal_var=equal_var, alternative=alternative)
+    statistic = res.statistic
+    p_value = res.pvalue
+    ci_low = float(res.confidence_interval().low.round(2))
+    ci_high = float(res.confidence_interval().high.round(2))
 
     if not return_results:
         print('T-критерий')
         print('p-value = ', p_value)
         print('alpha = ', alpha)
         print('beta = ', beta)
+        print(f'ci = ({ci_low}, {ci_high})')
 
         if p_value < alpha:
             print(colored(
@@ -577,15 +589,18 @@ def ttest_ind(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, equal
         effect_size=cohens_d, nobs1=nobs1, ratio=nobs2/nobs1, alpha=alpha)
     # Calculate the type II error rate (β)
     beta = 1 - power
-    statistic, p_value = stats.ttest_ind(
+    res = stats.ttest_ind(
         sample1, sample2, equal_var=equal_var, alternative=alternative)
-
+    statistic = res.statistic
+    p_value = res.pvalue
+    ci_low = float(res.confidence_interval().low.round(2))
+    ci_high = float(res.confidence_interval().high.round(2))
     if not return_results:
         print('T-критерий Уэлча')
         print('p-value = ', p_value)
         print('alpha = ', alpha)
         print('beta = ', beta)
-
+        print(f'ci = ({ci_low}, {ci_high})')
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -596,7 +611,7 @@ def ttest_ind(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, equal
         return statistic, p_value, beta, cohens_d
 
 
-def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', return_results: bool = False) -> None:
+def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', first_for_alternative: str = None, return_results: bool = False) -> None:
     """
     Perform the Mann-Whitney U rank test on two independent samples.
 
@@ -606,6 +621,7 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
         the second column contains corresponding values
     - alpha (float, optional): Significance level (default: 0.05)
     - alternative (str, optional): Alternative hypothesis ('two-sided', '2s', 'larger', 'l', 'smaller', 's') (default: 'two-sided')
+    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - return_results (bool, optional): Return (statistic, p_value) instead of printing (default=False).
 
     Returns:
@@ -645,7 +661,11 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
     if len(unique_samples) != 2:
         raise ValueError(
             "Sample column must contain exactly two unique labels")
-
+    if first_for_alternative:
+        if first_for_alternative not in unique_samples:
+            raise ValueError('first_for_alternative must be a lable in first column of df')
+        if first_for_alternative != unique_samples[0]:
+            unique_samples = unique_samples[::-1]
     sample1_values = value_column[sample_column == unique_samples[0]]
     sample2_values = value_column[sample_column == unique_samples[1]]
     warning_issued = False
@@ -1809,7 +1829,7 @@ def confint_t_1sample(sample: pd.Series, alpha: float = 0.05, alternative: str =
     return lower, upper
 
 
-def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', equal_var=False) -> tuple:
+def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', first_for_alternative: str = None, equal_var=False) -> tuple:
     """
     Calculate the confidence interval using t-statistic for the difference in means between two samples.
 
@@ -1824,6 +1844,7 @@ def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: st
            * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
            * 'larger' :   H1: ``value1 - value2 - diff > 0``
            * 'smaller' :  H1: ``value1 - value2 - diff < 0``
+    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - equal_var (bool): Whether to assume equal variances between the two samples. If `True`, the pooled standard deviation is used.   
     If `False`, the standard error is calculated using the separate variances of each sample. Defaults to `False`.
 
@@ -1873,7 +1894,11 @@ def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: st
     unique_labels = labels.unique()
     if len(unique_labels) != 2:
         raise ValueError("Labels must contain exactly two unique values")
-
+    if first_for_alternative:
+        if first_for_alternative not in unique_labels:
+            raise ValueError('first_for_alternative must be a lable in first column of df')
+        if first_for_alternative != unique_labels[0]:
+            unique_labels = unique_labels[::-1]
     # Split values into two samples based on labels
     sample1 = values[labels == unique_labels[0]]
     sample2 = values[labels == unique_labels[1]]

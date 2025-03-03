@@ -4446,7 +4446,7 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
 
     Returns:
     if return_diffs is True
-    tuple (mismatches_left_dif_right, count_right_dif_left_mismatches)
+    tuple (mismatches_left_dif_right, mismatches_right_dif_left)
     """
     # Check if DataFrames are empty
     if left_df.empty or right_df.empty:
@@ -4476,7 +4476,7 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     print('Строки в левой таблице, отсутствующие в правой: ', count_left_dif_right_mismatches)
     print('Строки в правой таблице, отсутствующие в левой: ', count_right_dif_left_mismatches)
     if return_diffs:
-        return mismatches_left_dif_right, count_right_dif_left_mismatches
+        return list(mismatches_left_dif_right), list(mismatches_right_dif_left)
 
 def haversine(lat1, lon1, lat2, lon2):
     """

@@ -495,17 +495,18 @@ def _create_base_fig_for_bar_line_area(
             else:
                 num_column = kwargs['y']
                 cat_column_axis = kwargs['x']
-        config['cat_column_axis'] = cat_column_axis
-        columns_for_groupby_share = cat_column_axis
-        config['num_column'] = num_column
         cat_columns = facet_col + facet_row + [cat_column_axis] + color + animation_frame
-        return num_column, cat_columns, columns_for_groupby_share
+        config['cat_column_axis'] = cat_column_axis
+        config['num_column'] = num_column
+        config['cat_columns'] = cat_columns
+        return num_column, cat_columns
 
     # Function to create a combined filter mask
     def _create_filter_mask(df: pd.DataFrame, config: dict, kwargs: dict):
         """Create a combined filter mask based on top_n_trim_color and top_n_trim_axis"""
         mask = None
         num_column  = config.get('num_column')
+        cat_columns = config.get('cat_columns')
         mode_top_or_bottom = config['trim_top_or_bottom']
         agg_func = config.get('agg_func')
         top_n_trim_x = config.get('top_n_trim_x')
@@ -520,6 +521,7 @@ def _create_base_fig_for_bar_line_area(
             ascendign = True
         else:
             raise ValueError('unknown mask_func')
+
         # Filter by color
         if top_n_trim_color:
             if kwargs.get('color') is None:
@@ -530,7 +532,8 @@ def _create_base_fig_for_bar_line_area(
                 .sort_values(ascending=ascendign)[:top_n_trim_color]
                 .index
             )
-            mask = df[kwargs['color']].isin(top_color)
+            color_mask = df[kwargs['color']].isin(top_color)
+            mask = mask & color_mask if mask is not None else color_mask
 
         # Filter by x axis
         if top_n_trim_x:
@@ -686,7 +689,13 @@ def _create_base_fig_for_bar_line_area(
             raise ValueError('If x and y are numeric, agg_column must be defined')
         norm_by = config.get('norm_by')
         agg_func = config.get('agg_func')
-        num_column, cat_columns, columns_for_groupby_share = _determine_numeric_and_categorical_columns(config, kwargs)
+        num_column, cat_columns = _determine_numeric_and_categorical_columns(config, kwargs)
+        min_group_size = config.get('min_group_size')
+        # Fiter by min group size
+        if min_group_size:
+            if cat_columns is None:
+                raise ValueError('Error fiter min_group_size, cat_columns is None')
+            df = df.groupby(cat_columns, observed=False).filter(lambda x: len(x) >= min_group_size)
         # Create filter mask
         mask = _create_filter_mask(df, config, kwargs)
 
@@ -745,12 +754,6 @@ def _create_base_fig_for_bar_line_area(
         else:
             is_num_integer = pd.api.types.is_integer_dtype(df_for_fig_bottom[config['num_column']])
         kwargs['custom_data'] = custom_data
-        if graph_type == 'bar' and config.get('show_ci') == True:
-            if config['num_column'] == kwargs['x']:
-                kwargs['error_x'] = 'margin_of_error'
-            else:
-                kwargs['error_y'] = 'margin_of_error'
-            hover_data['margin_of_error'] =  ':.2f'
         fig_bottom = px.bar(df_for_fig_bottom, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         fig_subplots.add_trace(fig_bottom.data[0], row=1, col=2)
@@ -763,8 +766,10 @@ def _create_base_fig_for_bar_line_area(
 
     def _create_base_fig_and_countplot(fig, df_for_fig, config: dict, kwargs: dict):
         kwargs_for_count = kwargs.copy()
+        num_column = config.get('num_column')
         kwargs_for_count['error_x'] = None
         kwargs_for_count['error_y'] = None
+        kwargs_for_count['hover_data'].update({'margin_of_error': False, num_column: False})
         if 'count_for_subplots' not in kwargs_for_count['labels']:
             kwargs_for_count['labels']['count_for_subplots'] = 'Количество'
         if config['num_column'] == kwargs['x']:
@@ -902,7 +907,7 @@ def _create_base_fig_for_bar_line_area(
             raise ValueError('For resample agg_mode resample_freq must be defined')
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
             raise ValueError('x must be datetime type')
-
+        agg_func = config.get('agg_func')
         # Define columns for aggregation
         columns = [kwargs['x'], kwargs['y']]
 
@@ -910,7 +915,10 @@ def _create_base_fig_for_bar_line_area(
         if config.get('top_n_trim_color'):
             if 'color' not in kwargs:
                 raise ValueError('For top_n_trim_color color must be defined')
-            top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nlargest(top_n_trim_color).index.to_list()
+            if config.get('trim_top_or_bottom') == 'bottom':
+                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nsmallest(config.get('top_n_trim_color')).index.to_list()
+            else:
+                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nlargest(config.get('top_n_trim_color')).index.to_list()
             if graph_type in ['line', 'area']:
                 kwargs.setdefault('category_orders', {kwargs.get('color'): top_color})
         else:
@@ -933,7 +941,7 @@ def _create_base_fig_for_bar_line_area(
             'line': px.line,
             'area': px.area
         }
-        if kwargs.get('hover_data') is not None and not pd.api.types.is_integer_dtype(df_for_fig[kwargs['y']]):
+        if kwargs.get('hover_data') is None and not pd.api.types.is_integer_dtype(df_for_fig[kwargs['y']]):
             kwargs['hover_data'] = {kwargs['y']: ':.2f'}
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
 
@@ -965,6 +973,8 @@ def _create_base_fig_for_bar_line_area(
             else:
                 kwargs['error_y'] = 'margin_of_error'
             hover_data['margin_of_error'] =  ':.2f'
+            if kwargs.get('labels') is not None:
+                kwargs['labels']['margin_of_error'] = 'Предельная ошибка'
         kwargs['hover_data'] = hover_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
@@ -1034,6 +1044,7 @@ def bar(
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
     show_group_size: bool = False,
+    min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
     show_box: bool = False,
@@ -1083,6 +1094,11 @@ def bar(
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
+    min_group_size : int, optional
+        The minimum number of observations required in a category to include it in the calculation.
+        Categories with fewer observations than this threshold will be excluded from the analysis.
+        This ensures that the computed mean is based on a sufficiently large sample size,
+        improving the reliability of the results. Default is None (no minimum size restriction).
     decimal_places : int, optional
         The number of decimal places to display in hover. Default is 2
     x : str, optional
@@ -1185,6 +1201,7 @@ def bar(
         'show_ci': show_ci,
         'top_and_bottom': top_and_bottom,
         'trim_top_or_bottom': trim_top_or_bottom,
+        'min_group_size': min_group_size,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1208,6 +1225,7 @@ def line(
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
     show_group_size: bool = False,
+    min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
@@ -1251,6 +1269,11 @@ def line(
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
+    min_group_size : int, optional
+        The minimum number of observations required in a category to include it in the calculation.
+        Categories with fewer observations than this threshold will be excluded from the analysis.
+        This ensures that the computed mean is based on a sufficiently large sample size,
+        improving the reliability of the results. Default is None (no minimum size restriction).
     decimal_places : int, optional
         The number of decimal places to display in hover. Default is 2
     x : str, optional
@@ -1337,6 +1360,7 @@ def line(
         'norm_by': norm_by,
         'update_layout': update_layout,
         'trim_top_or_bottom': trim_top_or_bottom,
+        'min_group_size': min_group_size,
 
     }
     config = {k: v for k,v in config.items() if v is not None}
@@ -1361,6 +1385,7 @@ def area(
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
     show_group_size: bool = False,
+    min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
@@ -1404,6 +1429,11 @@ def area(
         Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
     show_group_size : bool, optional
         Whether to show the group size (only for groupby mode). Default is False
+    min_group_size : int, optional
+        The minimum number of observations required in a category to include it in the calculation.
+        Categories with fewer observations than this threshold will be excluded from the analysis.
+        This ensures that the computed mean is based on a sufficiently large sample size,
+        improving the reliability of the results. Default is None (no minimum size restriction).
     decimal_places : int, optional
         The number of decimal places to display in hover. Default is 2
     x : str, optional
@@ -1494,6 +1524,7 @@ def area(
         'norm_by': norm_by,
         'update_layout': update_layout,
         'trim_top_or_bottom': trim_top_or_bottom,
+        'min_group_size': min_group_size,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
@@ -6754,20 +6785,21 @@ def plot_confidence_intervals_old(df, categorical_col, numerical_col, confidence
     fig.update_layout(height=height, width=width, title_text=title, xaxis_title=xaxis_title, yaxis_title=yaxis_title)
     return plotly_default_settings(fig)
 
-def plot_confidence_intervals(
+def plot_ci(
     df: pd.DataFrame,
     categorical_col: str,
     numerical_col: str,
     second_categorical_col: str = None,
     confidence_level: float = 0.95,
-    orientation: str = 'vertical',
-    height: int = 600,
-    width: int = 800,
+    orientation: str = 'v',
+    height: int = 300,
+    width: int = 400,
     legend_position: str = 'top',
     title: str = None,
     xaxis_title: str = None, 
     yaxis_title: str = None,
-    legend_title: str = None
+    legend_title: str = None,
+    labels: dict = None,
 ) -> go.Figure:
     """
     Creates a plot with mean values and confidence intervals using t-statistics.
@@ -6821,17 +6853,15 @@ def plot_confidence_intervals(
     # func_for_title = ['Среднее', 'Средний', 'Средняя', 'Средние']
     # suffix_type = titles_for_axis[numerical_col][2] if titles_for_axis else 0
 
-    # if not titles_for_axis:
-    #     # title = f'Среднее {numerical_col} в зависимости от {categorical_col} с {int(confidence_level*100)}% доверительными интервалами'
-    #     xaxis_title = categorical_col
-    #     yaxis_title = numerical_col
-    # else:
-    #     if second_categorical_col:
-    #         title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} и {titles_for_axis[second_categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
-    #     else:
-    #         title = f'{func_for_title[suffix_type]} {titles_for_axis[numerical_col][1]} в зависимости от {titles_for_axis[categorical_col][1]} с {int(confidence_level*100)}% доверительными интервалами'
-    #     xaxis_title = f'{titles_for_axis[categorical_col][0]}'
-    #     yaxis_title = f'{titles_for_axis[numerical_col][0]}'
+    if labels is None:
+        # title = f'Среднее {numerical_col} в зависимости от {categorical_col} с {int(confidence_level*100)}% доверительными интервалами'
+        xaxis_title = categorical_col
+        yaxis_title = numerical_col
+        legend_title = second_categorical_col if second_categorical_col else None
+    else:
+        xaxis_title = f'{labels[categorical_col]}'
+        yaxis_title = f'{labels[numerical_col]}'
+        legend_title = f'{labels[second_categorical_col]}' if second_categorical_col else None
 
     # Группируем данные и вычисляем среднее, стандартное отклонение и количество наблюдений
     if second_categorical_col:
@@ -6845,22 +6875,37 @@ def plot_confidence_intervals(
     t_score = t.ppf(1 - alpha / 2, degrees_of_freedom)  # t-статистика
 
     # Вычисляем доверительный интервал
-    summary_df["ci"] = t_score * summary_df["std"] / (summary_df["count"] ** 0.5)
-
+    summary_df["ci"] = (t_score * summary_df["std"] / (summary_df["count"] ** 0.5)).round(2)
+    summary_df["mean"] = summary_df["mean"].round(2)
+    if df[categorical_col].nunique() == 2 and second_categorical_col is None:
+        ticktext = summary_df[categorical_col].unique()
+        tickvals = [0.25, 0.75]
+        summary_df[categorical_col] = [0.25, 0.75]
+    else:
+        ticktext = None
+        tickvals = None
+    # print(tickvals, ticktext)
+    # display(summary_df)
     # Определяем ориентацию графика
     if orientation == 'v':
         x_col = categorical_col
         y_col = "mean"
+        hovertemplate = f'{yaxis_title}' + ' = %{y}<br>'
         if xaxis_title:
-            hovertemplate = 'Среднее = %{y}<br>' + f'{xaxis_title} = ' + '%{x}'
+            hovertemplate += f'{xaxis_title} = ' + '%{x}<extra></extra>'
+        else:
+            hovertemplate += '%{x}<extra></extra>'
     elif orientation == 'h':
         x_col = "mean"
         y_col = categorical_col
         xaxis_title, yaxis_title = yaxis_title, xaxis_title
+        hovertemplate = f'{yaxis_title}' + ' = %{x}<br>'
         if xaxis_title:
-            hovertemplate = 'Среднее = %{x}<br>' + f'{xaxis_title} = ' + '%{y}'
+            hovertemplate ++ f'{xaxis_title} = ' + '%{y}<extra></extra>'
+        else:
+            hovertemplate += '%{x}<extra></extra>'
     else:
-        raise ValueError("Ориентация должна быть 'vertical' или 'horizontal'.")
+        raise ValueError("Ориентация должна быть 'v' или 'h'.")
 
     if second_categorical_col:
         # Преобразуем категориальные значения в числовые для расчета смещения
@@ -6885,7 +6930,7 @@ def plot_confidence_intervals(
                 error_x=dict(type='data', array=df_subset["ci"], visible=True) if orientation == 'h' else None,
                 mode='markers',
                 name=category,
-                hovertemplate=hovertemplate
+                hovertemplate=hovertemplate,
             ))
         
         # Настраиваем ось X, чтобы отображать категории
@@ -6895,11 +6940,21 @@ def plot_confidence_intervals(
         )
     else:
         # Если вторая категориальная переменная не указана, строим обычный график
-        fig = px.scatter(summary_df, x=x_col, y=y_col, 
+        fig = px.scatter(summary_df, x=x_col, y=y_col,
                         error_y="ci" if orientation == 'v' else None,
                         error_x="ci" if orientation == 'h' else None,
                         title=title)
 
+        # Обновляем оси X: задаем метки и их позиции
+        fig.update_xaxes(
+            tickvals=tickvals
+            , ticktext=ticktext
+            , range=[0,1]
+        )
+    fig.update_traces(
+        error_x=dict(width=10),  # Ширина черточек для ошибок по оси X
+        error_y=dict(width=10)  # Ширина черточек для ошибок по оси Y
+    )
     # Настраиваем подсказки (hovertemplate)
     fig.update_traces(hovertemplate=hovertemplate)
     if second_categorical_col:
@@ -6935,14 +6990,14 @@ def plot_confidence_intervals(
         else:
             raise ValueError("Invalid legend_position. Please choose 'top' or 'right'.")         
     # Настраиваем макет графика
-    fig.update_layout(
+    update_layout_config = dict(
         height=height,
         width=width,
-        title_text=title,
+        title=title,
         xaxis_title=xaxis_title,
         yaxis_title=yaxis_title
     )
-    return plotly_default_settings(fig)
+    return fig_update(fig, **update_layout_config)
 
 def subplots(
     configs,
