@@ -930,6 +930,8 @@ def _create_base_fig_for_bar_line_area(
         if 'color' in kwargs:
             columns.append(kwargs['color'])
             if config.get('top_n_trim_color'):
+                if pd.api.types.is_categorical_dtype(df[kwargs['color']]):
+                    df[kwargs['color']] = df[kwargs['color']].cat.set_categories(top_color)
                 df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
             else:
                 df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
