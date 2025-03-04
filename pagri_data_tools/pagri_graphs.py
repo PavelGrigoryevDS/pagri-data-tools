@@ -467,6 +467,7 @@ def _create_base_fig_for_bar_line_area(
         raise ValueError('x and y must be defined')
 
     # Retrieve mode from config
+    df = df.copy()
     agg_mode = config.get('agg_mode')
     norm_by = config.get('norm_by')
     if graph_type in ['line', 'area']:
@@ -894,7 +895,8 @@ def _create_base_fig_for_bar_line_area(
             fig_update_config['legend_position'] = 'top'
             if graph_type in ['line', 'area']:
                 fig_update_config['opacity'] = 0.7
-            fig_update_config['legend_title'] = ''
+            if config.get('show_legend_title') == False:
+                fig_update_config['legend_title'] = ''
         if config['update_layout'] == True:
             fig = fig_update(fig, **fig_update_config)
         return fig
@@ -988,12 +990,13 @@ def _create_base_fig_for_bar_line_area(
 
         if graph_type == 'bar' and config['show_box']:
             fig = _add_boxplot(fig, df, config, kwargs)
-
     # Handle data in normal mode
     else:
         num_column_for_subplots = None
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
-            orientation = kwargs.get('orientation') if kwargs.get('orientation') is not None else 'h'
+            orientation = kwargs.get('orientation')
+            if kwargs.get('orientation') is None:
+                orientation='v'
             if pd.api.types.is_numeric_dtype(df[kwargs['y']]) and orientation == 'v':
                 if config.get('sort_axis'):
                     df[kwargs['x']] = df[kwargs['x']].astype(str)
@@ -1056,6 +1059,7 @@ def bar(
     top_and_bottom: bool = False,
     show_ci: bool = False,
     trim_top_or_bottom: str = 'top',
+    show_legend_title: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1169,6 +1173,8 @@ def bar(
         Whether to show confidence intervals. Default is False
     top_and_bottom : bool, optional
         Whether to show only top or both top and bottom
+    show_legend_title : bool, optional
+        Whether to show legend title. Default is False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1204,6 +1210,7 @@ def bar(
         'top_and_bottom': top_and_bottom,
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
+        'show_legend_title': show_legend_title,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1231,6 +1238,7 @@ def line(
     decimal_places: int = 2,
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
+    show_legend_title: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1334,6 +1342,8 @@ def line(
         Width of the chart in pixels. Default is None
     height : int, optional
         Height of the chart in pixels. Default is None
+    show_legend_title : bool, optional
+        Whether to show legend title. Default is False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1363,7 +1373,7 @@ def line(
         'update_layout': update_layout,
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
-
+        'show_legend_title': show_legend_title,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
@@ -1391,6 +1401,7 @@ def area(
     decimal_places: int = 2,
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
+    show_legend_title: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1498,6 +1509,8 @@ def area(
         Normalization method for groups. Options: 'fraction', 'percent'. Default is None
     stackgroup : str, optional
         Method for stacking groups. Options: 'absolute', 'relative', 'percent'. Default is None
+    show_legend_title : bool, optional
+        Whether to show legend title. Default is False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1527,6 +1540,7 @@ def area(
         'update_layout': update_layout,
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
+        'show_legend_title': show_legend_title,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
