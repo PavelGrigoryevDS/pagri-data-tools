@@ -3360,7 +3360,7 @@ def create_category_column(
     n_intervals=None,
     bins=None,
     right=True,
-    fillnavalue=None
+    fill_na_value=None
 ):
     """
     Create a new category column based on the chosen method.
@@ -3372,7 +3372,7 @@ def create_category_column(
     - n_intervals (int, optional): number of intervals for 'custom_intervals' or 'quantiles' method (default is len(labels) + 1)
     - bins (list, optional): list of bins for pd.cut function (default is None). The length of `bins` should be `len(labels) + 1`.
     - right (bool, optional): Whether to include the rightmost edge or not. Default is True.
-    - fillnavalue (str): Value for fill na. If None , then not filling na.
+    - fill_na_value (str): Value for fill na. If None , then not filling na.
 
     Returns:
     - pandas Series: new category column (categorical type pandas)
@@ -3423,9 +3423,9 @@ def create_category_column(
         raise ValueError(
             "Invalid method. Choose either 'custom_intervals' or 'quantiles'."
         )
-    if fillnavalue:
-        category_column = category_column.cat.add_categories([fillnavalue])
-        return category_column.fillna(fillnavalue).astype("category")
+    if fill_na_value:
+        category_column = category_column.cat.add_categories([fill_na_value])
+        return category_column.fillna(fill_na_value).astype("category")
     else:
         return category_column.astype("category")
 
