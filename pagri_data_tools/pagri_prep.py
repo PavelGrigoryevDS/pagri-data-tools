@@ -3423,7 +3423,7 @@ def create_category_column(
         raise ValueError(
             "Invalid method. Choose either 'custom_intervals' or 'quantiles'."
         )
-    if fill_na_value:
+    if fill_na_value and category_column.isna().sum() != 0:
         category_column = category_column.cat.add_categories([fill_na_value])
         return category_column.fillna(fill_na_value).astype("category")
     else:
