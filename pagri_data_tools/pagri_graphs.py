@@ -2377,8 +2377,12 @@ def heatmap(
 
     # Check if the z column is numeric and not integer
     if z:
-        is_z_numeric = pd.api.types.is_numeric_dtype(df[z])
-        is_z_integer = pd.api.types.is_integer_dtype(df[z])
+        if isinstance(z, str):
+            z_column = df[z]
+        else:
+            z_column = z
+        is_z_numeric = pd.api.types.is_numeric_dtype(z_column)
+        is_z_integer = pd.api.types.is_integer_dtype(z_column)
         if is_z_numeric and not is_z_integer:
             # Format the hover text to display two decimal places
             for trace in fig.data:
