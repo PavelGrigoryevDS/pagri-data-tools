@@ -1011,6 +1011,8 @@ def _create_base_fig_for_bar_line_area(
                     # num_column_for_subplots = kwargs['x']
                     ascending_for_sort = True
                     df = df.sort_values(num_for_sort, ascending=ascending_for_sort)
+        if kwargs.get('color') is not None:
+            df[kwargs['color']] = df[kwargs['color']].astype('str')
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
