@@ -636,6 +636,7 @@ def _create_base_fig_for_bar_line_area(
         sort_facet_row = config.get('sort_facet_row')
         sort_facet_col = config.get('sort_facet_col')
         sort_animation_frame = config.get('sort_animation_frame')
+        observed_for_groupby = config.get('observed_for_groupby')
         cat_column_axis = config['cat_column_axis']
         color = [kwargs['color']] if kwargs.get('color') else []
         facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
@@ -661,23 +662,23 @@ def _create_base_fig_for_bar_line_area(
             func_for_sort = 'sum' if agg_func in ['count', 'nunique'] else agg_func
             if sort_animation_frame == True and animation_frame:
                 ascending.append(ascending_for_animation_frame)
-                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=False)[num_column_for_sort].transform(func_for_sort)
+                func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_animation_frame')
             if sort_facet_col == True and facet_col:
                 ascending.append(ascending_for_facet_col)
-                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=False)[num_column_for_sort].transform(func_for_sort)
+                func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_col')
             if sort_facet_row == True and facet_row:
                 ascending.append(ascending_for_facet_row)
-                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=False)[num_column_for_sort].transform(func_for_sort)
+                func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_row')
             if sort_axis == True and cat_column_axis:
                 ascending.append(ascending_for_axis)
-                func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=False)[num_column_for_sort].transform(func_for_sort)
+                func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_axis')
             if sort_color == True and color:
                 ascending.append(ascending_for_color)
-                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=False)[num_column_for_sort].transform(func_for_sort)
+                func_df['sum_for_sort_color'] = func_df.groupby(color, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_color')
             func_df = func_df.sort_values(columns_for_sort, ascending=ascending)
             func_df = func_df.drop(columns_for_sort, axis=1)
@@ -690,13 +691,14 @@ def _create_base_fig_for_bar_line_area(
             raise ValueError('If x and y are numeric, agg_column must be defined')
         norm_by = config.get('norm_by')
         agg_func = config.get('agg_func')
+        observed_for_groupby = config.get('observed_for_groupby')
         num_column, cat_columns = _determine_numeric_and_categorical_columns(config, kwargs)
         min_group_size = config.get('min_group_size')
         # Fiter by min group size
         if min_group_size:
             if cat_columns is None:
                 raise ValueError('Error fiter min_group_size, cat_columns is None')
-            df = df.groupby(cat_columns, observed=False).filter(lambda x: len(x) >= min_group_size)
+            df = df.groupby(cat_columns, observed=observed_for_groupby).filter(lambda x: len(x) >= min_group_size)
         # Create filter mask
         mask = _create_filter_mask(df, config, kwargs)
 
@@ -707,7 +709,7 @@ def _create_base_fig_for_bar_line_area(
         # print(cat_columns)
         if pd.api.types.is_numeric_dtype(df[num_column]):
             func_df = (func_df[[*cat_columns, num_column]]
-                    .groupby(cat_columns, observed=False)
+                    .groupby(cat_columns, observed=observed_for_groupby)
                     .agg(num=(num_column, agg_func)
                             , count_for_subplots=(num_column, 'count')
                             , margin_of_error = (num_column, 'sem'))
@@ -715,7 +717,7 @@ def _create_base_fig_for_bar_line_area(
             func_df['margin_of_error'] = 1.96 * func_df['margin_of_error']
         else:
             func_df = (func_df[[*cat_columns, num_column]]
-                    .groupby(cat_columns, observed=False)
+                    .groupby(cat_columns, observed=observed_for_groupby)
                     .agg(num=(num_column, agg_func)
                             , count_for_subplots=(num_column, 'count'))
                     .reset_index())
@@ -934,9 +936,9 @@ def _create_base_fig_for_bar_line_area(
             if config.get('top_n_trim_color'):
                 if pd.api.types.is_categorical_dtype(df[kwargs['color']]):
                     df[kwargs['color']] = df[kwargs['color']].cat.set_categories(top_color)
-                df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
+                df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])[kwargs['y']].agg(agg_func).reset_index()
             else:
-                df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
+                df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])[kwargs['y']].agg(agg_func).reset_index()
             # Since when grouping by two or more fields, missing dates in a variable of type datetime are not preserved, it is necessary to restore all missing dates and fill them with zeros.
             full_index = pd.MultiIndex.from_product([pd.date_range(df_for_fig[kwargs['x']].min(), df_for_fig[kwargs['x']].max(), freq=config['resample_freq']), df_for_fig[kwargs['color']].unique()], names=[kwargs['x'], kwargs['color']])
             df_for_fig = df_for_fig.set_index([kwargs['x'], kwargs['color']]).reindex(full_index, fill_value=0).reset_index()
@@ -1016,6 +1018,8 @@ def _create_base_fig_for_bar_line_area(
                     df = df.sort_values(num_for_sort, ascending=ascending_for_sort)
         if kwargs.get('color') is not None:
             df[kwargs['color']] = df[kwargs['color']].astype('str')
+            if kwargs.get('category_orders') is not None and kwargs.get('category_orders').get(kwargs['color']) is not None:
+                kwargs['category_orders'][kwargs['color']] = map(str, kwargs['category_orders'][kwargs['color']])
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
@@ -1028,7 +1032,7 @@ def _create_base_fig_for_bar_line_area(
             kwargs['hover_data'] = {num_for_sort: ':.2f'}
         fig = figure_creators[graph_type](df, **kwargs)
         if graph_type == 'bar' and config['show_count']:
-            fig  = _create_base_fig_and_countplot(fig, df_sorted)
+            fig  = _create_base_fig_and_countplot(fig, df)
 
     fig = _update_fig(fig, config, kwargs)
 
@@ -1065,6 +1069,7 @@ def bar(
     show_ci: bool = False,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
+    observed_for_groupby: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1180,8 +1185,14 @@ def bar(
         Whether to show only top or both top and bottom
     show_legend_title : bool, optional
         Whether to show legend title. Default is False
+    observed_for_groupby : bool, optional
+        This only applies if any of the groupers are Categoricals.
+        If True: only show observed values for categorical groupers.
+        If False: show all values for categorical groupers.
+        default False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
+
     Returns
     -------
     go.Figure
@@ -1216,6 +1227,7 @@ def bar(
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
+        'observed_for_groupby': observed_for_groupby,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1244,6 +1256,7 @@ def line(
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
+    observed_for_groupby: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1349,6 +1362,11 @@ def line(
         Height of the chart in pixels. Default is None
     show_legend_title : bool, optional
         Whether to show legend title. Default is False
+    observed_for_groupby : bool, optional
+        This only applies if any of the groupers are Categoricals.
+        If True: only show observed values for categorical groupers.
+        If False: show all values for categorical groupers.
+        default False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1379,6 +1397,7 @@ def line(
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
+        'observed_for_groupby': observed_for_groupby,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
@@ -1407,6 +1426,7 @@ def area(
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
+    observed_for_groupby: bool = False,
     **kwargs
 ) -> go.Figure:
     """
@@ -1516,6 +1536,11 @@ def area(
         Method for stacking groups. Options: 'absolute', 'relative', 'percent'. Default is None
     show_legend_title : bool, optional
         Whether to show legend title. Default is False
+    observed_for_groupby : bool, optional
+        This only applies if any of the groupers are Categoricals.
+        If True: only show observed values for categorical groupers.
+        If False: show all values for categorical groupers.
+        default False
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1546,6 +1571,7 @@ def area(
         'trim_top_or_bottom': trim_top_or_bottom,
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
+        'observed_for_groupby': observed_for_groupby,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
