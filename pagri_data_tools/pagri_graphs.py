@@ -937,6 +937,9 @@ def _create_base_fig_for_bar_line_area(
                 df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
             else:
                 df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=False)[kwargs['y']].agg(agg_func).reset_index()
+            # Since when grouping by two or more fields, missing dates in a variable of type datetime are not preserved, it is necessary to restore all missing dates and fill them with zeros.
+            full_index = pd.MultiIndex.from_product([pd.date_range(df_for_fig[kwargs['x']].min(), df_for_fig[kwargs['x']].max(), freq=config['resample_freq']), df_for_fig[kwargs['color']].unique()], names=[kwargs['x'], kwargs['color']])
+            df_for_fig = df_for_fig.set_index([kwargs['x'], kwargs['color']]).reindex(full_index, fill_value=0).reset_index()
         else:
             df_for_fig = df[columns].set_index(kwargs['x']).resample(config['resample_freq']).agg(agg_func).reset_index()
         # Create the figure using Plotly Express

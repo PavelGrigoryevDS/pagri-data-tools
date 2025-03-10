@@ -4648,3 +4648,52 @@ def column_info_short(column):
         .hide(axis="index")
         .hide(axis="columns")
     )
+
+def restore_full_index(df: pd.DataFrame, date_col: str, group_cols: list[str], freq: str = 'ME', fill_value: str | int | float = 0) -> pd.DataFrame:
+    """
+    Restores a full index for a DataFrame by filling in missing dates and categories.
+
+    This function takes a DataFrame, a date column, and a list of grouping columns.
+    It creates a full MultiIndex by generating all possible combinations of dates
+    (within the range of the date column) and unique values of the grouping columns.
+    Missing values are filled with 0.
+
+    Parameters:
+    -----------
+    df : pd.DataFrame
+        The input DataFrame containing the data.
+    date_col : str
+        The name of the column in `df` that contains the dates.
+    group_cols : list of str
+        A list of column names in `df` that are used for grouping.
+    freq : str, optional
+        The frequency for the date range. Default is 'ME' (month end).
+
+    Returns:
+    --------
+    pd.DataFrame
+        A DataFrame with a full index, where missing dates and categories are filled in.
+
+    Example:
+    --------
+    >>> df = pd.DataFrame({
+    ...     'date': pd.to_datetime(['2023-01-01', '2023-01-01', '2023-02-01']),
+    ...     'status': ['A', 'B', 'A'],
+    ...     'value': [10, 20, 30]
+    ... })
+    >>> restored_df = restore_full_index(df, 'date', ['status'])
+    >>> print(restored_df)
+    """
+    # Generate the full date range based on the minimum and maximum dates in the DataFrame
+    date_range = pd.date_range(df[date_col].min(), df[date_col].max(), freq=freq)
+
+    # Create a MultiIndex from the Cartesian product of the date range and unique values of the grouping columns
+    full_index = pd.MultiIndex.from_product(
+        [date_range] + [df[col].unique() for col in group_cols],
+        names=[date_col] + group_cols
+    )
+
+    # Set the index of the DataFrame to the date and grouping columns, then reindex to the full index
+    df = df.set_index([date_col] + group_cols).reindex(full_index, fill_value=fill_value).reset_index()
+
+    return df
