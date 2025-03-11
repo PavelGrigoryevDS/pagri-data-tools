@@ -509,7 +509,9 @@ def _create_base_fig_for_bar_line_area(
         num_column  = config.get('num_column')
         cat_columns = config.get('cat_columns')
         mode_top_or_bottom = config['trim_top_or_bottom']
-        agg_func = config.get('agg_func')
+        agg_func_for_top_n = config.get('agg_func_for_top_n')
+        if agg_func_for_top_n is None:
+            agg_func_for_top_n = config.get('agg_func')
         top_n_trim_x = config.get('top_n_trim_x')
         top_n_trim_color = config.get('top_n_trim_color')
         top_n_trim_y = config.get('top_n_trim_y')
@@ -529,7 +531,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_color color must be defined')
             top_color = (
                 df.groupby(kwargs['color'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_color]
                 .index
             )
@@ -542,7 +544,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_x x must be defined')
             top_x = (
                 df.groupby(kwargs['x'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_x]
                 .index
             )
@@ -555,7 +557,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_y y must be defined')
             top_y = (
                 df.groupby(kwargs['y'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_y]
                 .index
             )
@@ -568,7 +570,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_facet_col facet_col must be defined')
             top_facet_col = (
                 df.groupby(kwargs['facet_col'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_facet_col]
                 .index
             )
@@ -581,7 +583,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_facet_row facet_row must be defined')
             top_facet_row = (
                 df.groupby(kwargs['facet_row'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_facet_row]
                 .index
             )
@@ -594,7 +596,7 @@ def _create_base_fig_for_bar_line_area(
                 raise ValueError('For top_n_trim_facet_animation_frame animation_frame must be defined')
             top_animation_frame = (
                 df.groupby(kwargs['animation_frame'], observed=False)[num_column]
-                .agg(agg_func)
+                .agg(agg_func_for_top_n)
                 .sort_values(ascending=ascendign)[:top_n_trim_facet_animation_frame]
                 .index
             )
@@ -912,6 +914,9 @@ def _create_base_fig_for_bar_line_area(
         if not pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
             raise ValueError('x must be datetime type')
         agg_func = config.get('agg_func')
+        agg_func_for_top_n = config.get('agg_func_for_top_n')
+        if agg_func_for_top_n is None:
+            agg_func_for_top_n = config.get('agg_func')
         # Define columns for aggregation
         columns = [kwargs['x'], kwargs['y']]
 
@@ -920,14 +925,14 @@ def _create_base_fig_for_bar_line_area(
             if 'color' not in kwargs:
                 raise ValueError('For top_n_trim_color color must be defined')
             if config.get('trim_top_or_bottom') == 'bottom':
-                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nsmallest(config.get('top_n_trim_color')).index.to_list()
+                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func_for_top_n).nsmallest(config.get('top_n_trim_color')).index.to_list()
             else:
-                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nlargest(config.get('top_n_trim_color')).index.to_list()
+                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func_for_top_n).nlargest(config.get('top_n_trim_color')).index.to_list()
             if graph_type in ['line', 'area']:
                 kwargs.setdefault('category_orders', {kwargs.get('color'): top_color})
         else:
             if kwargs.get('color'):
-                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func).nlargest(10).index.to_list()
+                top_color = df.groupby(kwargs['color'], observed=False)[kwargs['y']].agg(agg_func_for_top_n).nlargest(10).index.to_list()
                 if graph_type in ['line', 'area']:
                     kwargs.setdefault('category_orders', {kwargs.get('color'): top_color})
         # Create DataFrame for the figure
@@ -1070,6 +1075,7 @@ def bar(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
+    agg_func_for_top_n: bool = None,
     **kwargs
 ) -> go.Figure:
     """
@@ -1190,6 +1196,9 @@ def bar(
         If True: only show observed values for categorical groupers.
         If False: show all values for categorical groupers.
         default False
+    agg_func_for_top_n : str, optional
+        Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'.
+        By default agg_func_for_top_n = agg_func
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
 
@@ -1228,6 +1237,7 @@ def bar(
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
         'observed_for_groupby': observed_for_groupby,
+        'agg_func_for_top_n': agg_func_for_top_n,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='bar')
@@ -1257,6 +1267,7 @@ def line(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
+    agg_func_for_top_n: bool = None,
     **kwargs
 ) -> go.Figure:
     """
@@ -1367,6 +1378,9 @@ def line(
         If True: only show observed values for categorical groupers.
         If False: show all values for categorical groupers.
         default False
+    agg_func_for_top_n : str, optional
+        Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+        By default agg_func_for_top_n = agg_func
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1398,6 +1412,7 @@ def line(
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
         'observed_for_groupby': observed_for_groupby,
+        'agg_func_for_top_n': agg_func_for_top_n,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='line')
@@ -1427,6 +1442,7 @@ def area(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
+    agg_func_for_top_n: bool = None,
     **kwargs
 ) -> go.Figure:
     """
@@ -1541,6 +1557,9 @@ def area(
         If True: only show observed values for categorical groupers.
         If False: show all values for categorical groupers.
         default False
+    agg_func_for_top_n : str, optional
+        Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+        By default agg_func_for_top_n = agg_func
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1572,6 +1591,7 @@ def area(
         'min_group_size': min_group_size,
         'show_legend_title': show_legend_title,
         'observed_for_groupby': observed_for_groupby,
+        'agg_func_for_top_n': agg_func_for_top_n,
     }
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
