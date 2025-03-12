@@ -613,21 +613,21 @@ def _create_base_fig_for_bar_line_area(
         animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
         if norm_by == 'all':
             columns_for_groupby_share = facet_col + facet_row + animation_frame
-            func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-            func_df['origin_num'] = func_df['num']
-            func_df['num'] = func_df['num'] / func_df['all_sum']
+            func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
+            func_df['origin_num'] = func_df['num_in_prepare_df']
+            func_df['num_in_prepare_df'] = func_df['num_in_prepare_df'] / func_df['all_sum']
             func_df = func_df.drop('all_sum', axis=1)
         if norm_by == columns_for_groupby_share:
             columns_for_groupby_share = [columns_for_groupby_share] + facet_col + facet_row + animation_frame
-            func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-            func_df['origin_num'] = func_df['num']
-            func_df['num'] = func_df['num'] / func_df['category_sum']
+            func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
+            func_df['origin_num'] = func_df['num_in_prepare_df']
+            func_df['num_in_prepare_df'] = func_df['num_in_prepare_df'] / func_df['category_sum']
             func_df = func_df.drop('category_sum', axis=1)
         if color and norm_by == color[0]:
             columns_for_groupby_share = [color[0]] + facet_col + facet_row + animation_frame
-            func_df['color_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num'].transform('sum')
-            func_df['origin_num'] = func_df['num']
-            func_df['num'] = func_df['num'] / func_df['color_sum']
+            func_df['color_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
+            func_df['origin_num'] = func_df['num_in_prepare_df']
+            func_df['num_in_prepare_df'] = func_df['num_in_prepare_df'] / func_df['color_sum']
             func_df = func_df.drop('color_sum', axis=1)
         return func_df
 
@@ -647,7 +647,7 @@ def _create_base_fig_for_bar_line_area(
         norm_by = config.get('norm_by')
         agg_func = config.get('agg_func')
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
-            num_column_for_sort = 'origin_num' if norm_by else 'num'
+            num_column_for_sort = 'origin_num' if norm_by else 'num_in_prepare_df'
             # Determine sorting order
             if config['trim_top_or_bottom'] == 'top':
                 ascending_for_axis = False if kwargs['y'] == num_column else True
@@ -712,7 +712,7 @@ def _create_base_fig_for_bar_line_area(
         if pd.api.types.is_numeric_dtype(df[num_column]):
             func_df = (func_df[[*cat_columns, num_column]]
                     .groupby(cat_columns, observed=observed_for_groupby)
-                    .agg(num=(num_column, agg_func)
+                    .agg(num_in_prepare_df=(num_column, agg_func)
                             , count_for_subplots=(num_column, 'count')
                             , margin_of_error = (num_column, 'sem'))
                     .reset_index())
@@ -720,7 +720,7 @@ def _create_base_fig_for_bar_line_area(
         else:
             func_df = (func_df[[*cat_columns, num_column]]
                     .groupby(cat_columns, observed=observed_for_groupby)
-                    .agg(num=(num_column, agg_func)
+                    .agg(num_in_prepare_df=(num_column, agg_func)
                             , count_for_subplots=(num_column, 'count'))
                     .reset_index())
             func_df['margin_of_error'] = None
@@ -741,7 +741,7 @@ def _create_base_fig_for_bar_line_area(
         # Format the 'count' column
         func_df['count_for_show_group_size'] = func_df['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
-        return func_df.rename(columns={'num': num_column})
+        return func_df.rename(columns={'num_in_prepare_df': num_column})
 
     def _create_top_and_bottom_fig(fig, df, config: dict, kwargs: dict):
         fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.15)
@@ -941,14 +941,33 @@ def _create_base_fig_for_bar_line_area(
             if config.get('top_n_trim_color'):
                 if pd.api.types.is_categorical_dtype(df[kwargs['color']]):
                     df[kwargs['color']] = df[kwargs['color']].cat.set_categories(top_color)
-                df_for_fig = df[columns][df[kwargs['color']].isin(top_color)].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])[kwargs['y']].agg(agg_func).reset_index()
+                df = df[columns][df[kwargs['color']].isin(top_color)]
             else:
-                df_for_fig = df[columns].groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])[kwargs['y']].agg(agg_func).reset_index()
+                df = df[columns]
+            df_for_fig = (df.groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])
+                            .agg(num_in_resample_mode = (kwargs['y'], agg_func)
+                                , count_for_show_group_size = (kwargs['y'], 'count')
+                                , margin_of_error = (kwargs['y'], 'sem')
+                                )
+                            .reset_index()
+                            .rename(columns={'num_in_resample_mode': kwargs['y']})
+            )
+            df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
             # Since when grouping by two or more fields, missing dates in a variable of type datetime are not preserved, it is necessary to restore all missing dates and fill them with zeros.
             full_index = pd.MultiIndex.from_product([pd.date_range(df_for_fig[kwargs['x']].min(), df_for_fig[kwargs['x']].max(), freq=config['resample_freq']), df_for_fig[kwargs['color']].unique()], names=[kwargs['x'], kwargs['color']])
             df_for_fig = df_for_fig.set_index([kwargs['x'], kwargs['color']]).reindex(full_index, fill_value=0).reset_index()
         else:
-            df_for_fig = df[columns].set_index(kwargs['x']).resample(config['resample_freq']).agg(agg_func).reset_index()
+            df_for_fig = (df[columns].set_index(kwargs['x']).resample(config['resample_freq'])
+                            .agg(num_in_resample_mode = (kwargs['y'], agg_func)
+                                , count_for_show_group_size = (kwargs['y'], 'count')
+                                , margin_of_error = (kwargs['y'], 'sem')
+                                )
+                            .reset_index()
+                            .rename(columns={'num_in_resample_mode': kwargs['y']})
+            )
+            df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
+        custom_data = [df_for_fig['count_for_show_group_size']]
+        kwargs['custom_data'] = custom_data
         # Create the figure using Plotly Express
         figure_creators = {
             'bar': px.bar,
@@ -958,7 +977,9 @@ def _create_base_fig_for_bar_line_area(
         if kwargs.get('hover_data') is None and not pd.api.types.is_integer_dtype(df_for_fig[kwargs['y']]):
             kwargs['hover_data'] = {kwargs['y']: ':.2f'}
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
-
+        if config.get('show_group_size') == True:
+            for trace in fig.data:
+                trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
     # Handle data in 'groupby' mode
     elif agg_mode == 'groupby':
         df_for_fig = _prepare_df(df, config, kwargs)
@@ -1000,6 +1021,9 @@ def _create_base_fig_for_bar_line_area(
 
         if graph_type == 'bar' and config['show_box']:
             fig = _add_boxplot(fig, df, config, kwargs)
+        if config.get('show_group_size') == True:
+            for trace in fig.data:
+                trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
     # Handle data in normal mode
     else:
         num_column_for_subplots = None
