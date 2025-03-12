@@ -353,7 +353,7 @@ def chisquare(sample: pd.Series, alpha: float = 0.05, return_results: bool = Fal
     if not return_results:
         print('Хи-квадрат Пирсона')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -404,7 +404,7 @@ def chi2_pearson(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, re
     if not return_results:
         print('Хи-квадрат Пирсона')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -508,7 +508,7 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
 
     if not return_results:
         print('T-критерий')
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         print('alpha = ', alpha)
         print('beta = ', beta)
         print(f'ci = ({ci_low}, {ci_high})')
@@ -597,7 +597,7 @@ def ttest_ind(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, equal
     ci_high = float(res.confidence_interval().high.round(2))
     if not return_results:
         print('T-критерий Уэлча')
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         print('alpha = ', alpha)
         print('beta = ', beta)
         print(f'ci = ({ci_low}, {ci_high})')
@@ -683,7 +683,7 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
     if not return_results:
         print('U-критерий Манна-Уитни')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -751,7 +751,7 @@ def mannwhitneyu(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, al
     if not return_results:
         print('U-критерий Манна-Уитни')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -807,7 +807,7 @@ def proportion_ztest_1sample(count: int, n: int, p0: float, alpha: float = 0.05,
     if not return_results:
         print('Один выборочный Z-тест для доли')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -863,7 +863,7 @@ def proportions_ztest_2sample(count1: int, count2: int, n1: int, n2: int, alpha:
     if not return_results:
         print('Z тест для долей')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -937,7 +937,7 @@ def proportions_ztest_column_2sample(column: pd.Series, alpha: float = 0.05, alt
     if not return_results:
         print('Z тест для долей')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -992,7 +992,7 @@ def proportions_chi2(count1: int, count2: int, n1: int, n2: int, alpha: float = 
     if not return_results:
         print('Хи-квадрат тест для долей')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1058,7 +1058,7 @@ def proportions_chi2_column(column: pd.Series, alpha: float = 0.05, alternative:
     if not return_results:
         print('Хи-квадрат тест для долей')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1120,7 +1120,7 @@ def anova_oneway_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool 
     if not return_results:
         print('Однофакторный дисперсионный анализ')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1171,7 +1171,7 @@ def anova_oneway(samples: list, alpha: float = 0.05, return_results: bool = Fals
     if not return_results:
         print('Однофакторный дисперсионный анализ')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1302,7 +1302,7 @@ def anova_oneway_welch_df(df: pd.DataFrame, alpha: float = 0.05, return_results:
     if not return_results:
         print('Однофакторный дисперсионный анализ Welch')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1370,7 +1370,7 @@ def kruskal_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fal
     if not return_results:
         print('Тест Краскела-Уоллиса (H-критерий)')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1422,7 +1422,7 @@ def kruskal(samples: list, alpha: float = 0.05, return_results: bool = False) ->
     if not return_results:
         print('Тест Краскела-Уоллиса (H-критерий)')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1484,7 +1484,7 @@ def levene_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fals
     if not return_results:
         print('Тест Левена')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1536,7 +1536,7 @@ def levene(samples: list, alpha: float = 0.05, return_results: bool = False) -> 
     if not return_results:
         print('Тест Левена на гомогенность дисперсии')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1598,7 +1598,7 @@ def bartlett_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fa
     if not return_results:
         print('Тест Бартлетта')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -1649,7 +1649,7 @@ def bartlett(samples: list, alpha: float = 0.05, return_results: bool = False) -
     if not return_results:
         print('Тест Бартлетта')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         if p_value < alpha:
             print(colored(
                 "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
@@ -2494,7 +2494,7 @@ def bootstrap_diff_2sample(sample1: pd.Series, sample2: pd.Series,
     if not return_results:
         print('Bootstrap resampling to estimate the difference')
         print('alpha = ', alpha)
-        print('p-value = ', p_value)
+        print('p-value = ', round(p_value, 3))
         print('ci = ', ci)
         if p_value < alpha:
             print(colored(

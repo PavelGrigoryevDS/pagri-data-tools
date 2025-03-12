@@ -947,12 +947,12 @@ def _create_base_fig_for_bar_line_area(
             df_for_fig = (df.groupby([pd.Grouper(key=kwargs['x'], freq=config['resample_freq']), kwargs['color']], observed=config['observed_for_groupby'])
                             .agg(num_in_resample_mode = (kwargs['y'], agg_func)
                                 , count_for_show_group_size = (kwargs['y'], 'count')
-                                , margin_of_error = (kwargs['y'], 'sem')
+                                # , margin_of_error = (kwargs['y'], 'sem')
                                 )
                             .reset_index()
                             .rename(columns={'num_in_resample_mode': kwargs['y']})
             )
-            df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
+            # df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
             # Since when grouping by two or more fields, missing dates in a variable of type datetime are not preserved, it is necessary to restore all missing dates and fill them with zeros.
             full_index = pd.MultiIndex.from_product([pd.date_range(df_for_fig[kwargs['x']].min(), df_for_fig[kwargs['x']].max(), freq=config['resample_freq']), df_for_fig[kwargs['color']].unique()], names=[kwargs['x'], kwargs['color']])
             df_for_fig = df_for_fig.set_index([kwargs['x'], kwargs['color']]).reindex(full_index, fill_value=0).reset_index()
@@ -960,12 +960,12 @@ def _create_base_fig_for_bar_line_area(
             df_for_fig = (df[columns].set_index(kwargs['x']).resample(config['resample_freq'])
                             .agg(num_in_resample_mode = (kwargs['y'], agg_func)
                                 , count_for_show_group_size = (kwargs['y'], 'count')
-                                , margin_of_error = (kwargs['y'], 'sem')
+                                # , margin_of_error = (kwargs['y'], 'sem')
                                 )
                             .reset_index()
                             .rename(columns={'num_in_resample_mode': kwargs['y']})
             )
-            df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
+            # df_for_fig['margin_of_error'] = 1.96 * df_for_fig['margin_of_error']
         custom_data = [df_for_fig['count_for_show_group_size']]
         kwargs['custom_data'] = custom_data
         # Create the figure using Plotly Express
@@ -2081,17 +2081,17 @@ def box(
 
     # Configure the figure based on orientation
     if orientation is None or orientation == 'v':
-        # Disable grid lines for the x-axis
-        fig_update_config['xaxis_showgrid'] = False
-        # Update hover template for each trace
-        for trace in fig.data:
-            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
-    else:
         # Disable grid lines for the y-axis
         fig_update_config['yaxis_showgrid'] = False
         # Update hover template for each trace
         for trace in fig.data:
             trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
+    else:
+        # Disable grid lines for the x-axis
+        fig_update_config['xaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
 
     # Set default width if not specified
     if not kwargs.get('width'):
