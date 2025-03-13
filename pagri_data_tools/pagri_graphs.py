@@ -605,20 +605,24 @@ def _create_base_fig_for_bar_line_area(
 
         return mask
 
-    def _normalize_data(func_df, norm_by: str, config: dict, kwargs: dict):
+    def _normalize_data(func_df, config: dict, kwargs: dict):
         norm_by = config.get('norm_by')
         color = [kwargs['color']] if kwargs.get('color') else []
+        cat_column_axis = config['cat_column_axis']
         facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
         facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
         animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
         if norm_by == 'all':
             columns_for_groupby_share = facet_col + facet_row + animation_frame
-            func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
+            if columns_for_groupby_share:
+                func_df['all_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
+            else:
+                func_df['all_sum'] = func_df['num_in_prepare_df'].sum()
             func_df['origin_num'] = func_df['num_in_prepare_df']
             func_df['num_in_prepare_df'] = func_df['num_in_prepare_df'] / func_df['all_sum']
             func_df = func_df.drop('all_sum', axis=1)
-        if norm_by == columns_for_groupby_share:
-            columns_for_groupby_share = [columns_for_groupby_share] + facet_col + facet_row + animation_frame
+        if norm_by == cat_column_axis:
+            columns_for_groupby_share = [cat_column_axis] + facet_col + facet_row + animation_frame
             func_df['category_sum'] = func_df.groupby(columns_for_groupby_share, observed=False)['num_in_prepare_df'].transform('sum')
             func_df['origin_num'] = func_df['num_in_prepare_df']
             func_df['num_in_prepare_df'] = func_df['num_in_prepare_df'] / func_df['category_sum']
@@ -830,8 +834,10 @@ def _create_base_fig_for_bar_line_area(
             lower_range -= (upper_range - lower_range) * 0.05
         if orientation == 'h':
             categories = fig.data[0].y
+            hover_data[kwargs['y']] = None
         else:
             categories = fig.data[0].x
+            hover_data[kwargs['x']] = None
         # print(categories)
         # category_orders_for_box = {config['cat_column_axis']: categories}
         df[config['cat_column_axis']] = df[config['cat_column_axis']].astype(str).astype('category')
@@ -840,6 +846,7 @@ def _create_base_fig_for_bar_line_area(
                         , y=kwargs['y']
                         , labels=kwargs.get('labels')
                         , orientation=orientation
+                        , hover_data=hover_data
                         # , category_orders = category_orders_for_box
                     )
         fig_subplots.add_trace(fig.data[0], row=1, col=1)
