@@ -1901,20 +1901,25 @@ def histogram(
                     )
                 )
     # Update axis titles based on normalization and sorting
+    num_rows = len(fig._grid_ref)
     if y is not None:
         if kwargs.get('histnorm') == 'probability':
-            fig.update_layout(xaxis_title='Доля')  # Set x-axis title to 'Доля' for probability
+            for row in range(1, num_rows + 1):
+                fig.update_xaxes(title_text='Доля', row=row, col=1)
         if kwargs.get('histnorm') is None:
-            fig.update_layout(xaxis_title='Количество')  # Set x-axis title to 'Количество' for count
+            for row in range(1, num_rows + 1):
+                fig.update_xaxes(title_text='Количество', row=row, col=1)
         if sort:
             fig.data = fig.data[::-1]  # Reverse the order of traces if sorting
             fig.update_layout(legend={'traceorder': 'reversed'})  # Reverse legend order
 
     if x is not None:
         if kwargs.get('histnorm') == 'probability':
-            fig.update_layout(yaxis_title='Доля')  # Set y-axis title to 'Доля' for probability
+            for row in range(1, num_rows + 1):
+                fig.update_yaxes(title_text='Доля', row=row, col=1)
         if kwargs.get('histnorm') is None:
-            fig.update_layout(yaxis_title='Количество')  # Set y-axis title to 'Количество' for count
+            for row in range(1, num_rows + 1):
+                fig.update_yaxes(title_text='Количество', row=row, col=1)
     # Update the figure with any additional modifications
     fig_update_config = dict()
     if  x is not None:
@@ -7197,6 +7202,10 @@ def subplots(
     # Implementation of the function goes here
 
     # Create subplot layout
+    # if subplot_titles is None:
+    #     subplot_titles = []
+    #     for fig in configs:
+    #         subplot_titles.append(fig['layout'].title.text)
     fig = make_subplots(
         rows=rows,
         cols=cols,
@@ -7231,7 +7240,7 @@ def subplots(
                 config['yaxis_visible'] = config.get('yaxis_visible', False)
             else:
                 # Handle regular plot settings
-                if 'with_margin' in config:
+                if config['with_margin']:
                     config['domain_y'] = config.get('domain_y', [0, 0.9])
                 config['showgrid_x'] = config.get('showgrid_x', True)
                 config['showgrid_y'] = config.get('showgrid_y', True)
@@ -7258,7 +7267,7 @@ def subplots(
                 col=config['col'],
                 showgrid=config['showgrid_x'],
                 showticklabels=config['showticklabels_x'],
-                visible=config['xaxis_visible'],
+                # visible=config['xaxis_visible'],
                 title_text=config['xaxis_title_text'],
                 gridwidth=1,
                 gridcolor="rgba(0, 0, 0, 0.1)"
@@ -7269,43 +7278,45 @@ def subplots(
                 fig.update_xaxes(row=config['row'], col=config['col'], domain=config['domain_x'])
             if 'domain_y' in config:
                 fig.update_yaxes(row=config['row'], col=config['col'], domain=config['domain_y'])
-
             # Update Y axes
             fig.update_yaxes(
                 row=config['row'],
                 col=config['col'],
-                showgrid=config['showgrid_y'],
+                # showgrid=config['showgrid_y'],
                 gridwidth=1,
                 gridcolor="rgba(0, 0, 0, 0.1)",
                 visible=config['yaxis_visible'],
                 title_text=config['yaxis_title_text']
             )
+            fig_update(fig, xaxis_showgrid = config['showgrid_x'], yaxis_showgrid = config['showgrid_y'])
 
     # Adjust subplot titles position
     if subplot_titles:
         for i, _ in enumerate(subplot_titles):
             fig['layout']['annotations'][i-1]['y'] = 1.04
 
+
     # Update figure layout
     fig.update_layout(
         title=title,
         width=width,
         height=height,
+        margin =  dict(l=50, r=50, b=50, t=50),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-        xaxis_showticklabels=True,
-        xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
-        xaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        yaxis_linecolor="rgba(0, 0, 0, 0.4)",
-        xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        yaxis_tickcolor="rgba(0, 0, 0, 0.4)",
-        legend_title_font_color='rgba(0, 0, 0, 0.7)',
-        legend_title_font_size=14,
-        legend_font_color='rgba(0, 0, 0, 0.7)',
-        hoverlabel=dict(bgcolor="white")
+        # font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        # xaxis_showticklabels=True,
+        # xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        # yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        # xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        # yaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
+        # xaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        # yaxis_linecolor="rgba(0, 0, 0, 0.4)",
+        # xaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        # yaxis_tickcolor="rgba(0, 0, 0, 0.4)",
+        # legend_title_font_color='rgba(0, 0, 0, 0.7)',
+        # legend_title_font_size=14,
+        # legend_font_color='rgba(0, 0, 0, 0.7)',
+        # hoverlabel=dict(bgcolor="white")
     )
 
     return fig
