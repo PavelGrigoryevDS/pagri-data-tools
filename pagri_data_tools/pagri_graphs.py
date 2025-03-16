@@ -240,7 +240,7 @@ def fig_update(
 
     legend_position : str, optional
         Predefined legend position.
-        Options: 'top', 'right'
+        Options: 'top', 'right', 'bottom'
         Example: legend_position='top'
 
     xaxis_dtick, yaxis_dtick : float, optional
@@ -405,14 +405,22 @@ def fig_update(
                     domain=[0, 1]
                 )
                 , legend = dict(
-                    title_font_color='rgba(0, 0, 0, 0.7)'
-                    , font_color='rgba(0, 0, 0, 0.7)'
-                    , xanchor=None
+                    xanchor=None
                     , yanchor=None
                     , orientation="v"  # Горизонтальное расположение
                     , y=1         # Положение по вертикали (отрицательное значение переместит вниз)
                     , x=None              # Центрирование по горизонтали
                 )
+        )
+    elif legend_position == 'bottom':
+        fig.update_layout(
+            legend = dict(
+                orientation="h"  # Горизонтальное расположение
+                , yanchor="bottom"    # Привязка к верхней части
+                , y=-0.15         # Положение по вертикали (отрицательное значение переместит вниз)
+                , xanchor="center" # Привязка к центру
+                , x=0.5              # Центрирование по горизонтали
+            )
         )
     return fig
 
@@ -465,7 +473,6 @@ def _create_base_fig_for_bar_line_area(
     # Ensure 'x' and 'y' keys are present in kwargs
     if 'x' not in kwargs or 'y' not in kwargs:
         raise ValueError('x and y must be defined')
-
     # Retrieve mode from config
     df = df.copy()
     agg_mode = config.get('agg_mode')
@@ -476,7 +483,8 @@ def _create_base_fig_for_bar_line_area(
         kwargs.setdefault('line_shape', 'spline')
     if graph_type == 'bar':
         kwargs.setdefault('barmode', 'group')
-
+    if 'color' in kwargs and kwargs['color'] is None:
+        kwargs.pop('color')
     # Determine numeric and categorical columns
     def _determine_numeric_and_categorical_columns(config: dict, kwargs: dict):
         color = [kwargs['color']] if kwargs.get('color') else []
@@ -519,9 +527,9 @@ def _create_base_fig_for_bar_line_area(
         top_n_trim_facet_row = config.get('top_n_trim_facet_row')
         top_n_trim_facet_animation_frame = config.get('top_n_trim_facet_animation_frame')
         if mode_top_or_bottom == 'top':
-            ascendign = False
+            ascending = False
         elif mode_top_or_bottom == 'bottom':
-            ascendign = True
+            ascending = True
         else:
             raise ValueError('unknown mask_func')
 
@@ -532,7 +540,7 @@ def _create_base_fig_for_bar_line_area(
             top_color = (
                 df.groupby(kwargs['color'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_color]
+                .sort_values(ascending=ascending)[:top_n_trim_color]
                 .index
             )
             color_mask = df[kwargs['color']].isin(top_color)
@@ -545,7 +553,7 @@ def _create_base_fig_for_bar_line_area(
             top_x = (
                 df.groupby(kwargs['x'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_x]
+                .sort_values(ascending=ascending)[:top_n_trim_x]
                 .index
             )
             x_mask = df[kwargs['x']].isin(top_x)
@@ -558,7 +566,7 @@ def _create_base_fig_for_bar_line_area(
             top_y = (
                 df.groupby(kwargs['y'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_y]
+                .sort_values(ascending=ascending)[:top_n_trim_y]
                 .index
             )
             y_mask = df[kwargs['y']].isin(top_y)
@@ -571,7 +579,7 @@ def _create_base_fig_for_bar_line_area(
             top_facet_col = (
                 df.groupby(kwargs['facet_col'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_facet_col]
+                .sort_values(ascending=ascending)[:top_n_trim_facet_col]
                 .index
             )
             facet_col_mask = df[kwargs['facet_col']].isin(top_facet_col)
@@ -584,7 +592,7 @@ def _create_base_fig_for_bar_line_area(
             top_facet_row = (
                 df.groupby(kwargs['facet_row'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_facet_row]
+                .sort_values(ascending=ascending)[:top_n_trim_facet_row]
                 .index
             )
             facet_row_mask = df[kwargs['facet_row']].isin(top_facet_row)
@@ -597,7 +605,7 @@ def _create_base_fig_for_bar_line_area(
             top_animation_frame = (
                 df.groupby(kwargs['animation_frame'], observed=False)[num_column]
                 .agg(agg_func_for_top_n)
-                .sort_values(ascending=ascendign)[:top_n_trim_facet_animation_frame]
+                .sort_values(ascending=ascending)[:top_n_trim_facet_animation_frame]
                 .index
             )
             animation_frame_mask = df[kwargs['animation_frame']].isin(top_animation_frame)
@@ -7198,6 +7206,26 @@ def subplots(
     -------
     plotly.graph_objects.Figure
         The created figure with subplots.
+
+    Example:
+    -------
+    configs = [
+        dict(
+            fig = fig_cnt.data[0]
+            , layout = fig_cnt.layout
+            , showgrid_y = False
+            , row = 1
+            , col = 1
+        )
+        , dict(
+            fig = fig_sum.data[0]
+            , layout = fig_sum.layout
+            , showgrid_y = False
+            , row = 1
+            , col = 2
+            , show_yaxis_title = False
+        )
+    ]
     """
     # Implementation of the function goes here
 
@@ -7288,6 +7316,8 @@ def subplots(
                 visible=config['yaxis_visible'],
                 title_text=config['yaxis_title_text']
             )
+            fig.update_traces(selector=dict(type='pie'),
+                  marker=dict(colors=colorway_for_bar))
             fig_update(fig, xaxis_showgrid = config['showgrid_x'], yaxis_showgrid = config['showgrid_y'])
 
     # Adjust subplot titles position
@@ -7298,11 +7328,11 @@ def subplots(
 
     # Update figure layout
     fig.update_layout(
-        title=title,
+        title_text=title,
         width=width,
         height=height,
         margin =  dict(l=50, r=50, b=50, t=50),
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
+        # title_font_size= 16,
         # font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         # xaxis_showticklabels=True,
         # xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -7321,3 +7351,270 @@ def subplots(
 
     return fig
 
+def pie_bar(
+    data_frame: pd.DataFrame,
+    agg_mode: str = None,
+    agg_func: str = None,
+    agg_column: str = None,
+    resample_freq: str = None,
+    norm_by: str = None,
+    top_n_trim_x: int = None,
+    top_n_trim_y: int = None,
+    top_n_trim_color: int = None,
+    top_n_trim_facet_col: int = None,
+    top_n_trim_facet_row: int = None,
+    top_n_trim_facet_animation_frame: int = None,
+    sort_axis: bool = True,
+    sort_color: bool = True,
+    sort_facet_col: bool = True,
+    sort_facet_row: bool = True,
+    sort_animation_frame: bool = True,
+    show_group_size: bool = False,
+    min_group_size: int = None,
+    decimal_places: int = 2,
+    update_layout: bool = True,
+    show_box: bool = False,
+    show_count: bool = False,
+    lower_quantile_for_box: float = None,
+    upper_quantile_for_box: float = None,
+    top_and_bottom: bool = False,
+    show_ci: bool = False,
+    trim_top_or_bottom: str = 'top',
+    show_legend_title: bool = False,
+    observed_for_groupby: bool = False,
+    agg_func_for_top_n: bool = None,
+    hole: float = None,
+    label_for_others_in_pie: str = 'others',
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a bar chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    agg_mode : str, optional
+        Aggregation mode. Options:
+        - 'groupby': Group by categorical columns
+        - 'resample': Resample time series data
+        - None: No aggregation (default)
+    agg_func : str, optional
+        Aggregation function. Options: 'mean', 'median', 'sum', 'count', 'nunique'
+    agg_column : str, optional
+         Column to aggregate
+    resample_freq : str, optional
+        Resample frequency for resample. Options: 'ME', 'W', D' and others
+    norm_by: str, optional
+        The name of the column to normalize by. If set to 'all', normalization will be performed based on the sum of all values in the dataset.
+    top_n_trim_x : int, optional
+        Ontly for aggregation mode. The number of top categories x axis to include in the chart. For top using num column and agg_func.
+    top_n_trim_y : int, optional
+        Ontly for aggregation mode. The number of top categories y axis to include in the chart. For top using num column and agg_func
+    top_n_trim_color : int, optional
+        Ontly for aggregation mode. The number of top categories legend to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_col : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_col to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_row : int, optional
+        Ontly for aggregation mode. The number of top categories in facet_row to include in the chart. For top using num column and agg_func
+    top_n_trim_facet_animation_frame : int, optional
+        Ontly for aggregation mode. The number of top categories in animation_frame to include in the chart. For top using num column and agg_func
+    trim_top_or_bottom : str, optional
+        Trim from bottom or from top. Default is 'top'
+    sort_axis, sort_color, sort_facet_col, sort_facet_row, sort_animation_frame : bool, optional
+        Controls whether to sort the corresponding dimension (axis, color, facet columns, facet rows, or animation frames) based on the sum of numeric values across each slice. When True (default), the dimension will be sorted in descending order by the sum of numeric values. When False, no sorting will be applied and the original order will be preserved.
+    show_group_size : bool, optional
+        Whether to show the group size (only for groupby mode). Default is False
+    min_group_size : int, optional
+        The minimum number of observations required in a category to include it in the calculation.
+        Categories with fewer observations than this threshold will be excluded from the analysis.
+        This ensures that the computed mean is based on a sufficiently large sample size,
+        improving the reliability of the results. Default is None (no minimum size restriction).
+    decimal_places : int, optional
+        The number of decimal places to display in hover. Default is 2
+    x : str, optional
+        Column to use for the x-axis
+    y : str, optional
+        Column to use for the y-axis
+    color : str, optional
+        Column to use for color encoding
+    pattern : str, optional
+        Column to use for pattern encoding
+    hover_name : str, optional
+        Column to use for hover text
+    hover_data : list, optional
+        List of columns to use for hover data
+    custom_data : list, optional
+        List of columns to use for custom data
+    text : str, optional
+        Column to use for text
+    facet_row : str, optional
+        Column to use for facet row
+    facet_col : str, optional
+        Column to use for facet column
+    facet_col_wrap : int, optional
+        Number of columns to use for facet column wrap
+    error_x : str, optional
+        Column to use for x-axis error bars
+    error_x_minus : str, optional
+        Column to use for x-axis error bars (minus)
+    error_y : str, optional
+        Column to use for y-axis error bars
+    error_y_minus : str, optional
+        Column to use for y-axis error bars (minus)
+    animation_frame : str, optional
+        Column to use for animation frame
+    animation_group : str, optional
+        Column to use for animation group
+    range_x : list, optional
+        List of values to use for x-axis range
+    range_y : list, optional
+        List of values to use for y-axis range
+    log_x : bool, optional
+        Whether to use a logarithmic scale for the x-axis. Default is False
+    log_y : bool, optional
+        Whether to use a logarithmic scale for the y-axis. Default is False
+    range_x_equals : list, optional
+        List of values to use for x-axis range, with equal scaling. Default is None
+    range_y_equals : list, optional
+        List of values to use for y-axis range, with equal scaling. Default is None
+    title : str, optional
+        Title of the chart. Default is None
+    template : str, optional
+        Template to use for the chart. Default is None
+    width : int, optional
+        Width of the chart in pixels. Default is None
+    height : int, optional
+        Height of the chart in pixels. Default is None
+    show_box : bool, optional
+        Whether to show boxplot in subplots
+    show_count : bool, optional
+            Whether to show countplot in subplots
+    lower_quantile : float, optional
+        The lower quantile for filtering the data. Value should be in the range [0, 1].
+    upper_quantile : float, optional
+        The upper quantile for filtering the data. Value should be in the range [0, 1].
+    show_ci : bool, optional
+        Whether to show confidence intervals. Default is False
+    top_and_bottom : bool, optional
+        Whether to show only top or both top and bottom
+    show_legend_title : bool, optional
+        Whether to show legend title. Default is False
+    observed_for_groupby : bool, optional
+        This only applies if any of the groupers are Categoricals.
+        If True: only show observed values for categorical groupers.
+        If False: show all values for categorical groupers.
+        default False
+    agg_func_for_top_n : str, optional
+        Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'.
+        By default agg_func_for_top_n = agg_func
+    hole : float, optional
+        Size of pie hole. May be from 0 to 1.
+    label_for_others_in_pie : str, optional
+        Label for others part in pie
+    **kwargs
+        Additional keyword arguments to pass to the Plotly Express function. Default is None
+
+    Returns
+    -------
+    go.Figure
+        The created chart
+    """
+    config = {
+        'top_n_trim_x': top_n_trim_x,
+        'top_n_trim_y': top_n_trim_y,
+        'top_n_trim_color': top_n_trim_color,
+        'top_n_trim_facet_col': top_n_trim_facet_col,
+        'top_n_trim_facet_row': top_n_trim_facet_row,
+        'top_n_trim_facet_animation_frame': top_n_trim_facet_animation_frame,
+        'agg_column': agg_column,
+        'sort_axis': sort_axis,
+        'sort_color': sort_color,
+        'sort_facet_col': sort_facet_col,
+        'sort_facet_row': sort_facet_row,
+        'sort_animation_frame': sort_animation_frame,
+        'agg_func': agg_func,
+        'show_group_size': show_group_size,
+        'agg_mode': agg_mode,
+        'resample_freq': resample_freq,
+        'decimal_places': decimal_places,
+        'norm_by': norm_by,
+        'update_layout': update_layout,
+        'show_box': show_box,
+        'show_count': show_count,
+        'lower_quantile_for_box': lower_quantile_for_box,
+        'upper_quantile_for_box': upper_quantile_for_box,
+        'show_ci': show_ci,
+        'top_and_bottom': top_and_bottom,
+        'trim_top_or_bottom': trim_top_or_bottom,
+        'min_group_size': min_group_size,
+        'show_legend_title': show_legend_title,
+        'observed_for_groupby': observed_for_groupby,
+        'agg_func_for_top_n': agg_func_for_top_n,
+        'hole': hole,
+    }
+    config = {k: v for k,v in config.items() if v is not None}
+    if kwargs.get('color_discrete_sequence') is None:
+        kwargs['color_discrete_sequence'] = colorway_for_bar[1:]
+    labels = kwargs.get('labels', None)
+    if 'agg_column' in config:
+        num_column = config['agg_column']
+        if kwargs['x'] == num_column:
+            cat_column_axis = kwargs['y']
+        else:
+            cat_column_axis = kwargs['x']
+    else:
+        if pd.api.types.is_numeric_dtype(data_frame[kwargs['x']]):
+            num_column = kwargs['x']
+            cat_column_axis = kwargs['y']
+        else:
+            num_column = kwargs['y']
+            cat_column_axis = kwargs['x']
+    if config.get('agg_func') is None:
+        raise ValueError('agg_func must be defined')
+    df_for_pie = data_frame.groupby(cat_column_axis, observed=config.get('observed_for_groupby'))[num_column].agg(config['agg_func'])
+    max_cat_for_exclude = df_for_pie.idxmax()
+    df_for_pie = df_for_pie.reset_index()
+    df_for_pie['new_cat_column'] = df_for_pie[cat_column_axis].apply(lambda x: max_cat_for_exclude if x == max_cat_for_exclude else 'others')
+    df_for_pie = df_for_pie.sort_values(num_column, ascending=False)
+    pie_fig = px.pie(df_for_pie
+                     , values=num_column
+                     , names='new_cat_column'
+                     , labels=labels
+                     , hole=hole
+    )
+    df_for_bar = data_frame[data_frame[cat_column_axis] != max_cat_for_exclude]
+    bar_fig = _create_base_fig_for_bar_line_area(df=df_for_bar, config=config, kwargs=kwargs, graph_type='bar')
+    configs = [
+        dict(
+            fig = pie_fig.data[0]
+            , layout = pie_fig.layout
+            , row = 1 , col = 1
+            )
+        , dict(
+            fig = bar_fig.data[0]
+            , layout = bar_fig.layout
+            , showgrid_y = False
+            , show_yaxis_title = False
+            , row = 1, col = 2
+        )
+    ]
+    fig = subplots(configs
+              , specs=[[{'type': 'pie'}, {'type': 'bar'}]]
+              , title = kwargs.get('title', None)
+    )
+    width =  kwargs.get('width')
+    if width is None:
+        width = 900
+    height =  kwargs.get('height')
+    if height is None:
+        height = 400
+    fig.update_layout(legend_y=-0.1
+                      , legend_x=0.11
+                      , title_y=0.96
+                      , margin = dict(l=50, r=50, b=50, t=70)
+                      , legend_orientation='h'
+                      , width=width
+                      , height=height
+    )
+    return fig
