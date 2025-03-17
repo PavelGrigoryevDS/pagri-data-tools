@@ -518,8 +518,6 @@ def _create_base_fig_for_bar_line_area(
         cat_columns = config.get('cat_columns')
         mode_top_or_bottom = config['trim_top_or_bottom']
         agg_func_for_top_n = config.get('agg_func_for_top_n')
-        if agg_func_for_top_n is None:
-            agg_func_for_top_n = config.get('agg_func')
         top_n_trim_x = config.get('top_n_trim_x')
         top_n_trim_color = config.get('top_n_trim_color')
         top_n_trim_y = config.get('top_n_trim_y')
@@ -930,8 +928,6 @@ def _create_base_fig_for_bar_line_area(
             raise ValueError('x must be datetime type')
         agg_func = config.get('agg_func')
         agg_func_for_top_n = config.get('agg_func_for_top_n')
-        if agg_func_for_top_n is None:
-            agg_func_for_top_n = config.get('agg_func')
         # Define columns for aggregation
         columns = [kwargs['x'], kwargs['y']]
 
@@ -1114,7 +1110,7 @@ def bar(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
-    agg_func_for_top_n: bool = None,
+    agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
     """
@@ -1237,7 +1233,7 @@ def bar(
         default False
     agg_func_for_top_n : str, optional
         Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'.
-        By default agg_func_for_top_n = agg_func
+        By default agg_func_for_top_n = 'count'
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
 
@@ -1306,7 +1302,7 @@ def line(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
-    agg_func_for_top_n: bool = None,
+    agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
     """
@@ -1419,7 +1415,7 @@ def line(
         default False
     agg_func_for_top_n : str, optional
         Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'
-        By default agg_func_for_top_n = agg_func
+        By default agg_func_for_top_n = 'count'
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
@@ -1481,7 +1477,7 @@ def area(
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
     observed_for_groupby: bool = False,
-    agg_func_for_top_n: bool = None,
+    agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
     """
@@ -1598,7 +1594,7 @@ def area(
         default False
     agg_func_for_top_n : str, optional
         Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'
-        By default agg_func_for_top_n = agg_func
+        By default agg_func_for_top_n = 'count'
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
     Returns
