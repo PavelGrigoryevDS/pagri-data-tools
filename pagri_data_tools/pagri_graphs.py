@@ -650,10 +650,10 @@ def _create_base_fig_for_bar_line_area(
         sort_animation_frame = config.get('sort_animation_frame')
         observed_for_groupby = config.get('observed_for_groupby')
         cat_column_axis = config['cat_column_axis']
-        color = [kwargs['color']] if kwargs.get('color') else []
-        facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
-        facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
-        animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
+        color = kwargs['color'] if kwargs.get('color') else None
+        facet_col = kwargs['facet_col'] if kwargs.get('facet_col') else None
+        facet_row = kwargs['facet_row'] if kwargs.get('facet_row') else None
+        animation_frame = kwargs['animation_frame'] if kwargs.get('animation_frame') else None
         norm_by = config.get('norm_by')
         agg_func = config.get('agg_func')
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
@@ -676,22 +676,32 @@ def _create_base_fig_for_bar_line_area(
                 ascending.append(ascending_for_animation_frame)
                 func_df['sum_for_sort_animation_frame'] = func_df.groupby(animation_frame, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_animation_frame')
+                if kwargs.get('category_orders') and animation_frame in kwargs['category_orders']:
+                    kwargs['category_orders'].pop(animation_frame)
             if sort_facet_col == True and facet_col:
                 ascending.append(ascending_for_facet_col)
                 func_df['sum_for_sort_facet_col'] = func_df.groupby(facet_col, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_col')
+                if kwargs.get('category_orders') and facet_col in kwargs['category_orders']:
+                    kwargs['category_orders'].pop(facet_col)
             if sort_facet_row == True and facet_row:
                 ascending.append(ascending_for_facet_row)
                 func_df['sum_for_sort_facet_row'] = func_df.groupby(facet_row, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_facet_row')
+                if kwargs.get('category_orders') and facet_row in kwargs['category_orders']:
+                    kwargs['category_orders'].pop(facet_row)
             if sort_axis == True and cat_column_axis:
                 ascending.append(ascending_for_axis)
                 func_df['sum_for_sort_axis'] = func_df.groupby(cat_column_axis, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_axis')
+                if kwargs.get('category_orders') and cat_column_axis in kwargs['category_orders']:
+                    kwargs['category_orders'].pop(cat_column_axis)
             if sort_color == True and color:
                 ascending.append(ascending_for_color)
                 func_df['sum_for_sort_color'] = func_df.groupby(color, observed=observed_for_groupby)[num_column_for_sort].transform(func_for_sort)
                 columns_for_sort.append('sum_for_sort_color')
+                if kwargs.get('category_orders') and color in kwargs['category_orders']:
+                    kwargs['category_orders'].pop(color)
             func_df = func_df.sort_values(columns_for_sort, ascending=ascending)
             func_df = func_df.drop(columns_for_sort, axis=1)
         return func_df
@@ -802,8 +812,8 @@ def _create_base_fig_for_bar_line_area(
         fig_subplots = make_subplots(rows=1, cols=2, shared_yaxes=shared_yaxes, horizontal_spacing=horizontal_spacing)
         fig_subplots.add_trace(fig.data[0], row=1, col=1)
         fig_subplots.update_layout(title_text=kwargs.get('title'))
-        fig_subplots.update_xaxes(title_text=kwargs.get('labels')[kwargs['x']], row=1, col=1)
-        fig_subplots.update_yaxes(title_text=kwargs.get('labels')[kwargs['y']], row=1, col=1)
+        fig_subplots.update_xaxes(title_text=kwargs.get('labels').get(kwargs['x']), row=1, col=1)
+        fig_subplots.update_yaxes(title_text=kwargs.get('labels').get(kwargs['y']), row=1, col=1)
         fig_count = px.bar(df_for_fig, **kwargs_for_count)
         fig_subplots.add_trace(fig_count.data[0], row=1, col=2)
         fig_subplots.update_xaxes(title_text=count_xaxis_title, row=1, col=2)
@@ -7573,12 +7583,15 @@ def pie_bar(
     df_for_pie = df_for_pie.reset_index()
     df_for_pie['new_cat_column'] = df_for_pie[cat_column_axis].apply(lambda x: max_cat_for_exclude if x == max_cat_for_exclude else 'others')
     df_for_pie = df_for_pie.sort_values(num_column, ascending=False)
+    labels['new_cat_column'] = kwargs.get('labels').get(cat_column_axis)
     pie_fig = px.pie(df_for_pie
                      , values=num_column
                      , names='new_cat_column'
                      , labels=labels
+                     , hover_data = {num_column: False} if norm_by == 'all' else None
                      , hole=hole
     )
+    # pie_fig.update_traces(textinfo='value')
     df_for_bar = data_frame[data_frame[cat_column_axis] != max_cat_for_exclude]
     bar_fig = _create_base_fig_for_bar_line_area(df=df_for_bar, config=config, kwargs=kwargs, graph_type='bar')
     configs = [

@@ -4607,13 +4607,15 @@ def df_summary(dataframes: list | pd.DataFrame):
         .hide(axis="index")
     )
 
-def column_info_short(column):
+def column_info_short(column, show_mode: bool=True):
     mean_ = format_number(column.mean())
     mode_ = column.mode()
     if mode_.size == 1:
         mode_ = format_number(mode_[0])
     else:
         mode_ = [format_number(mode_el) for mode_el in mode_]
+    if len(mode_) > 5:
+        mode_ = '> 5 modes'
     q_75 = format_number(column.quantile(0.75))
     median_ = format_number(column.median())
     q_25 = format_number(column.quantile(0.25))
