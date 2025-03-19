@@ -2713,3 +2713,94 @@ def dunn_df(df: pd.DataFrame, p_adjust: str = 'holm') -> None:
             ]
         )
     )
+
+def ttest_ind_report(
+    df: pd.DataFrame,
+    category_column: str,
+    numeric_column: str,
+    alpha: float = 0.05,
+    alternative: str = 'two-sided',
+    reference_group: str = None
+) -> dict:
+    """
+    Perform t-test for independent samples and generate a detailed report.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data for analysis.
+    category_column : str
+        The name of the column in `df` that contains the group labels (categories).
+        This column should have exactly two unique values representing the two groups to compare.
+    numeric_column : str
+        The name of the column in `df` that contains the numeric values to compare between the two groups.
+    alpha : float, optional
+        The significance level for the hypothesis tests. Default is 0.05.
+    alternative : str, optional
+        The alternative hypothesis for the t-test. Possible values are:
+        - 'two-sided' or '2s': The means of the two groups are not equal (default).
+        - 'larger' or 'l': The mean of the first group is larger than the mean of the second group.
+        - 'smaller' or 's': The mean of the first group is smaller than the mean of the second group.
+    reference_group : str, optional
+        The label in `category_column` that defines the reference group for the alternative hypothesis.
+        If not provided, the first group is determined by the order of unique values in `category_column`.
+
+    Returns:
+    -------
+    None
+    """
+    # Check if the category column exists in the DataFrame
+    if category_column not in df.columns:
+        raise ValueError(f"Column '{category_column}' not found in DataFrame.")
+    # Check if the numeric column exists in the DataFrame
+    if numeric_column not in df.columns:
+        raise ValueError(f"Column '{numeric_column}' not found in DataFrame.")
+    # Ensure the numeric column contains numeric data
+    if not pd.api.types.is_numeric_dtype(df[numeric_column]):
+        raise ValueError(f"Column '{numeric_column}' must contain numeric data.")
+
+    # Verify that the category column contains exactly two unique groups
+    groups = df[category_column].unique()
+    if len(groups) != 2:
+        raise ValueError(f"Column '{category_column}' must contain exactly two unique groups.")
+
+    # Remove missing values from the data
+    df_clean = df[[category_column, numeric_column]].dropna()
+
+    # State the null and alternative hypotheses for the t-test
+    print("Шаг 1: Формулировка гипотез.")
+    print("H0: Средние значения в двух группах равны.")
+    print("H1: Средние значения в двух группах не равны.")
+
+    # State the null and alternative hypotheses for the Levene's test
+    print("Шаг 2: Проверка равенства дисперсий.")
+    print("H0: Дисперсии в двух группах равны.")
+    print("H1: Дисперсии в двух группах не равны.")
+    print("Используем тест Левена для проверки равенства дисперсий.")
+    print(f"Уровень значимости (alpha) установлен на {alpha}.")
+
+    # Perform Levene's test to check for equal variances
+    _, p_value_levene = pgdt.levene_df(df_clean[[category_column, numeric_column]], alpha=alpha, return_results=True)
+    equal_var = p_value_levene >= alpha
+    print("Шаг 3: Выбор подходящего t-теста.")
+    # Determine whether to use Welch's correction based on the Levene's test result
+    if not equal_var:
+        print("Так как дисперсии в группах разные, будем использовать тест Уэлча.")
+    else:
+        print("Так как нет оснований утверждать, что дисперсии в группах отличаются, используем стандартный t-тест.")
+    print(f"Уровень значимости alpha выберем {alpha}.")
+    print(f"Альтернативная гипотеза: {alternative}.")
+
+    # Check the sample size in each group
+    print("Шаг 4: Проверка размеров групп.")
+    display(df_clean[category_column].value_counts())
+
+    # Perform the independent t-test (with or without Welch's correction)
+    print("Шаг 5: Проведение теста.")
+    pgdt.ttest_ind_df(df_clean[[category_column, numeric_column]]
+                      , alpha=alpha
+                      , equal_var=equal_var
+                      , alternative=alternative
+                      , first_for_alternative=reference_group
+    )
+
