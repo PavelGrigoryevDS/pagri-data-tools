@@ -264,7 +264,7 @@ def linear_regression_with_vif(df: pd.DataFrame, target_column: str) -> None:
 
     # Display results
     display(res.iloc[1:])  # exclude the constant term
-    display(model.summary())
+    print(model.summary())
 
 
 def calculate_cohens_d(sample1: pd.Series, sample2: pd.Series, equal_var=False) -> float:
@@ -1205,7 +1205,7 @@ def tukey_hsd_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
         raise ValueError("Labels must contain at least two unique values")
 
     tukey = pairwise_tukeyhsd(endog=values, groups=labels, alpha=alpha)
-    display(tukey)
+    print(tukey)
 
 def games_howell_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
     """
@@ -1241,7 +1241,7 @@ def games_howell_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
 
     # Perform Games-Howell test
     gh_test = pg.pairwise_gameshowell(data=df, dv=df.columns[1], between=df.columns[0])
-    display(gh_test)
+    print(gh_test)
 
 def anova_oneway_welch_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = False) -> None:
     """
