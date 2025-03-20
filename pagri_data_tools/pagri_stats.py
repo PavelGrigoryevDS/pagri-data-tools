@@ -350,17 +350,16 @@ def chisquare(sample: pd.Series, alpha: float = 0.05, return_results: bool = Fal
 
     chi2, p_value = stats.chisquare(sample)
 
-    if not return_results:
-        print('Хи-квадрат Пирсона')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Хи-квадрат Пирсона')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return chi2, p_value
 
 def chi2_pearson(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, return_results: bool = False) -> None:
@@ -401,21 +400,20 @@ def chi2_pearson(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, re
     chi2, p_value, dof, expected = stats.chi2_contingency(
         crosstab_for_chi2_pearson)
 
-    if not return_results:
-        print('Хи-квадрат Пирсона')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Хи-квадрат Пирсона')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return chi2, p_value, dof, expected
 
 
-def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alternative: str = 'two-sided', first_for_alternative: str = None, return_results: bool = False) -> None:
+def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alternative: str = 'two-sided', reference_group: str = None, return_results: bool = False) -> None:
     """
     Perform t-test for independent samples.
 
@@ -427,7 +425,7 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     - equal_var (bool, optional): If True (default), perform a standard independent 2 sample test that assumes equal population variances.  
         If False, perform Welch's t-test, which does not assume equal population variance.
     - alternative (str, optional): Alternative hypothesis ('two-sided', '2s', 'larger', 'l', 'smaller', 's') (default: 'two-sided')
-    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
+    - reference_group (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - return_results (bool, optional): Return (statistic, p_value, beta, cohens_d) instead of printing (default=False).
 
     Returns:
@@ -472,10 +470,10 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     if len(unique_samples) != 2:
         raise ValueError(
             "Sample column must contain exactly two unique labels")
-    if first_for_alternative:
-        if first_for_alternative not in unique_samples:
-            raise ValueError('first_for_alternative must be a lable in first column of df')
-        if first_for_alternative != unique_samples[0]:
+    if reference_group:
+        if reference_group not in unique_samples:
+            raise ValueError('reference_group must be a lable in first column of df')
+        if reference_group != unique_samples[0]:
             unique_samples = unique_samples[::-1]
     sample1 = value_column[sample_column == unique_samples[0]]
     sample2 = value_column[sample_column == unique_samples[1]]
@@ -506,20 +504,20 @@ def ttest_ind_df(df: pd.DataFrame, alpha: float = 0.05, equal_var=False, alterna
     ci_low = float(res.confidence_interval().low.round(2))
     ci_high = float(res.confidence_interval().high.round(2))
 
-    if not return_results:
-        print('T-критерий')
-        print('p-value = ', round(p_value, 3))
-        print('alpha = ', alpha)
-        print('beta = ', beta)
-        print(f'ci = ({ci_low}, {ci_high})')
 
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('T-критерий')
+    print('p-value = ', round(p_value, 3))
+    print('alpha = ', alpha)
+    print('beta = ', beta)
+    print(f'ci = ({ci_low}, {ci_high})')
+
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value, beta, cohens_d
 
 
@@ -595,23 +593,23 @@ def ttest_ind(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, equal
     p_value = res.pvalue
     ci_low = float(res.confidence_interval().low.round(2))
     ci_high = float(res.confidence_interval().high.round(2))
-    if not return_results:
-        print('T-критерий Уэлча')
-        print('p-value = ', round(p_value, 3))
-        print('alpha = ', alpha)
-        print('beta = ', beta)
-        print(f'ci = ({ci_low}, {ci_high})')
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print('T-критерий Уэлча')
+    print('p-value = ', round(p_value, 3))
+    print('alpha = ', alpha)
+    print('beta = ', beta)
+    print(f'ci = ({ci_low}, {ci_high})')
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value, beta, cohens_d
 
 
-def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', first_for_alternative: str = None, return_results: bool = False) -> None:
+def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', reference_group: str = None, return_results: bool = False) -> None:
     """
     Perform the Mann-Whitney U rank test on two independent samples.
 
@@ -621,7 +619,7 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
         the second column contains corresponding values
     - alpha (float, optional): Significance level (default: 0.05)
     - alternative (str, optional): Alternative hypothesis ('two-sided', '2s', 'larger', 'l', 'smaller', 's') (default: 'two-sided')
-    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
+    - reference_group (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - return_results (bool, optional): Return (statistic, p_value) instead of printing (default=False).
 
     Returns:
@@ -661,10 +659,10 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
     if len(unique_samples) != 2:
         raise ValueError(
             "Sample column must contain exactly two unique labels")
-    if first_for_alternative:
-        if first_for_alternative not in unique_samples:
-            raise ValueError('first_for_alternative must be a lable in first column of df')
-        if first_for_alternative != unique_samples[0]:
+    if reference_group:
+        if reference_group not in unique_samples:
+            raise ValueError('reference_group must be a lable in first column of df')
+        if reference_group != unique_samples[0]:
             unique_samples = unique_samples[::-1]
     sample1_values = value_column[sample_column == unique_samples[0]]
     sample2_values = value_column[sample_column == unique_samples[1]]
@@ -680,17 +678,16 @@ def mannwhitneyu_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 't
     statistic, p_value = stats.mannwhitneyu(
         sample1_values, sample2_values, alternative=alternative)
 
-    if not return_results:
-        print('U-критерий Манна-Уитни')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('U-критерий Манна-Уитни')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -748,17 +745,16 @@ def mannwhitneyu(sample1: pd.Series, sample2: pd.Series, alpha: float = 0.05, al
     statistic, p_value = stats.mannwhitneyu(
         sample1, sample2, alternative=alternative)
 
-    if not return_results:
-        print('U-критерий Манна-Уитни')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('U-критерий Манна-Уитни')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -804,17 +800,16 @@ def proportion_ztest_1sample(count: int, n: int, p0: float, alpha: float = 0.05,
     z_stat, p_value = stm.proportions_ztest(
         count=count, nobs=n, value=p0, alternative=alternative)
 
-    if not return_results:
-        print('Один выборочный Z-тест для доли')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Один выборочный Z-тест для доли')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return z_stat, p_value
 
 
@@ -860,17 +855,16 @@ def proportions_ztest_2sample(count1: int, count2: int, n1: int, n2: int, alpha:
     z_stat, p_value = stm.proportions_ztest(
         count=count, nobs=nobs, alternative=alternative)
 
-    if not return_results:
-        print('Z тест для долей')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Z тест для долей')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return z_stat, p_value
 
 
@@ -934,17 +928,17 @@ def proportions_ztest_column_2sample(column: pd.Series, alpha: float = 0.05, alt
 
     z_stat, p_value = stm.proportions_ztest(
         count=count, nobs=nobs, alternative=alternative)
-    if not return_results:
-        print('Z тест для долей')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print('Z тест для долей')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return z_stat, p_value
 
 
@@ -989,17 +983,16 @@ def proportions_chi2(count1: int, count2: int, n1: int, n2: int, alpha: float = 
     chi2_stat, p_value = stm.test_proportions_2indep(
         count1, n1, count2, n2, alternative=alternative).tuple
 
-    if not return_results:
-        print('Хи-квадрат тест для долей')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Хи-квадрат тест для долей')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return chi2_stat, p_value
 
 
@@ -1055,17 +1048,16 @@ def proportions_chi2_column(column: pd.Series, alpha: float = 0.05, alternative:
     chi2_stat, p_value = stm.test_proportions_2indep(
         count1, n1, count2, n2, alternative=alternative).tuple
 
-    if not return_results:
-        print('Хи-квадрат тест для долей')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Хи-квадрат тест для долей')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return chi2_stat, p_value
 
 
@@ -1117,17 +1109,16 @@ def anova_oneway_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool 
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.f_oneway(*samples)
 
-    if not return_results:
-        print('Однофакторный дисперсионный анализ')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Однофакторный ANOVA')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1168,17 +1159,17 @@ def anova_oneway(samples: list, alpha: float = 0.05, return_results: bool = Fals
         print(colored(
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.f_oneway(*samples)
-    if not return_results:
-        print('Однофакторный дисперсионный анализ')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print('Однофакторный ANOVA')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1214,7 +1205,7 @@ def tukey_hsd_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
         raise ValueError("Labels must contain at least two unique values")
 
     tukey = pairwise_tukeyhsd(endog=values, groups=labels, alpha=alpha)
-    print(tukey)
+    display(tukey)
 
 def games_howell_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
     """
@@ -1249,8 +1240,8 @@ def games_howell_df(df: pd.DataFrame, alpha: float = 0.05) -> None:
         raise ValueError("Labels must contain at least two unique values")
 
     # Perform Games-Howell test
-    gh_test = pg.pairwise_gameshowell(data=df, dv=df.columns[1], between=df.columns[0], alpha=alpha)
-    print(gh_test)
+    gh_test = pg.pairwise_gameshowell(data=df, dv=df.columns[1], between=df.columns[0])
+    display(gh_test)
 
 def anova_oneway_welch_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = False) -> None:
     """
@@ -1299,17 +1290,17 @@ def anova_oneway_welch_df(df: pd.DataFrame, alpha: float = 0.05, return_results:
     anova_results = pg.welch_anova(
         dv=value_column, between=labels_column, data=df)
     p_value = anova_results['p-unc'][0]
-    if not return_results:
-        print('Однофакторный дисперсионный анализ Welch')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print("Однофакторный Welch's ANOVA")
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return anova_results
 
 
@@ -1367,17 +1358,16 @@ def kruskal_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fal
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.kruskal(*samples)
 
-    if not return_results:
-        print('Тест Краскела-Уоллиса (H-критерий)')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Тест Краскела-Уоллиса (H-критерий)')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1419,17 +1409,17 @@ def kruskal(samples: list, alpha: float = 0.05, return_results: bool = False) ->
         print(colored(
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.kruskal(*samples)
-    if not return_results:
-        print('Тест Краскела-Уоллиса (H-критерий)')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print('Тест Краскела-Уоллиса (H-критерий)')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1481,17 +1471,16 @@ def levene_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fals
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.levene(*samples)
 
-    if not return_results:
-        print('Тест Левена')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Тест Левена')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1533,17 +1522,17 @@ def levene(samples: list, alpha: float = 0.05, return_results: bool = False) -> 
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
 
     statistic, p_value = stats.levene(*samples)
-    if not return_results:
-        print('Тест Левена на гомогенность дисперсии')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+
+    print('Тест Левена')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1595,17 +1584,16 @@ def bartlett_df(df: pd.DataFrame, alpha: float = 0.05, return_results: bool = Fa
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.bartlett(*samples)
 
-    if not return_results:
-        print('Тест Бартлетта')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Тест Бартлетта')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1646,17 +1634,16 @@ def bartlett(samples: list, alpha: float = 0.05, return_results: bool = False) -
         print(colored(
             "Warning: Sample size is less than 30 for one or more samples. Results may be unreliable.", 'red'))
     statistic, p_value = stats.bartlett(*samples)
-    if not return_results:
-        print('Тест Бартлетта')
-        print('alpha = ', alpha)
-        print('p-value = ', round(p_value, 3))
-        if p_value < alpha:
-            print(colored(
-                "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
-        else:
-            print(colored(
-                "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    print('Тест Бартлетта')
+    print('alpha = ', alpha)
+    print('p-value = ', round(p_value, 3))
+    if p_value < alpha:
+        print(colored(
+            "Отклоняем нулевую гипотезу, поскольку p-value меньше уровня значимости", 'red'))
     else:
+        print(colored(
+            "Нет оснований отвергнуть нулевую гипотезу, поскольку p-value больше или равно уровню значимости", 'green'))
+    if return_results:
         return statistic, p_value
 
 
@@ -1829,7 +1816,7 @@ def confint_t_1sample(sample: pd.Series, alpha: float = 0.05, alternative: str =
     return lower, upper
 
 
-def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', first_for_alternative: str = None, equal_var=False) -> tuple:
+def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: str = 'two-sided', reference_group: str = None, equal_var=False) -> tuple:
     """
     Calculate the confidence interval using t-statistic for the difference in means between two samples.
 
@@ -1844,7 +1831,7 @@ def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: st
            * 'two-sided' : H1: ``value1 - value2 - diff`` not equal to 0.
            * 'larger' :   H1: ``value1 - value2 - diff > 0``
            * 'smaller' :  H1: ``value1 - value2 - diff < 0``
-    - first_for_alternative (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
+    - reference_group (str, optional): Lable name in first column of df for define first sample for scipy.stats.ttest_ind
     - equal_var (bool): Whether to assume equal variances between the two samples. If `True`, the pooled standard deviation is used.   
     If `False`, the standard error is calculated using the separate variances of each sample. Defaults to `False`.
 
@@ -1894,10 +1881,10 @@ def confint_t_2samples_df(df: pd.DataFrame, alpha: float = 0.05, alternative: st
     unique_labels = labels.unique()
     if len(unique_labels) != 2:
         raise ValueError("Labels must contain exactly two unique values")
-    if first_for_alternative:
-        if first_for_alternative not in unique_labels:
-            raise ValueError('first_for_alternative must be a lable in first column of df')
-        if first_for_alternative != unique_labels[0]:
+    if reference_group:
+        if reference_group not in unique_labels:
+            raise ValueError('reference_group must be a lable in first column of df')
+        if reference_group != unique_labels[0]:
             unique_labels = unique_labels[::-1]
     # Split values into two samples based on labels
     sample1 = values[labels == unique_labels[0]]
@@ -2674,6 +2661,9 @@ def dunn_df(df: pd.DataFrame, p_adjust: str = 'holm') -> None:
         raise ValueError("Input DataFrame must have exactly two columns")
     labels = df.iloc[:, 0]
     values = df.iloc[:, 1]
+    if isinstance(labels.dtype, pd.CategoricalDtype):
+        labels = labels.astype(str)
+        df[df.columns[0]] = df[df.columns[0]].astype(str)
     if not pd.api.types.is_numeric_dtype(values):
         raise ValueError("Value column must contain numeric values")
     if labels.isna().sum() or values.isna().sum():
@@ -2767,22 +2757,25 @@ def ttest_ind_report(
     # Remove missing values from the data
     df_clean = df[[category_column, numeric_column]].dropna()
 
+    print('Так как распределения средних близки к нормальным, то будем использовать параметрический тест.')
     # State the null and alternative hypotheses for the t-test
-    print("Шаг 1: Формулировка гипотез.")
+    print(colored("Шаг 1: Формулировка гипотез.", 'blue', attrs=['bold']))
     print("H0: Средние значения в двух группах равны.")
     print("H1: Средние значения в двух группах не равны.")
+    print()
 
     # State the null and alternative hypotheses for the Levene's test
-    print("Шаг 2: Проверка равенства дисперсий.")
+    print(colored("Шаг 2: Проверка равенства дисперсий.", 'blue', attrs=['bold']))
     print("H0: Дисперсии в двух группах равны.")
     print("H1: Дисперсии в двух группах не равны.")
     print("Используем тест Левена для проверки равенства дисперсий.")
     print(f"Уровень значимости (alpha) установлен на {alpha}.")
 
     # Perform Levene's test to check for equal variances
-    _, p_value_levene = pgdt.levene_df(df_clean[[category_column, numeric_column]], alpha=alpha, return_results=True)
+    _, p_value_levene = levene_df(df_clean[[category_column, numeric_column]], alpha=alpha, return_results=True)
     equal_var = p_value_levene >= alpha
-    print("Шаг 3: Выбор подходящего t-теста.")
+    print()
+    print(colored("Шаг 3: Выбор подходящего t-теста.", 'blue', attrs=['bold']))
     # Determine whether to use Welch's correction based on the Levene's test result
     if not equal_var:
         print("Так как дисперсии в группах разные, будем использовать тест Уэлча.")
@@ -2792,15 +2785,355 @@ def ttest_ind_report(
     print(f"Альтернативная гипотеза: {alternative}.")
 
     # Check the sample size in each group
-    print("Шаг 4: Проверка размеров групп.")
-    display(df_clean[category_column].value_counts())
+    print()
+    print(colored("Шаг 4: Проверка размеров групп.", 'blue', attrs=['bold']))
+    display(df_clean[category_column].value_counts().to_frame())
 
     # Perform the independent t-test (with or without Welch's correction)
-    print("Шаг 5: Проведение теста.")
-    pgdt.ttest_ind_df(df_clean[[category_column, numeric_column]]
+    print(colored("Шаг 5: Проведение теста.", 'blue', attrs=['bold']))
+    ttest_ind_df(df_clean[[category_column, numeric_column]]
                       , alpha=alpha
                       , equal_var=equal_var
                       , alternative=alternative
-                      , first_for_alternative=reference_group
+                      , reference_group=reference_group
     )
 
+def mannwhitneyu_report(
+    df: pd.DataFrame,
+    category_column: str,
+    numeric_column: str,
+    alpha: float = 0.05,
+    alternative: str = 'two-sided',
+    reference_group: str = None
+) -> dict:
+    """
+    Perform Mann-Whitney U rank test and generate a detailed report.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data for analysis.
+    category_column : str
+        The name of the column in `df` that contains the group labels (categories).
+        This column should have exactly two unique values representing the two groups to compare.
+    numeric_column : str
+        The name of the column in `df` that contains the numeric values to compare between the two groups.
+    alpha : float, optional
+        The significance level for the hypothesis tests. Default is 0.05.
+    alternative : str, optional
+        The alternative hypothesis for test. Possible values are:
+        - 'two-sided' or '2s': The means of the two groups are not equal (default).
+        - 'larger' or 'l': The mean of the first group is larger than the mean of the second group.
+        - 'smaller' or 's': The mean of the first group is smaller than the mean of the second group.
+    reference_group : str, optional
+        The label in `category_column` that defines the reference group for the alternative hypothesis.
+        If not provided, the first group is determined by the order of unique values in `category_column`.
+
+    Returns:
+    -------
+    None
+    """
+    # Check if the category column exists in the DataFrame
+    if category_column not in df.columns:
+        raise ValueError(f"Column '{category_column}' not found in DataFrame.")
+    # Check if the numeric column exists in the DataFrame
+    if numeric_column not in df.columns:
+        raise ValueError(f"Column '{numeric_column}' not found in DataFrame.")
+    # Ensure the numeric column contains numeric data
+    if not pd.api.types.is_numeric_dtype(df[numeric_column]):
+        raise ValueError(f"Column '{numeric_column}' must contain numeric data.")
+
+    # Verify that the category column contains exactly two unique groups
+    groups = df[category_column].unique()
+    if len(groups) != 2:
+        raise ValueError(f"Column '{category_column}' must contain exactly two unique groups.")
+
+    # Remove missing values from the data
+    df_clean = df[[category_column, numeric_column]].dropna()
+
+    print('Так как распределения средних далеки от нормальных, то будем использовать тест Манна-Уитни')
+    print()
+    # State the null and alternative hypotheses
+    print(colored("Шаг 1: Формулировка гипотез.", 'blue', attrs=['bold']))
+    print("H0: Распределения в двух группах одинаковы.")
+    print("H1: Распределения в двух группах отличаются.")
+    print()
+    print(colored("Шаг 2: Выбор уровня значимости и альтернативы.", 'blue', attrs=['bold']))
+    print(f"Уровень значимости alpha выберем {alpha}.")
+    print(f"Альтернативная гипотеза: {alternative}.")
+
+    # Check the sample size in each group
+    print()
+    print(colored("Шаг 3: Проверка размеров групп.", 'blue', attrs=['bold']))
+    display(df_clean[category_column].value_counts().to_frame())
+
+    # Perform test
+    print(colored("Шаг 4: Проведение теста.", 'blue', attrs=['bold']))
+    mannwhitneyu_df(df_clean[[category_column, numeric_column]]
+                      , alpha=alpha
+                      , alternative=alternative
+                      , reference_group=reference_group
+    )
+
+def anova_oneway_report(
+    df: pd.DataFrame,
+    category_column: str,
+    numeric_column: str,
+    alpha: float = 0.05,
+) -> dict:
+    """
+    Perform ANOVA and generate a detailed report.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data for analysis.
+    category_column : str
+        The name of the column in `df` that contains the group labels (categories).
+        This column should have exactly two unique values representing the two groups to compare.
+    numeric_column : str
+        The name of the column in `df` that contains the numeric values to compare between the two groups.
+    alpha : float, optional
+        The significance level for the hypothesis tests. Default is 0.05.
+
+    Returns:
+    -------
+    None
+    """
+
+    # Check if the category column exists in the DataFrame
+    if category_column not in df.columns:
+        raise ValueError(f"Column '{category_column}' not found in DataFrame.")
+    # Check if the numeric column exists in the DataFrame
+    if numeric_column not in df.columns:
+        raise ValueError(f"Column '{numeric_column}' not found in DataFrame.")
+    # Ensure the numeric column contains numeric data
+    if not pd.api.types.is_numeric_dtype(df[numeric_column]):
+        raise ValueError(f"Column '{numeric_column}' must contain numeric data.")
+    # Verify that the category column contains exactly two unique groups
+    groups = df[category_column].unique()
+    if len(groups) < 2:
+        raise ValueError(f"Column '{category_column}' must contain at least two unique groups.")
+
+    # Remove missing values from the data
+    df_clean = df[[category_column, numeric_column]].dropna()
+
+    print('Так как распределения средних близки к нормальным, то будем использовать параметрический тест.')
+    print()
+    # State the null and alternative hypotheses
+    print(colored("Шаг 1: Формулировка гипотез.", 'blue', attrs=['bold']))
+    print("H0: Средние значения во всех группах равны.")
+    print("H1: Среднее значение хотя бы в одной группе отличается от других.")
+    print()
+
+    # State the null and alternative hypotheses for the Levene's test
+    print(colored("Шаг 2: Проверка равенства дисперсий.", 'blue', attrs=['bold']))
+    print("H0: Дисперсии в группах равны.")
+    print("H1: Дисперсии в группах не равны.")
+    print()
+    print("Используем тест Левена для проверки равенства дисперсий.")
+    print(f"Уровень значимости (alpha) установлен на {alpha}.")
+    print()
+    # Perform Levene's test to check for equal variances
+    _, p_value_levene = levene_df(df_clean[[category_column, numeric_column]], alpha=alpha, return_results=True)
+    equal_var = p_value_levene >= alpha
+    print()
+    print(colored("Шаг 3: Выбор подходящего теста ANOVA.", 'blue', attrs=['bold']))
+    # Determine whether to use Welch's correction based on the Levene's test result
+    if not equal_var:
+        print("Так как дисперсии в группах разные, будем использовать Welch's ANOVA.")
+    else:
+        print("Так как нет оснований утверждать, что дисперсии в группах отличаются, используем стандартный ANOVA.")
+    print(f"Уровень значимости alpha выберем {alpha}.")
+
+    # Check the sample size in each group
+    print()
+    print(colored("Шаг 4: Проверка размеров групп.", 'blue', attrs=['bold']))
+    display(df_clean[category_column].value_counts().to_frame())
+
+    # Perform test
+    print(colored("Шаг 5: Проведение теста.", 'blue', attrs=['bold']))
+    if equal_var:
+        anova_oneway_df(df_clean[[category_column, numeric_column]]
+                        , alpha=alpha
+                        , return_results=True
+        )
+    else:
+        anova_oneway_welch_df(df_clean[[category_column, numeric_column]]
+                        , alpha=alpha
+                        , return_results=True
+        )
+
+def kruskal_report(
+    df: pd.DataFrame,
+    category_column: str,
+    numeric_column: str,
+    alpha: float = 0.05,
+) -> dict:
+    """
+    Perform a Kruskal-Wallis test and generate a detailed report.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data for analysis.
+    category_column : str
+        The name of the column in `df` that contains the group labels (categories).
+        This column should have exactly two unique values representing the two groups to compare.
+    numeric_column : str
+        The name of the column in `df` that contains the numeric values to compare between the two groups.
+    alpha : float, optional
+        The significance level for the hypothesis tests. Default is 0.05.
+
+    Returns:
+    -------
+    None
+    """
+
+    # Check if the category column exists in the DataFrame
+    if category_column not in df.columns:
+        raise ValueError(f"Column '{category_column}' not found in DataFrame.")
+    # Check if the numeric column exists in the DataFrame
+    if numeric_column not in df.columns:
+        raise ValueError(f"Column '{numeric_column}' not found in DataFrame.")
+    # Ensure the numeric column contains numeric data
+    if not pd.api.types.is_numeric_dtype(df[numeric_column]):
+        raise ValueError(f"Column '{numeric_column}' must contain numeric data.")
+    # Verify that the category column contains exactly two unique groups
+    groups = df[category_column].unique()
+    if len(groups) < 2:
+        raise ValueError(f"Column '{category_column}' must contain at least two unique groups.")
+
+    # Remove missing values from the data
+    df_clean = df[[category_column, numeric_column]].dropna()
+
+    print('Так как распределения средних далеки от нормальных, то будем использовать тест Краскела-Уоллиса')
+    print()
+    # State the null and alternative hypotheses
+    print(colored("Шаг 1: Формулировка гипотез.", 'blue', attrs=['bold']))
+    print("H0: Распределения во всех группах одинаковы.")
+    print("H1: Распределение хотя бы в одной группе отличается от других.")
+    print()
+
+    print(colored("Шаг 2: Выбор уровня значимости.", 'blue', attrs=['bold']))
+    print(f"Уровень значимости alpha выберем {alpha}.")
+
+    # Check the sample size in each group
+    print()
+    print(colored("Шаг 3: Проверка размеров групп.", 'blue', attrs=['bold']))
+    display(df_clean[category_column].value_counts().to_frame())
+
+    # Perform test
+    print(colored("Шаг 4: Проведение теста.", 'blue', attrs=['bold']))
+    _, p_value_kruskal = kruskal_df(df_clean[[category_column, numeric_column]]
+                    , alpha=alpha
+                    , return_results=True
+    )
+    print()
+    if p_value_kruskal >= alpha:
+        return
+    else:
+        print(colored("Шаг 4: Проведение теста.", 'blue', attrs=['bold']))
+        print('Так как нулевая гипотеза отвергнута, проведем тест Данна , чтобы обнаружить между какими группами есть различия.')
+        dunn_df(df_clean[[category_column, numeric_column]])
+
+def anova_oneway_report(
+    df: pd.DataFrame,
+    category_column: str,
+    numeric_column: str,
+    alpha: float = 0.05,
+) -> dict:
+    """
+    Perform ANOVA and generate a detailed report.
+
+    Parameters:
+    ----------
+    df : pd.DataFrame
+        The DataFrame containing the data for analysis.
+    category_column : str
+        The name of the column in `df` that contains the group labels (categories).
+        This column should have exactly two unique values representing the two groups to compare.
+    numeric_column : str
+        The name of the column in `df` that contains the numeric values to compare between the two groups.
+    alpha : float, optional
+        The significance level for the hypothesis tests. Default is 0.05.
+
+    Returns:
+    -------
+    None
+    """
+
+    # Check if the category column exists in the DataFrame
+    if category_column not in df.columns:
+        raise ValueError(f"Column '{category_column}' not found in DataFrame.")
+    # Check if the numeric column exists in the DataFrame
+    if numeric_column not in df.columns:
+        raise ValueError(f"Column '{numeric_column}' not found in DataFrame.")
+    # Ensure the numeric column contains numeric data
+    if not pd.api.types.is_numeric_dtype(df[numeric_column]):
+        raise ValueError(f"Column '{numeric_column}' must contain numeric data.")
+    # Verify that the category column contains exactly two unique groups
+    groups = df[category_column].unique()
+    if len(groups) < 2:
+        raise ValueError(f"Column '{category_column}' must contain at least two unique groups.")
+
+    # Remove missing values from the data
+    df_clean = df[[category_column, numeric_column]].dropna()
+
+    print('Так как распределения средних близки к нормальным, то будем использовать параметрический тест.')
+    print()
+    # State the null and alternative hypotheses
+    print(colored("Шаг 1: Формулировка гипотез.", 'blue', attrs=['bold']))
+    print("H0: Средние значения во всех группах равны.")
+    print("H1: Среднее значение хотя бы в одной группе отличается от других.")
+    print()
+
+    # State the null and alternative hypotheses for the Levene's test
+    print(colored("Шаг 2: Проверка равенства дисперсий.", 'blue', attrs=['bold']))
+    print("H0: Дисперсии в группах равны.")
+    print("H1: Дисперсии в группах не равны.")
+    print()
+    print("Используем тест Левена для проверки равенства дисперсий.")
+    print(f"Уровень значимости (alpha) установлен на {alpha}.")
+    print()
+    # Perform Levene's test to check for equal variances
+    _, p_value_levene = levene_df(df_clean[[category_column, numeric_column]], alpha=alpha, return_results=True)
+    equal_var = p_value_levene >= alpha
+    print()
+    print(colored("Шаг 3: Выбор подходящего теста ANOVA.", 'blue', attrs=['bold']))
+    # Determine whether to use Welch's correction based on the Levene's test result
+    if not equal_var:
+        print("Так как дисперсии в группах разные, будем использовать Welch's ANOVA.")
+    else:
+        print("Так как нет оснований утверждать, что дисперсии в группах отличаются, используем стандартный ANOVA.")
+    print(f"Уровень значимости alpha выберем {alpha}.")
+
+    # Check the sample size in each group
+    print()
+    print(colored("Шаг 4: Проверка размеров групп.", 'blue', attrs=['bold']))
+    display(df_clean[category_column].value_counts().to_frame())
+
+    # Perform test
+    print(colored("Шаг 5: Проведение теста.", 'blue', attrs=['bold']))
+    if equal_var:
+        _, p_value_anova = anova_oneway_df(df_clean[[category_column, numeric_column]]
+                        , alpha=alpha
+                        , return_results=True
+        )
+    else:
+        anova_results = anova_oneway_welch_df(df_clean[[category_column, numeric_column]]
+                        , alpha=alpha
+                        , return_results=True
+        )
+        p_value_anova = anova_results['p-unc'][0]
+    print()
+    if p_value_anova >= alpha:
+        return
+    else:
+        print(colored("Шаг 6: Проведение post hoc теста.", 'blue', attrs=['bold']))
+        if equal_var:
+            print('Так как нулевая гипотеза отвергнута, проведем тест Тьюки , чтобы обнаружить между какими группами есть различия.')
+            tukey_hsd_df(df_clean[[category_column, numeric_column]])
+        else:
+            print('Так как нулевая гипотеза отвергнута, проведем тест Геймса-Хоуэлла , чтобы обнаружить между какими группами есть различия.')
+            games_howell_df(df_clean[[category_column, numeric_column]])
