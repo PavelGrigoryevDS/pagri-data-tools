@@ -1,5 +1,6 @@
 # import importlib
 # importlib.reload(pgdt)
+# make k format plotly - texttemplate='%{z:.2s}'
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -13,7 +14,9 @@ from scipy.stats import gaussian_kde
 import plotly.figure_factory as ff
 from scipy.stats import t
 import re
+from pingouin import qqplot as pg_qqplot
 from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
 
 pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
 pio.renderers.default = "notebook"
@@ -281,7 +284,7 @@ def fig_update(
     AXIS_TITLE_FONT_SIZE = 14
     TICK_FONT_SIZE = 14
     LEGEND_TITLE_FONT_SIZE = 14
-    FONT_FAMILY = "Segoe UI"
+    FONT_FAMILY = "Noto Sans"
     FONT_COLOR = "rgba(0, 0, 0, 0.7)"
     LINE_COLOR = "rgba(0, 0, 0, 0.4)"
     GRID_COLOR = "rgba(0, 0, 0, 0.1)"
@@ -383,7 +386,8 @@ def fig_update(
         fig.update_traces(marker=dict(
                 line=dict(color='white', width=0.5)))
     for trace in fig.data:
-        trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
+        if trace.hovertemplate:
+            trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
         # trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
         # trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
     if legend_position == 'top':
@@ -2594,7 +2598,7 @@ def heatmap_simple(
                     y=row,
                     showarrow=False,
                     font=dict(
-                        family='Segoe UI',
+                        family='Noto Sans',
                         color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
                         center_color_bar else "white",
                         size=font_size
@@ -2610,7 +2614,7 @@ def heatmap_simple(
                     y=row,
                     showarrow=False,
                     font=dict(
-                        family='Segoe UI',
+                        family='Noto Sans',
                         color="rgba(0, 0, 0, 0.7)" if df.values[row, col] <
                         center_color_bar else "white",
                         size=font_size
@@ -2656,8 +2660,8 @@ def heatmap_simple(
     if height is not None:
         fig.update_layout(height=height)
     fig.update_layout(
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -2810,8 +2814,8 @@ def heatmap_corr(
     hovertemplate = 'ось X = %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
     fig.update_traces(hovertemplate=hovertemplate)
     fig.update_layout(
-        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
+        title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -2985,8 +2989,8 @@ def heatmap_corr_gen(
         hovertemplate = 'ось X = %{x}<br>ось Y = %{y}<br>Коэффициент корреляции = %{z:.2f}<extra></extra>'
         fig.update_traces(hovertemplate=hovertemplate)
         fig.update_layout(
-            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+            font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
+            title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
             xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -4673,7 +4677,7 @@ def graph_analysis_gen(df):
 #     # hovertemplate += '%{customdata[1]}'
 #     hovertemplate += '<extra></extra>'
 #     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white"), textfont=dict(
-#         family='Segoe UI', size=config['textsize']  # Размер шрифта
+#         family='Noto Sans', size=config['textsize']  # Размер шрифта
 #         # color='black'  # Цвет текста
 #     ) # Положение текстовых меток (outside или inside))
 #     )
@@ -4684,7 +4688,7 @@ def graph_analysis_gen(df):
 #         width=config['width'], height=config['height'],
 #         title={'text': config["title"]}, xaxis_title=xaxis_title, yaxis_title=yaxis_title,
 #         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
-#         font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
+#         font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
 #         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
 #         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
 #         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -4882,9 +4886,9 @@ def histogram_go(
     fig.update_layout(
         title=title,
         width=width, height=height,
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),
         title_y=0.95,
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_showticklabels=True,
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -5384,8 +5388,8 @@ def heatmap_categories(
         return crosstab_for_figs_all
     def fig_update_layout(fig):
         fig.update_layout(          
+            font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
             title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
             xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -5431,7 +5435,7 @@ def heatmap_categories(
 
     fig = heatmap_simple(data_for_fig, font_size=14, title=title)
     fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
-        family='Segoe UI', size=14, color="rgba(0, 0, 0, 0.7)"), hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))
+        family='Noto Sans', size=14, color="rgba(0, 0, 0, 0.7)"), hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14)))
     for trace in fig.data:
         trace.xgap = 3
         trace.ygap = 3
@@ -5608,8 +5612,8 @@ def bar_categories(
     
     def fig_update_layout(fig):
         fig.update_layout(          
+            font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
             title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
             xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -5688,7 +5692,7 @@ def bar_categories(
                 hovertemplate=f'{column_for_axis_label}'+' = %{x}<br>Доля = %{y:.1f} %<br>Количество = %{customdata}<extra></extra>'   
         trace.customdata = customdata[i]
     fig.update_traces(hovertemplate=hovertemplate, hoverlabel=dict(bgcolor="white", font=dict(color='rgba(0, 0, 0, 0.7)', size=14))
-                      , textfont=dict(family='Segoe UI', size=textsize))   
+                      , textfont=dict(family='Noto Sans', size=textsize))
     if textposition:
         fig.update_traces(textposition=textposition)
     if not column_for_legend:
@@ -5890,9 +5894,8 @@ def heatmap_no_wrapper(
     
     def fig_update_layout(fig):
         fig.update_layout(          
+            font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
             title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-            font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
-            
             xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
             xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -5938,7 +5941,7 @@ def heatmap_no_wrapper(
     else:
         hovertemplate = None
     fig.update_traces(hovertemplate=hovertemplate, textfont=dict(
-        family='Segoe UI', size=14), hoverlabel=dict(bgcolor="white", font=dict(family='Segoe UI', color='rgba(0, 0, 0, 0.7)', size=14)))
+        family='Noto Sans', size=14), hoverlabel=dict(bgcolor="white", font=dict(family='Noto Sans', color='rgba(0, 0, 0, 0.7)', size=14)))
     for trace in fig.data:
         trace.xgap = 3
         trace.ygap = 3
@@ -6156,8 +6159,8 @@ def pairplot_pairs(
         margin=dict(l=50, r=50, t=90, b=50),
         title=title,
         # Для подписей и меток
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -6446,8 +6449,8 @@ def histograms_stacked(
             , width=width
             , title=title
             , margin=dict(l=50, r=50, b=10, t=50)
-            , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
-            , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
+            , font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)")
+            , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")
             , hoverlabel=dict(bgcolor="white")
         )
         if mode == 'step':
@@ -6479,8 +6482,8 @@ def histograms_stacked(
             , width=width
             , title=title
             , margin=dict(l=50, r=50, b=10, t=50)
+            , font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)")
             , title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)")   
-            , font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)")
             , hoverlabel=dict(bgcolor="white")
         )
     if legend_position == 'top':
@@ -6678,8 +6681,8 @@ def boxplots_stacked(
         width=width,
         title=title,
         # Для подписей и меток
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -6818,8 +6821,8 @@ def violins_stacked(
         width=width,
         title=title,
         # Для подписей и меток
+        font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         title_font=dict(size=16, color="rgba(0, 0, 0, 0.7)"),     
-        font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         xaxis_tickfont=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -7338,8 +7341,8 @@ def subplots(
         width=width,
         height=height,
         margin =  dict(l=50, r=50, b=50, t=50),
+        # font=dict(size=14, family="Noto Sans", color="rgba(0, 0, 0, 0.7)"),
         # title_font_size= 16,
-        # font=dict(size=14, family="Segoe UI", color="rgba(0, 0, 0, 0.7)"),
         # xaxis_showticklabels=True,
         # xaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
         # yaxis_title_font=dict(size=14, color="rgba(0, 0, 0, 0.7)"),
@@ -7627,3 +7630,229 @@ def pie_bar(
                       , height=height
     )
     return fig
+
+def qqplot_plotly(x, **kwargs):
+    """
+    Create an interactive Q-Q plot using Plotly, based on the data and parameters passed to `pg.qqplot`.
+
+    Parameters:
+    -----------
+    x : array_like
+        Sample data.
+    dist : str or stats.distributions instance, optional
+        Distribution or distribution function name. The default is 'norm' for a normal probability plot.
+    sparams : tuple, optional
+        Distribution-specific shape parameters (shape parameters, location,
+        and scale). See scipy.stats.probplot for more details.
+    confidence : float
+        Confidence level (.95 = 95%) for point-wise confidence envelope. Can be disabled by passing False.
+
+    Returns:
+    --------
+    fig : plotly.graph_objects.Figure
+        An interactive Plotly figure displaying the Q-Q plot.
+
+    Example:
+    --------
+    >>> residuals = np.random.normal(loc=0, scale=1, size=100)
+    >>> fig = plotly_qqplot(residuals, dist='norm')
+    >>> fig.show()
+    """
+    # Create a Q-Q plot using pingouin
+    ax = pg_qqplot(x, **kwargs)
+
+    # Close the matplotlib plot to prevent it from displaying
+    plt.close()
+
+    # Extract the points (quantiles of residuals)
+    points = ax.collections[0]  # Points are stored in collections
+    points_x = points.get_offsets()[:, 0]  # X coordinates of points
+    points_y = points.get_offsets()[:, 1]  # Y coordinates of points
+
+    # Extract the lines (regression line, reference line, and confidence bands)
+    lines_data = []
+    for line in ax.lines:
+        x_data = line.get_xdata()
+        y_data = line.get_ydata()
+        lines_data.append((x_data, y_data))
+
+    # Black line (Regression line)
+    # black_line_x, black_line_y = lines_data[0]
+
+    # Red line (Reference line)
+    red_line_x, red_line_y = lines_data[1]
+
+    # Gray areas (Confidence bands)
+    confidence_band1_x, confidence_band1_y = lines_data[2]
+    confidence_band2_x, confidence_band2_y = lines_data[3]
+
+    # Create a Plotly figure
+    fig = go.Figure()
+
+    # Add points (Ordered quantiles)
+    fig.add_trace(go.Scatter(
+        x=points_x, y=points_y, mode='markers',
+        marker=dict(color='rgba(128, 60, 170, 0.9)', size=8),
+        hovertemplate='%{x:.2f}, %{y:.2f}<extra></extra>'
+    ))
+
+    # Add reference line
+    fig.add_trace(go.Scatter(
+        x=red_line_x, y=red_line_y, mode='lines',
+        line=dict(color='#049CB3', width=2),
+        hoverinfo='none'
+    ))
+
+    # Add confidence bands
+    fig.add_trace(go.Scatter(
+        x=confidence_band1_x, y=confidence_band1_y, mode='lines',
+        line=dict(dash='dash', color='#049CB3', width=1),
+        hoverinfo='none'
+    ))
+    fig.add_trace(go.Scatter(
+        x=confidence_band2_x, y=confidence_band2_y, mode='lines',
+        line=dict(dash='dash', color='#049CB3', width=1),
+        hoverinfo='none'
+    ))
+
+    # Set axis ranges
+    x_min, x_max = min(points_x), max(points_x)
+    y_min, y_max = min(points_y), max(points_y)
+    x_padding = (x_max - x_min) * 0.1  # 10% of the range
+    y_padding = (y_max - y_min) * 0.1  # 10% of the range
+
+    # Update figure layout
+    fig_update(fig
+                    # , xaxis_showgrid=False
+                    # , yaxis_showgrid=False
+                    , showlegend=False
+                    , title='Q-Q Plot'
+                    , xaxis_title='Теоретические квантили'
+                    , yaxis_title='Упорядоченные квантили '
+                    , width=500
+                    , height=400
+                    , xaxis_range=[x_min - x_padding, x_max + x_padding]
+                    , yaxis_range=[y_min - y_padding, y_max + y_padding]
+                    , margin = dict(l=20, r=20, b=20, t=50)
+                    , xaxis_dtick=0.5
+                    , yaxis_dtick=0.5
+    )
+
+    return fig
+
+def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, plot_height=3):
+    """
+    Plots Q-Q plots with custom styling, optionally faceted by a categorical column.
+
+    Parameters:
+        df (pd.DataFrame): The input DataFrame.
+        numeric_col (str): The column name for the numeric data to plot.
+        facet_col (str, optional): The column name for faceting the plots by a categorical variable.
+        facet_col_wrap (int, optional): The number of subplots per row for faceting.
+        plot_width (float): The width of each individual plot.
+        plot_height (float): The height of each individual plot.
+    """
+    def _style_qqplot(ax, font_color, line_color, grid_color, font_family, grid_width, title_font_size, font_size, tick_font_size):
+        """
+        Applies custom styling to a Q-Q plot.
+
+        Parameters:
+            ax (matplotlib.axes.Axes): The axes object to style.
+            font_color (str): Color for text.
+            line_color (str): Color for lines.
+            grid_color (str): Color for the grid.
+            font_family (str): Font family for text.
+            grid_width (float): Width of the grid lines.
+            title_font_size (int): Font size for the title.
+            font_size (int): Font size for axis labels.
+            tick_font_size (int): Font size for tick labels.
+        """
+        # Remove top and right spines (borders)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(True)
+        ax.spines['bottom'].set_visible(True)
+        ax.spines['left'].set_color(line_color)
+        # ax.spines['bottom'].set_color(line_color)
+        # Add a light gray grid
+        ax.grid(True, color=grid_color, linestyle='-', linewidth=grid_width)
+
+        # Set the axis labels with custom styling
+        ax.set_xlabel('Theoretical Quantiles', fontsize=font_size, fontfamily=font_family, color=font_color)
+        ax.set_ylabel('Ordered Quantiles', fontsize=font_size, fontfamily=font_family, color=font_color)
+
+        # Customize tick parameters (color and font size)
+        ax.tick_params(axis='both', which='major', colors=line_color, labelsize=tick_font_size)  # Major tick
+        ax.tick_params(axis='both', which='minor', colors=line_color, labelsize=tick_font_size)  # Minor ticks
+
+    # Constants for styling
+    FONT_COLOR = "#4d4d4d"  # rgba(0, 0, 0, 0.7)
+    LINE_COLOR = "#666666"  # rgba(0, 0, 0, 0.4)
+    GRID_COLOR = "#e6e6e6"  # rgba(0, 0, 0, 0.1)
+    FONT_FAMILY = 'Noto Sans'
+    GRID_WIDTH = 0.7
+    TITLE_FONT_SIZE = 12
+    FONT_SIZE = 10
+    TICK_FONT_SIZE = 8
+
+    # If no faceting, create a single Q-Q plot
+    if facet_col is None:
+        fig = sm.qqplot(
+            df[numeric_col]
+            , line='s'
+            , marker='o'
+            , markersize=5
+            # , markeredgecolor='white'
+            # , markeredgewidth=0.5
+        )
+        ax = fig.gca()
+        _style_qqplot(ax, FONT_COLOR, LINE_COLOR, GRID_COLOR, FONT_FAMILY, GRID_WIDTH, TITLE_FONT_SIZE, FONT_SIZE, TICK_FONT_SIZE)
+        ax.set_title('Q-Q Plot', fontsize=TITLE_FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, loc='left', pad=20)
+        plt.show()
+    else:
+        # Get unique categories for faceting
+        categories = df[facet_col].unique()
+        n_categories = len(categories)
+
+        # Determine the layout of subplots
+        if facet_col_wrap is None:
+            n_rows = int(np.ceil(n_categories / 3))  # Default to 3 columns
+            n_cols = 3
+        else:
+            n_rows = int(np.ceil(n_categories / facet_col_wrap))
+            n_cols = facet_col_wrap
+
+        # Calculate the total figure size
+        n_rows = int(np.ceil(len(categories) / n_cols))  # Number of rows
+        figsize = (n_cols * plot_width, n_rows * plot_height)
+
+        # Create the figure and subplots
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize)
+        axes = axes.flatten()  # Flatten the axes array for easy iteration
+        # fig.suptitle('Q-Q Plot', fontsize=TITLE_FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, x=0.01, y=1.01)
+        fig.text(0.05, 1, 'Q-Q Plot', fontsize=TITLE_FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, ha='left')
+        # Plot Q-Q plots for each category
+        for i, category in enumerate(categories):
+            ax = axes[i]
+            subset = df[df[facet_col] == category]
+            sm.qqplot(
+                subset[numeric_col],
+                line='s',
+                ax=ax,
+                marker='o',
+                markersize=5,  # Размер точек
+                # markeredgecolor='white',  # Цвет границы точек
+                # markeredgewidth=0.5  # Толщина границы точек
+            )
+            _style_qqplot(ax, FONT_COLOR, LINE_COLOR, GRID_COLOR, FONT_FAMILY, GRID_WIDTH, TITLE_FONT_SIZE, FONT_SIZE, TICK_FONT_SIZE)
+            ax.set_title(category, fontsize=FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, pad=0)
+            if i % n_cols != 0:
+                ax.set_ylabel('')
+            if i < len(categories) - n_cols:
+                ax.set_xlabel('')
+        # Hide unused subplots
+        for j in range(i + 1, len(axes)):
+            axes[j].axis('off')
+
+        plt.tight_layout(pad=2)
+        plt.show()
