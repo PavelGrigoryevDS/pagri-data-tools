@@ -1,6 +1,7 @@
 # import importlib
 # importlib.reload(pgdt)
 # make k format plotly - texttemplate='%{z:.2s}'
+# png render fig.show(config=dict(displayModeBar=False), renderer="png")
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -17,6 +18,7 @@ import re
 from pingouin import qqplot as pg_qqplot
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
+from statsmodels.api import qqplot as sm_qqplot
 
 pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
 pio.renderers.default = "notebook"
@@ -279,11 +281,11 @@ def fig_update(
         The styled Plotly figure
     """
     # Fonts and Colors
-    TITLE_FONT_SIZE = 16
-    FONT_SIZE = 14
-    AXIS_TITLE_FONT_SIZE = 14
-    TICK_FONT_SIZE = 14
-    LEGEND_TITLE_FONT_SIZE = 14
+    TITLE_FONT_SIZE = 15
+    FONT_SIZE = 13
+    AXIS_TITLE_FONT_SIZE = 13
+    TICK_FONT_SIZE = 13
+    LEGEND_TITLE_FONT_SIZE = 13
     FONT_FAMILY = "Noto Sans"
     FONT_COLOR = "rgba(0, 0, 0, 0.7)"
     LINE_COLOR = "rgba(0, 0, 0, 0.4)"
@@ -1645,323 +1647,7 @@ def area(
     config = {k: v for k,v in config.items() if v is not None}
     return _create_base_fig_for_bar_line_area(df=data_frame, config=config, kwargs=kwargs, graph_type='area')
 
-def histogram(
-    data_frame: pd.DataFrame = None,
-    lower_quantile: float = 0,
-    upper_quantile: float = 1,
-    norm_by: str = None,
-    sort: bool = None,
-    dual: bool = False,
-    **kwargs
-) -> go.Figure:
-    """
-    Creates a histogram chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
 
-    Parameters
-    ----------
-    data_frame : pd.DataFrame, optional
-        DataFrame containing the data to be plotted
-    lower_quantile : float, optional
-        The lower quantile for data filtering (default is 0).
-    upper_quantile : float, optional
-        The upper quantile for data filtering (default is 1).
-    norm_by : str, optional
-        Column name to normalize the histogram by.
-        If specified, the histogram will be normalized based on this column.
-    sort: bool, optional
-        Whether to sort the categories in the histogram.
-        If True, categories will be ordered based on their frequency.
-    x : str, optional
-        The name of the column in `data_frame` to be used for the x-axis. If not provided, the function will attempt to use the first column.
-    y : str, optional
-        The name of the column in `data_frame` to be used for the y-axis. If not provided, the function will count occurrences.
-    color : str, optional
-        The name of the column in `data_frame` to be used for color encoding. This will create a separate histogram for each unique value in this column.
-    barmode : str, optional
-        The mode for the bars in the histogram. Options include 'group', 'overlay', and 'relative'. Default is 'overlay'.
-    nbins : int, optional
-        The number of bins to use for the histogram. If not specified, the function will automatically determine the number of bins.
-    histnorm : str, optional
-        Normalization method for the histogram. Options include 'percent', 'probability', 'density', and 'probability density'. Default is None (no normalization).
-    barnorm : str, optional
-        Specifies how to normalize the heights of the bars in the histogram. Possible values include:
-        - 'fraction': normalizes the heights of the bars so that the sum of all heights equals 1 (fraction of the total count).
-        - 'percent': normalizes the heights of the bars so that the sum of all heights equals 100 (percentage of the total count).
-        - 'density': normalizes the heights of the bars so that the area under the histogram equals 1 (probability density).
-        - None: by default, the heights of the bars are not normalized.
-    marginal : str, optional
-        If set, adds a marginal histogram or box plot to the figure. Options include 'rug', 'box', and 'violin'.
-    template : str, optional
-        The name of the template to use for the figure. Default is None, which uses the default Plotly template.
-    title : str, optional
-        The title of the histogram. Default is None.
-    labels : dict, optional
-        A dictionary mapping column names to labels for the axes and legend.
-    dual: bool, optional
-        Whether to show 2 graphs, left origin, right trimmed by quantile
-    **kwargs : dict
-        Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
-
-    Returns
-    -------
-    go.Figure
-        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
-    """
-
-    # Set default values for the figure dimensions and bar mode
-    if dual:
-        kwargs.setdefault('width', 900)
-    else:
-        kwargs.setdefault('width', 600)
-    kwargs.setdefault('height', 400)
-    kwargs.setdefault('barmode', 'group')
-    kwargs.setdefault('nbins', 30)
-    kwargs.setdefault('marginal', 'box')
-    yaxis_domain = None
-    # Extract x, y, and color parameters from kwargs
-    x = kwargs.get('x')
-    y = kwargs.get('y')
-    color = kwargs.get('color')
-    # Set histogram normalization to 'probability' if no color is specified
-    if not color:
-        kwargs.setdefault('histnorm', 'probability')
-
-    # Adjust normalization based on the norm_by parameter and color
-    if norm_by and color:
-        if norm_by in [x, y]:
-            kwargs['barnorm'] = 'fraction'
-        if norm_by == color:
-            kwargs['histnorm'] = 'probability'
-    if dual:
-        kwargs_dual = kwargs.copy()
-    # If quantiles are provided, trim the data based on these quantiles
-    if lower_quantile or upper_quantile:
-        if isinstance(x, str):
-            if pd.api.types.is_numeric_dtype(data_frame[x]):
-                # Trim x based on the specified quantiles
-                lower_quantile_x = data_frame[x].quantile(lower_quantile)
-                upper_quantile_x = data_frame[x].quantile(upper_quantile)
-                data_frame = data_frame[data_frame[x].between(lower_quantile_x, upper_quantile_x)]
-        else:
-            if pd.api.types.is_numeric_dtype(x):
-                # Trim x based on the specified quantiles
-                trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
-                x = x[trimmed_column]
-        if isinstance(y, str):
-            if pd.api.types.is_numeric_dtype(data_frame[y]):
-                # Trim x based on the specified quantiles
-                lower_quantile_y = data_frame[y].quantile(lower_quantile)
-                upper_quantile_y = data_frame[y].quantile(upper_quantile)
-                data_frame = data_frame[data_frame[y].between(lower_quantile_y, upper_quantile_y)]
-        else:
-            if pd.api.types.is_numeric_dtype(y):
-                # Trim x based on the specified quantiles
-                trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
-                y = y[trimmed_column]
-        if dual:
-            kwargs_dual['x'] = x
-            kwargs_dual['y'] = y
-        else:
-            kwargs['x'] = x
-            kwargs['y'] = y
-    # If sorting is requested, prepare category orders for x and y
-    if sort:
-        category_orders = dict()
-        if x is not None:
-            if isinstance(x, str):
-                x = data_frame[x]
-            x_name = x.name
-            # Get the order of categories based on value counts
-            category_orders_x = x.value_counts().index.tolist()
-            if isinstance(x, str):
-                category_orders[x_name] = category_orders_x
-            else:
-                category_orders['x'] = category_orders_x
-            # If color is specified, get the order of categories for color based on the top x category
-            if color:
-                top_x = category_orders_x[0]
-                category_orders_color = data_frame[data_frame[x_name] == top_x][color].value_counts().index.tolist()
-                category_orders[color] = category_orders_color
-
-        if y is not None:
-            if isinstance(y, str):
-                y = data_frame[y]
-            y_name = y.name
-            # Get the order of categories for y based on value counts
-            category_orders_y = y.value_counts().index.tolist()
-            if isinstance(y, str):
-                category_orders[y_name] = category_orders_y
-            else:
-                category_orders['y'] = category_orders_y
-            # If color is specified, get the order of categories for color based on the top y category
-            if color:
-                top_y = category_orders_y[0]
-                category_orders_color = data_frame[data_frame[y_name] == top_y][color].value_counts().index.tolist()
-                category_orders[color] = category_orders_color
-
-        # Set the category orders in kwargs
-        kwargs['category_orders'] = category_orders
-
-    # Create the histogram figure using Plotly Express
-    fig = px.histogram(data_frame, **kwargs)
-    # Update hover templates for better readability
-    for trace in fig.data:
-        trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')  # Replace 'probability' with 'Доля'
-        trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')  # Replace 'count' with 'Количество'
-        if x is not None and kwargs.get('histnorm') is not None:
-            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')  # Format y values
-        if y is not None and kwargs.get('histnorm') is not None:
-            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')  # Format x values
-    if dual == True:
-        if kwargs.get('marginal') is None:
-            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
-            fig_subplots.add_trace(fig.data[0], row=1, col=2)
-            fig_subplots.add_trace(
-                go.Histogram(
-                    x=kwargs_dual['x'],
-                    nbinsx=kwargs['nbins'],
-                    histnorm=kwargs['histnorm'],
-                    marker_color='rgba(128, 60, 170, 0.9)',
-                    hovertemplate=fig.data[0].hovertemplate
-                ),
-                row=1, col=1
-            )
-            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=1)
-            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=2)
-            if kwargs.get('histnorm') == 'probability':
-                fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
-            if kwargs.get('histnorm') is None:
-                fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
-        else:
-            fig_subplots = make_subplots(rows=2, cols=2, horizontal_spacing=0.07)
-            fig_subplots.add_trace(fig.data[0], row=2, col=2)
-            x_for_box_hovertemplate = kwargs['labels']['x'] if kwargs.get('labels') is not None else 'x'
-            fig_subplots.add_trace(
-                go.Box(
-                    x=kwargs['x'],
-                    marker_color='rgba(128, 60, 170, 0.9)',
-                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
-                ),
-                row=1, col=2
-            )
-            fig_subplots.add_trace(
-                go.Histogram(
-                    x=kwargs_dual['x'],
-                    nbinsx=kwargs['nbins'],
-                    histnorm=kwargs['histnorm'],
-                    marker_color='rgba(128, 60, 170, 0.9)',
-                    hovertemplate=fig.data[0].hovertemplate
-                ),
-                row=2, col=1
-            )
-            fig_subplots.add_trace(
-                go.Box(
-                    x=kwargs_dual['x'],
-                    marker_color='rgba(128, 60, 170, 0.9)',
-                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
-                ),
-                row=1, col=1
-            )
-            fig_subplots.update_layout(
-                yaxis1 = dict(
-                    domain=[0.93, 1]
-                    , visible = False
-                )
-                , yaxis2 = dict(
-                    domain=[0.93, 1]
-                    , visible = False
-                )
-                , yaxis3 = dict(
-                    domain=[0, 0.9]
-                )
-                , yaxis4 = dict(
-                    domain=[0, 0.9]
-                )
-                , xaxis2 = dict(
-                    visible=False
-                )
-                , xaxis1 = dict(
-                    visible=False
-                )
-            )
-            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=1)
-            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=2)
-            if kwargs.get('histnorm') == 'probability':
-                fig_subplots.update_yaxes(title_text='Доля', row=2, col=1)  # Set x-axis title to 'Доля' for probability
-            if kwargs.get('histnorm') is None:
-                fig_subplots.update_yaxes(title_text='Количество', row=2, col=1)  # Set x-axis title to 'Количество' for count
-        fig_subplots.update_layout(title_text=kwargs.get('title'))
-        fig = fig_subplots
-        fig.update_traces(showlegend=False)
-        fig.update_layout(height=kwargs['height'], width=kwargs['width'])
-    else:
-        if kwargs.get('marginal') is not None:
-            if kwargs.get('color'):
-                yaxis_domain = [0, 0.8]
-                fig.update_layout(
-                    yaxis2 = dict(
-                        domain=[0.85, 0.93]
-                        , visible = False
-                    )
-                    , xaxis2 = dict(
-                        visible=False
-                    )
-                )
-            else:
-                yaxis_domain = [0, 0.9]
-                fig.update_layout(
-                    yaxis2 = dict(
-                        domain=[0.93, 1]
-                        , visible = False
-                    )
-                    , xaxis2 = dict(
-                        visible=False
-                    )
-                )
-    # Update axis titles based on normalization and sorting
-    num_rows = len(fig._grid_ref)
-    if y is not None:
-        if kwargs.get('histnorm') == 'probability':
-            for row in range(1, num_rows + 1):
-                fig.update_xaxes(title_text='Доля', row=row, col=1)
-        if kwargs.get('histnorm') is None:
-            for row in range(1, num_rows + 1):
-                fig.update_xaxes(title_text='Количество', row=row, col=1)
-        if sort:
-            fig.data = fig.data[::-1]  # Reverse the order of traces if sorting
-            fig.update_layout(legend={'traceorder': 'reversed'})  # Reverse legend order
-
-    if x is not None:
-        if kwargs.get('histnorm') == 'probability':
-            for row in range(1, num_rows + 1):
-                fig.update_yaxes(title_text='Доля', row=row, col=1)
-        if kwargs.get('histnorm') is None:
-            for row in range(1, num_rows + 1):
-                fig.update_yaxes(title_text='Количество', row=row, col=1)
-    # Update the figure with any additional modifications
-    fig_update_config = dict()
-    if  x is not None:
-        if isinstance(x, str):
-            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[x])
-        else:
-            is_x_numeric = pd.api.types.is_numeric_dtype(x)
-        if not is_x_numeric:
-            fig_update_config['xaxis_showgrid'] = False
-    if y is not None:
-        if isinstance(y, str):
-            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[y])
-        else:
-            is_x_numeric = pd.api.types.is_numeric_dtype(y)
-        if not is_x_numeric:
-            fig_update_config['yaxis_showgrid'] = False
-    if kwargs.get('color'):
-        fig_update_config['legend_position'] = 'top'
-        fig_update_config['legend_title'] = ''
-    if yaxis_domain:
-        fig_update_config['yaxis_domain'] = yaxis_domain
-    fig = fig_update(fig, **fig_update_config)
-
-    return fig  # Return the final figure
 
 def box(
     data_frame: pd.DataFrame = None,
@@ -7631,87 +7317,60 @@ def pie_bar(
     )
     return fig
 
-def qqplot_plotly(x, **kwargs):
+def qqplot_plotly(x, show_skew_curt=True, **kwargs):
     """
-    Create an interactive Q-Q plot using Plotly, based on the data and parameters passed to `pg.qqplot`.
+    Create an interactive Q-Q plot using Plotly
 
     Parameters:
     -----------
     x : array_like
         Sample data.
-    dist : str or stats.distributions instance, optional
-        Distribution or distribution function name. The default is 'norm' for a normal probability plot.
-    sparams : tuple, optional
-        Distribution-specific shape parameters (shape parameters, location,
-        and scale). See scipy.stats.probplot for more details.
-    confidence : float
-        Confidence level (.95 = 95%) for point-wise confidence envelope. Can be disabled by passing False.
 
     Returns:
     --------
     fig : plotly.graph_objects.Figure
         An interactive Plotly figure displaying the Q-Q plot.
 
-    Example:
-    --------
-    >>> residuals = np.random.normal(loc=0, scale=1, size=100)
-    >>> fig = plotly_qqplot(residuals, dist='norm')
-    >>> fig.show()
     """
     # Create a Q-Q plot using pingouin
-    ax = pg_qqplot(x, **kwargs)
-
+    if not isinstance(x, pd.Series):
+        x = pd.Series(x)
+    skew = x.skew()
+    kurt = x.kurtosis()
+    fig = sm_qqplot(
+        x
+        , line='s'
+        , marker='o'
+        , markersize=5
+        # , markeredgecolor='white'
+        # , markeredgewidth=0.5
+    )
     # Close the matplotlib plot to prevent it from displaying
     plt.close()
 
-    # Extract the points (quantiles of residuals)
-    points = ax.collections[0]  # Points are stored in collections
-    points_x = points.get_offsets()[:, 0]  # X coordinates of points
-    points_y = points.get_offsets()[:, 1]  # Y coordinates of points
+    qqplot_data = fig.gca().lines
 
-    # Extract the lines (regression line, reference line, and confidence bands)
-    lines_data = []
-    for line in ax.lines:
-        x_data = line.get_xdata()
-        y_data = line.get_ydata()
-        lines_data.append((x_data, y_data))
-
-    # Black line (Regression line)
-    # black_line_x, black_line_y = lines_data[0]
-
-    # Red line (Reference line)
-    red_line_x, red_line_y = lines_data[1]
-
-    # Gray areas (Confidence bands)
-    confidence_band1_x, confidence_band1_y = lines_data[2]
-    confidence_band2_x, confidence_band2_y = lines_data[3]
-
+    # Извлечение точек и линии
+    points_x = qqplot_data[0].get_xdata()  # Теоретические квантили
+    points_y = qqplot_data[0].get_ydata()  # Эмпирические квантили
+    red_line_x = qqplot_data[1].get_xdata()  # Линия теоретических квантилей
+    red_line_y = qqplot_data[1].get_ydata()  # Линия эмпирических квантилей
+    point_color ='rgba(25, 108, 181, 0.9)'
+    line_color ='rgba(200, 0, 0, 0.9)'
     # Create a Plotly figure
     fig = go.Figure()
 
     # Add points (Ordered quantiles)
     fig.add_trace(go.Scatter(
         x=points_x, y=points_y, mode='markers',
-        marker=dict(color='rgba(128, 60, 170, 0.9)', size=8),
+        marker=dict(color=point_color, size=8),
         hovertemplate='%{x:.2f}, %{y:.2f}<extra></extra>'
     ))
 
     # Add reference line
     fig.add_trace(go.Scatter(
         x=red_line_x, y=red_line_y, mode='lines',
-        line=dict(color='#049CB3', width=2),
-        hoverinfo='none'
-    ))
-
-    # Add confidence bands
-    fig.add_trace(go.Scatter(
-        x=confidence_band1_x, y=confidence_band1_y, mode='lines',
-        line=dict(dash='dash', color='#049CB3', width=1),
-        hoverinfo='none'
-    ))
-    fig.add_trace(go.Scatter(
-        x=confidence_band2_x, y=confidence_band2_y, mode='lines',
-        line=dict(dash='dash', color='#049CB3', width=1),
+        line=dict(color=line_color, width=2),
         hoverinfo='none'
     ))
 
@@ -7721,31 +7380,54 @@ def qqplot_plotly(x, **kwargs):
     x_padding = (x_max - x_min) * 0.1  # 10% of the range
     y_padding = (y_max - y_min) * 0.1  # 10% of the range
 
+    # Относительные координаты (например, 95% по X, 5% по Y)
+    x_rel = 1.02
+    y_rel = -0.01
+
+    # Преобразуем относительные координаты в данные
+    x_annotation = x_min + (x_max - x_min) * x_rel
+    y_annotation = y_min + (y_max - y_min) * y_rel
+
+    fig.add_annotation(
+        x=x_annotation,  # Координата X (0.95 = 95% от ширины графика)
+        y=y_annotation,  # Координата Y (0.05 = 5% от высоты графика)
+        xref='x',  # Используем относительные координаты по оси X (0-1)
+        yref='y',  # Используем относительные координаты по оси Y (0-1)
+        text=f"Skew: {skew:.2f}<br>Kurt: {kurt:.2f}",  # Текст аннотации
+        showarrow=False,  # Не показывать стрелку
+        xanchor='right',  # Выравнивание текста по правому краю
+        yanchor='bottom',  # Выравнивание текста по нижнему краю
+        align='right',
+        # font=dict(size=12, color="black"),  # Настройки шрифта
+        # bgcolor="white",  # Фон текста
+        # bordercolor="black",  # Цвет границы
+        # borderwidth=1  # Толщина границы
+    )
     # Update figure layout
     fig_update(fig
                     # , xaxis_showgrid=False
                     # , yaxis_showgrid=False
                     , showlegend=False
                     , title='Q-Q Plot'
-                    , xaxis_title='Теоретические квантили'
-                    , yaxis_title='Упорядоченные квантили '
+                    , xaxis_title='Theoretical Quantiles'
+                    , yaxis_title='Ordered Quantiles'
                     , width=500
                     , height=400
                     , xaxis_range=[x_min - x_padding, x_max + x_padding]
                     , yaxis_range=[y_min - y_padding, y_max + y_padding]
                     , margin = dict(l=20, r=20, b=20, t=50)
-                    , xaxis_dtick=0.5
-                    , yaxis_dtick=0.5
+                    # , xaxis_dtick=0.5
+                    # , yaxis_dtick=0.5
     )
 
     return fig
 
-def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, plot_height=3):
+def qqplot(data, numeric_col=None, facet_col=None, facet_col_wrap=None, plot_width=4, plot_height=3, show_skew_curt=True):
     """
     Plots Q-Q plots with custom styling, optionally faceted by a categorical column.
 
     Parameters:
-        df (pd.DataFrame): The input DataFrame.
+        data (pd.DataFrame or pd.Series): The input DataFrame.
         numeric_col (str): The column name for the numeric data to plot.
         facet_col (str, optional): The column name for faceting the plots by a categorical variable.
         facet_col_wrap (int, optional): The number of subplots per row for faceting.
@@ -7797,8 +7479,12 @@ def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, p
 
     # If no faceting, create a single Q-Q plot
     if facet_col is None:
-        fig = sm.qqplot(
-            df[numeric_col]
+        if isinstance(data, pd.DataFrame):
+            if not numeric_col or numeric_col not in data.columns:
+                raise ValueError('If data is pandas DataFrame then numeric_col must be in data.columns')
+            data = data[numeric_col]
+        fig = sm_qqplot(
+            data
             , line='s'
             , marker='o'
             , markersize=5
@@ -7808,10 +7494,27 @@ def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, p
         ax = fig.gca()
         _style_qqplot(ax, FONT_COLOR, LINE_COLOR, GRID_COLOR, FONT_FAMILY, GRID_WIDTH, TITLE_FONT_SIZE, FONT_SIZE, TICK_FONT_SIZE)
         ax.set_title('Q-Q Plot', fontsize=TITLE_FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, loc='left', pad=20)
+        if show_skew_curt:
+            skewness = data.skew().round(2)
+            kurt = data.kurtosis().round(2)
+
+            # Добавляем текст с skewness и kurtosis справа внизу
+            ax.text(
+                0.9, 0.1,  # Координаты (x, y) в относительных единицах (0-1)
+                f"Skew: {skewness:.2f}\nKurt: {kurt:.2f}",  # Текст
+                transform=ax.transAxes,  # Используем относительные координаты
+                fontsize=9,  # Размер шрифта
+                color=FONT_COLOR,  # Цвет текста
+                ha='right',  # Выравнивание по правому краю
+                va='bottom',  # Выравнивание по нижнему краю
+                bbox=dict(facecolor='white', alpha=0.8, edgecolor='none')  # Фон текста
+            )
         plt.show()
     else:
+        if not isinstance(data, pd.DataFrame) or not numeric_col:
+            raise ValueError('For facet_col data must be pandas DataFrame and numeric_col must be defined')
         # Get unique categories for faceting
-        categories = df[facet_col].unique()
+        categories = data[facet_col].unique()
         n_categories = len(categories)
 
         # Determine the layout of subplots
@@ -7834,8 +7537,8 @@ def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, p
         # Plot Q-Q plots for each category
         for i, category in enumerate(categories):
             ax = axes[i]
-            subset = df[df[facet_col] == category]
-            sm.qqplot(
+            subset = data[data[facet_col] == category]
+            sm_qqplot(
                 subset[numeric_col],
                 line='s',
                 ax=ax,
@@ -7846,6 +7549,20 @@ def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, p
             )
             _style_qqplot(ax, FONT_COLOR, LINE_COLOR, GRID_COLOR, FONT_FAMILY, GRID_WIDTH, TITLE_FONT_SIZE, FONT_SIZE, TICK_FONT_SIZE)
             ax.set_title(category, fontsize=FONT_SIZE, fontfamily=FONT_FAMILY, color=FONT_COLOR, pad=0)
+            if show_skew_curt:
+                skewness = subset[numeric_col].skew().round(2)
+                kurt = subset[numeric_col].kurtosis().round(2)
+                # Добавляем текст с skewness и kurtosis справа внизу
+                ax.text(
+                    0.9, 0.1,  # Координаты (x, y) в относительных единицах (0-1)
+                    f"Skew: {skewness:.2f}\nKurt: {kurt:.2f}",  # Текст
+                    transform=ax.transAxes,  # Используем относительные координаты
+                    fontsize=9,  # Размер шрифта
+                    color=FONT_COLOR,  # Цвет текста
+                    ha='right',  # Выравнивание по правому краю
+                    va='bottom',  # Выравнивание по нижнему краю
+                    bbox=dict(facecolor='white', alpha=0.8, edgecolor='none')  # Фон текста
+                )
             if i % n_cols != 0:
                 ax.set_ylabel('')
             if i < len(categories) - n_cols:
@@ -7856,3 +7573,361 @@ def qqplot(df, numeric_col, facet_col=None, facet_col_wrap=None, plot_width=4, p
 
         plt.tight_layout(pad=2)
         plt.show()
+
+def histogram(
+    data_frame: pd.DataFrame = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    norm_by: str = None,
+    sort: bool = None,
+    dual: bool = False,
+    show_qqplot: bool = False,
+    render_png: bool = False,
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a histogram chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    lower_quantile : float, optional
+        The lower quantile for data filtering (default is 0).
+    upper_quantile : float, optional
+        The upper quantile for data filtering (default is 1).
+    norm_by : str, optional
+        Column name to normalize the histogram by.
+        If specified, the histogram will be normalized based on this column.
+    sort: bool, optional
+        Whether to sort the categories in the histogram.
+        If True, categories will be ordered based on their frequency.
+    x : str, optional
+        The name of the column in `data_frame` to be used for the x-axis. If not provided, the function will attempt to use the first column.
+    y : str, optional
+        The name of the column in `data_frame` to be used for the y-axis. If not provided, the function will count occurrences.
+    color : str, optional
+        The name of the column in `data_frame` to be used for color encoding. This will create a separate histogram for each unique value in this column.
+    barmode : str, optional
+        The mode for the bars in the histogram. Options include 'group', 'overlay', and 'relative'. Default is 'overlay'.
+    nbins : int, optional
+        The number of bins to use for the histogram. If not specified, the function will automatically determine the number of bins.
+    histnorm : str, optional
+        Normalization method for the histogram. Options include 'percent', 'probability', 'density', and 'probability density'. Default is None (no normalization).
+    barnorm : str, optional
+        Specifies how to normalize the heights of the bars in the histogram. Possible values include:
+        - 'fraction': normalizes the heights of the bars so that the sum of all heights equals 1 (fraction of the total count).
+        - 'percent': normalizes the heights of the bars so that the sum of all heights equals 100 (percentage of the total count).
+        - 'density': normalizes the heights of the bars so that the area under the histogram equals 1 (probability density).
+        - None: by default, the heights of the bars are not normalized.
+    marginal : str, optional
+        If set, adds a marginal histogram or box plot to the figure. Options include 'rug', 'box', and 'violin'.
+    template : str, optional
+        The name of the template to use for the figure. Default is None, which uses the default Plotly template.
+    title : str, optional
+        The title of the histogram. Default is None.
+    labels : dict, optional
+        A dictionary mapping column names to labels for the axes and legend.
+    dual: bool, optional
+        Whether to show 2 graphs, left origin, right trimmed by quantile
+    **kwargs : dict
+        Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
+
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
+    """
+
+    # Set default values for the figure dimensions and bar mode
+    if dual or show_qqplot:
+        kwargs.setdefault('width', 900)
+    else:
+        kwargs.setdefault('width', 600)
+    kwargs.setdefault('height', 400)
+    kwargs.setdefault('barmode', 'group')
+    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('marginal', 'box')
+    yaxis_domain = None
+    # Extract x, y, and color parameters from kwargs
+    x = kwargs.get('x')
+    y = kwargs.get('y')
+    color = kwargs.get('color')
+    # Set histogram normalization to 'probability' if no color is specified
+    if not color:
+        kwargs.setdefault('histnorm', 'probability')
+
+    # Adjust normalization based on the norm_by parameter and color
+    if norm_by and color:
+        if norm_by in [x, y]:
+            kwargs['barnorm'] = 'fraction'
+        if norm_by == color:
+            kwargs['histnorm'] = 'probability'
+    if dual:
+        kwargs_dual = kwargs.copy()
+    # If quantiles are provided, trim the data based on these quantiles
+    if lower_quantile or upper_quantile:
+        if isinstance(x, str):
+            if pd.api.types.is_numeric_dtype(data_frame[x]):
+                # Trim x based on the specified quantiles
+                lower_quantile_x = data_frame[x].quantile(lower_quantile)
+                upper_quantile_x = data_frame[x].quantile(upper_quantile)
+                data_frame = data_frame[data_frame[x].between(lower_quantile_x, upper_quantile_x)]
+        else:
+            if pd.api.types.is_numeric_dtype(x):
+                # Trim x based on the specified quantiles
+                trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
+                x = x[trimmed_column]
+        if isinstance(y, str):
+            if pd.api.types.is_numeric_dtype(data_frame[y]):
+                # Trim x based on the specified quantiles
+                lower_quantile_y = data_frame[y].quantile(lower_quantile)
+                upper_quantile_y = data_frame[y].quantile(upper_quantile)
+                data_frame = data_frame[data_frame[y].between(lower_quantile_y, upper_quantile_y)]
+        else:
+            if pd.api.types.is_numeric_dtype(y):
+                # Trim x based on the specified quantiles
+                trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
+                y = y[trimmed_column]
+        if dual:
+            kwargs_dual['x'] = x
+            kwargs_dual['y'] = y
+        else:
+            kwargs['x'] = x
+            kwargs['y'] = y
+    # If sorting is requested, prepare category orders for x and y
+    if sort:
+        category_orders = dict()
+        if x is not None:
+            if isinstance(x, str):
+                x = data_frame[x]
+            x_name = x.name
+            # Get the order of categories based on value counts
+            category_orders_x = x.value_counts().index.tolist()
+            if isinstance(x, str):
+                category_orders[x_name] = category_orders_x
+            else:
+                category_orders['x'] = category_orders_x
+            # If color is specified, get the order of categories for color based on the top x category
+            if color:
+                top_x = category_orders_x[0]
+                category_orders_color = data_frame[data_frame[x_name] == top_x][color].value_counts().index.tolist()
+                category_orders[color] = category_orders_color
+
+        if y is not None:
+            if isinstance(y, str):
+                y = data_frame[y]
+            y_name = y.name
+            # Get the order of categories for y based on value counts
+            category_orders_y = y.value_counts().index.tolist()
+            if isinstance(y, str):
+                category_orders[y_name] = category_orders_y
+            else:
+                category_orders['y'] = category_orders_y
+            # If color is specified, get the order of categories for color based on the top y category
+            if color:
+                top_y = category_orders_y[0]
+                category_orders_color = data_frame[data_frame[y_name] == top_y][color].value_counts().index.tolist()
+                category_orders[color] = category_orders_color
+
+        # Set the category orders in kwargs
+        kwargs['category_orders'] = category_orders
+
+    # Create the histogram figure using Plotly Express
+    fig = px.histogram(data_frame, **kwargs)
+    # Update hover templates for better readability
+    for trace in fig.data:
+        trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')  # Replace 'probability' with 'Доля'
+        trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')  # Replace 'count' with 'Количество'
+        if x is not None and kwargs.get('histnorm') is not None:
+            trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')  # Format y values
+        if y is not None and kwargs.get('histnorm') is not None:
+            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')  # Format x values
+    if dual == True:
+        if kwargs.get('marginal') is None:
+            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
+            fig_subplots.add_trace(fig.data[0], row=1, col=2)
+            fig_subplots.add_trace(
+                go.Histogram(
+                    x=kwargs_dual['x'],
+                    nbinsx=kwargs['nbins'],
+                    histnorm=kwargs['histnorm'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=fig.data[0].hovertemplate
+                ),
+                row=1, col=1
+            )
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=1)
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=2)
+            if kwargs.get('histnorm') == 'probability':
+                fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
+            if kwargs.get('histnorm') is None:
+                fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+        else:
+            fig_subplots = make_subplots(rows=2, cols=2, horizontal_spacing=0.07)
+            fig_subplots.add_trace(fig.data[0], row=2, col=2)
+            x_for_box_hovertemplate = kwargs['labels']['x'] if kwargs.get('labels') is not None else 'x'
+            fig_subplots.add_trace(
+                go.Box(
+                    x=kwargs['x'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
+                ),
+                row=1, col=2
+            )
+            fig_subplots.add_trace(
+                go.Histogram(
+                    x=kwargs_dual['x'],
+                    nbinsx=kwargs['nbins'],
+                    histnorm=kwargs['histnorm'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=fig.data[0].hovertemplate
+                ),
+                row=2, col=1
+            )
+            fig_subplots.add_trace(
+                go.Box(
+                    x=kwargs_dual['x'],
+                    marker_color='rgba(128, 60, 170, 0.9)',
+                    hovertemplate=f'{x_for_box_hovertemplate} = ' + '%{x}<extra></extra>'
+                ),
+                row=1, col=1
+            )
+            fig_subplots.update_layout(
+                yaxis1 = dict(
+                    domain=[0.93, 1]
+                    , visible = False
+                )
+                , yaxis2 = dict(
+                    domain=[0.93, 1]
+                    , visible = False
+                )
+                , yaxis3 = dict(
+                    domain=[0, 0.9]
+                )
+                , yaxis4 = dict(
+                    domain=[0, 0.9]
+                )
+                , xaxis2 = dict(
+                    visible=False
+                )
+                , xaxis1 = dict(
+                    visible=False
+                )
+            )
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=1)
+            fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=2, col=2)
+            if kwargs.get('histnorm') == 'probability':
+                fig_subplots.update_yaxes(title_text='Доля', row=2, col=1)  # Set x-axis title to 'Доля' for probability
+            if kwargs.get('histnorm') is None:
+                fig_subplots.update_yaxes(title_text='Количество', row=2, col=1)  # Set x-axis title to 'Количество' for count
+        fig_subplots.update_layout(title_text=kwargs.get('title'))
+        fig = fig_subplots
+        fig.update_traces(showlegend=False)
+        fig.update_layout(height=kwargs['height'], width=kwargs['width'])
+
+    else:
+        if kwargs.get('marginal') is not None:
+            if kwargs.get('color'):
+                yaxis_domain = [0, 0.8]
+                fig.update_layout(
+                    yaxis2 = dict(
+                        domain=[0.85, 0.93]
+                        , visible = False
+                    )
+                    , xaxis2 = dict(
+                        visible=False
+                    )
+                )
+            else:
+                yaxis_domain = [0, 0.9]
+                fig.update_layout(
+                    yaxis2 = dict(
+                        domain=[0.93, 1]
+                        , visible = False
+                    )
+                    , xaxis2 = dict(
+                        visible=False
+                    )
+                )
+        if show_qqplot:
+            if x is not None:
+                if isinstance(x, str):
+                    data_for_qqplot = data_frame[x]
+                else:
+                    data_for_qqplot = x
+            elif y is not None:
+                if isinstance(y, str):
+                    data_for_qqplot = data_frame[x]
+                else:
+                    data_for_qqplot = y
+            else:
+                raise ValueError('For qqplot must be define x or y, not both')
+            fig_subplots = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+            fig_subplots.add_trace(fig.data[0], row=1, col=1)
+            qqplot = qqplot_plotly(data_for_qqplot)
+            for trace in qqplot.data:
+                fig_subplots.add_trace(
+                    trace
+                    , row=1, col=2
+                )
+            for annotation in qqplot.layout.annotations:
+                # Обновляем ссылки на оси (xref и yref) для подграфика
+                annotation.update(xref='x2', yref='y2')
+                fig_subplots.add_annotation(annotation)
+            fig_subplots.update_xaxes(title_text='Theoretical Quantiles', row=1, col=2)
+            fig_subplots.update_yaxes(title_text='Ordered Quantiles', row=1, col=2)
+            if kwargs.get('histnorm') == 'probability':
+                fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
+            if kwargs.get('histnorm') is None:
+                fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+            fig_subplots.update_layout(title_text=kwargs.get('title'))
+            fig = fig_subplots
+            fig.update_traces(showlegend=False)
+            fig.update_layout(height=kwargs['height'], width=kwargs['width'])
+    # Update axis titles based on normalization and sorting
+    num_rows = len(fig._grid_ref)
+    if y is not None:
+        if kwargs.get('histnorm') == 'probability':
+            for row in range(1, num_rows + 1):
+                fig.update_xaxes(title_text='Доля', row=row, col=1)
+        if kwargs.get('histnorm') is None:
+            for row in range(1, num_rows + 1):
+                fig.update_xaxes(title_text='Количество', row=row, col=1)
+        if sort:
+            fig.data = fig.data[::-1]  # Reverse the order of traces if sorting
+            fig.update_layout(legend={'traceorder': 'reversed'})  # Reverse legend order
+
+    if x is not None:
+        if kwargs.get('histnorm') == 'probability':
+            for row in range(1, num_rows + 1):
+                fig.update_yaxes(title_text='Доля', row=row, col=1)
+        if kwargs.get('histnorm') is None:
+            for row in range(1, num_rows + 1):
+                fig.update_yaxes(title_text='Количество', row=row, col=1)
+    # Update the figure with any additional modifications
+    fig_update_config = dict()
+    if  x is not None:
+        if isinstance(x, str):
+            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[x])
+        else:
+            is_x_numeric = pd.api.types.is_numeric_dtype(x)
+        if not is_x_numeric:
+            fig_update_config['xaxis_showgrid'] = False
+    if y is not None:
+        if isinstance(y, str):
+            is_x_numeric = pd.api.types.is_numeric_dtype(data_frame[y])
+        else:
+            is_x_numeric = pd.api.types.is_numeric_dtype(y)
+        if not is_x_numeric:
+            fig_update_config['yaxis_showgrid'] = False
+    if kwargs.get('color'):
+        fig_update_config['legend_position'] = 'top'
+        fig_update_config['legend_title'] = ''
+    if yaxis_domain:
+        fig_update_config['yaxis_domain'] = yaxis_domain
+    fig = fig_update(fig, **fig_update_config)
+    if render_png:
+        fig.show(config=dict(displayModeBar=False), renderer="png")
+    else:
+        return fig  # Return the final figure
