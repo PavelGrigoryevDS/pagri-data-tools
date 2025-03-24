@@ -907,23 +907,25 @@ def _create_base_fig_for_bar_line_area(
                 fig_update_config['yaxis_showgrid'] = True
         if pd.api.types.is_datetime64_any_dtype(df[kwargs['x']]):
             # fig_update_config['xaxis_tickformat'] = "%b'%y"
-            if not kwargs.get('width'):
+            if kwargs.get('width') is None:
                 fig_update_config['width'] = 1000
-            if not kwargs.get('height'):
+            if kwargs.get('height') is None:
                 fig_update_config['height'] = 450
         else:
-            if not kwargs.get('width'):
+            if kwargs.get('width') is None:
                 fig_update_config['width'] = 600
+                if kwargs.get('color'):
+                    fig_update_config['width'] = 800
+                if config.get('show_box'):
+                    fig_update_config['width'] = 1000
+                if config.get('top_and_bottom'):
+                    fig_update_config['width'] = 900
+                if config.get('show_count'):
+                    fig_update_config['width'] = 900
+            else:
+                fig_update_config['width'] = kwargs.get('width')
             if not kwargs.get('height'):
                 fig_update_config['height'] = 400
-            if kwargs.get('color'):
-                fig_update_config['width'] = 800
-            if config.get('show_box'):
-                fig_update_config['width'] = 1000
-            if config.get('top_and_bottom'):
-                fig_update_config['width'] = 900
-            if config.get('show_count'):
-                fig_update_config['width'] = 900
         if kwargs.get('color'):
             fig_update_config['legend_position'] = 'top'
             if graph_type in ['line', 'area']:
