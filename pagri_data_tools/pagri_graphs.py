@@ -37,6 +37,17 @@ colorway_for_line = [
     'rgb(102, 204, 204)',    # Цвет 9
     'rgb(182, 144, 196)'     # Цвет 10
 ]
+colorway_tableau = ['#1f77b4',  # muted blue
+ '#ff7f0e',  # safety orange
+ '#2ca02c',  # cooked asparagus green
+ '#d62728',  # brick red
+ '#9467bd',  # muted purple
+ '#8c564b',  # chestnut brown
+ '#e377c2',  # raspberry yogurt pink
+ '#7f7f7f',  # middle gray
+ '#bcbd22',  # curry yellow-green
+ '#17becf']  # blue-teal
+
 colorway_for_bar = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
                     ]
 colorway_for_stacked_histogram =['#2ecc71', '#e74c3c', '#3498db', '#f1c40f', '#9b59b6']
@@ -7647,7 +7658,7 @@ def histogram(
     else:
         kwargs.setdefault('width', 600)
     kwargs.setdefault('height', 400)
-    kwargs.setdefault('barmode', 'group')
+    kwargs.setdefault('barmode', 'overlay')
     kwargs.setdefault('nbins', 30)
     kwargs.setdefault('marginal', 'box')
     yaxis_domain = None
@@ -7660,11 +7671,13 @@ def histogram(
         kwargs.setdefault('histnorm', 'probability')
 
     # Adjust normalization based on the norm_by parameter and color
-    if norm_by and color:
+    if norm_by and color is not None:
         if norm_by in [x, y]:
             kwargs['barnorm'] = 'fraction'
         if norm_by == color:
             kwargs['histnorm'] = 'probability'
+    elif color is not None:
+        kwargs['histnorm'] = 'probability'
     if dual:
         kwargs_dual = kwargs.copy()
     # If quantiles are provided, trim the data based on these quantiles
@@ -7933,3 +7946,240 @@ def histogram(
         fig.show(config=dict(displayModeBar=False), renderer="png")
     else:
         return fig  # Return the final figure
+
+def distplot(
+    data_frame: pd.DataFrame,
+    num_col: str,
+    cat_col: str,
+    labels: dict = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    sort: bool = None,
+    show_box: bool = True,
+    legend_position: str = 'top',
+    height: int = None,
+    width: int = 800,
+    colorway: list = None,
+    title: str = None,
+    category_orders: dict = None,
+) -> go.Figure:
+    """
+    Creates a distribution plot with optional box plots using Plotly.
+
+    This function generates a distribution plot (KDE) for numerical data grouped by a categorical column.
+    It also supports adding box plots for each category and customizing the legend position, colors, and layout.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame
+        DataFrame containing the data to be plotted.
+    num_col : str
+        Name of the numerical variable to plot.
+    cat_col : str
+        Name of the categorical variable for grouping.
+    labels : dict, optional
+        A dictionary mapping column names to labels for the axes and legend.
+    lower_quantile : float, optional
+        The lower quantile for data filtering (default is 0).
+    upper_quantile : float, optional
+        The upper quantile for data filtering (default is 1).
+    sort : bool, optional
+        Whether to sort the categories (default is None).
+    show_box : bool, optional
+        Whether to show box plots for each category (default is True).
+    legend_position : str, optional
+        Position of the legend ('top' or 'right', default is 'top').
+    height : int, optional
+        Height of the plot in pixels (default is None).
+    width : int, optional
+        Width of the plot in pixels (default is None).
+    colorway : list, optional
+        List of colors for lines and boxes (default is None).
+    title : str, optional
+        Title of the plot (default is None).
+    category_orders : dict, optional
+        Dictionary specifying the order of categories (default is None).
+
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly figure with the distribution plot and optional box plots.
+    """
+
+
+    # Validate input data
+    if not isinstance(data_frame, pd.DataFrame):
+        raise TypeError("data_frame must be a pandas DataFrame.")
+
+    if num_col not in data_frame.columns:
+        raise ValueError(f"Column '{num_col}' not found in the DataFrame.")
+
+    if cat_col not in data_frame.columns:
+        raise ValueError(f"Column '{cat_col}' not found in the DataFrame.")
+
+    if category_orders is not None and not isinstance(category_orders, dict):
+        raise TypeError("category_orders must be a dictionary.")
+
+    if colorway is not None and not isinstance(colorway, list):
+        raise TypeError("colorway must be a list of colors.")
+
+    # Group data by categories
+    distplot_data = [data_frame[data_frame[cat_col] == cat][num_col] for cat in data_frame[cat_col].unique()]
+    # Trim data based on quantiles
+    if upper_quantile != 1 or lower_quantile != 0:
+        if not (0 <= lower_quantile <= 1 and 0 <= upper_quantile <= 1):
+            raise ValueError("lower_quantile and upper_quantile must be between 0 and 1.")
+        if lower_quantile > upper_quantile:
+            raise ValueError("lower_quantile must be less than or equal to upper_quantile.")
+
+        distplot_data_trimmed = []
+        for data in distplot_data:
+            # for kde function need at leest 2 values
+            if len(data) <= 2:
+                distplot_data_trimmed.append(data)
+                continue
+            lower_bound = data.quantile(lower_quantile)
+            upper_bound = data.quantile(upper_quantile)
+            trimmed_data = data[(data >= lower_bound) & (data <= upper_bound)]
+            distplot_data_trimmed.append(trimmed_data)
+        distplot_data = distplot_data_trimmed
+    group_labels = data_frame[cat_col].unique()
+    # Validate and apply category order if provided
+    if category_orders is not None and cat_col in category_orders:
+        ordered_categories = category_orders[cat_col]
+
+        # Check if all categories in ordered_categories are present in the data
+        missing_in_data = set(ordered_categories) - set(group_labels)
+        if missing_in_data:
+            raise ValueError(f"Categories {missing_in_data} from category_orders are missing in the data.")
+
+        # Check if all unique categories in the data are present in ordered_categories
+        missing_in_order = set(group_labels) - set(ordered_categories)
+        if missing_in_order:
+            raise ValueError(f"Categories {missing_in_order} from the data are missing in category_orders.")
+
+        # Create a mapping from group_labels to their indices
+        labels_map = {label: index for index, label in enumerate(group_labels)}
+
+        # Reorder distplot_data based on ordered_categories
+        distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
+        group_labels = ordered_categories
+
+    # Set default colorway if not provided
+    if colorway is None:
+        colorway = colorway_for_line
+    # Create the distribution plot
+    fig = ff.create_distplot(
+        distplot_data,
+        group_labels,
+        show_hist=False,  # Show histogram
+        show_curve=True,  # Show density curve
+        show_rug=False,   # Hide rug plot
+        colors=colorway
+    )
+    # Update hover template with axis labels
+    if labels:
+        xaxis_title = labels[num_col]
+    else:
+        xaxis_title = None
+    fig.update_traces(
+        hovertemplate=f"{xaxis_title} = %{{x}}<br>Density = %{{y:.2f}}<extra></extra>"
+    )
+
+    # Adjust legend position
+    y_for_legend = 1.07
+
+    # Add box plots if enabled
+    if show_box:
+        categories_cnt = len(group_labels)
+        box_height = 0.05 - 0.003 * (categories_cnt - 1)
+        y_for_legend = y_for_legend - 0.005 * (categories_cnt - 1)
+
+        # Calculate height increase based on the number of categories
+        height_increase = categories_cnt * 30  # Increase height by 30 pixels for each box plot
+        base_height = 400  # Base height of the plot
+        total_height = base_height + height_increase
+
+        # Adjust y-axis domains for subplots
+        if legend_position == 'top':
+            y_legend_for_domain = 0.98 - 0.003 * (categories_cnt - 1)
+            if categories_cnt <= 3:
+                y_legend_for_domain -= 0.003
+        else:
+            y_legend_for_domain = 1.05
+
+        total_box_height = categories_cnt * box_height  # Total height for box plots
+        yaxis_domain = [y_legend_for_domain + 0.01 - total_box_height, y_legend_for_domain]
+        yaxis2_domain = [0, y_legend_for_domain - 0.01 - total_box_height]
+
+        # Create subplots for box plots and distribution plot
+        fig_subplots = make_subplots(rows=2, cols=1, shared_xaxes=True)
+        for trace in fig.data:
+            fig_subplots.add_trace(trace, row=2, col=1)
+
+        # Create box plots
+        box_plots = go.Figure()
+        for indx, category in enumerate(group_labels):
+            data = distplot_data[indx]
+
+            # Add box plot trace
+            box_plots.add_trace(go.Box(
+                x=data,
+                name=str(category),
+                orientation='h',
+                notched=True,
+                showlegend=False,
+                marker_color=colorway[indx]
+            ))
+
+        # Update hover template for box plots
+        box_plots.update_traces(
+            hovertemplate=f"{xaxis_title} = %{{x}}<extra></extra>"
+        )
+
+        # Add box plot traces to subplots
+        for trace in box_plots.data:
+            fig_subplots.add_trace(trace, row=1, col=1)
+
+        # Update subplot layout
+        fig_subplots.update_layout(
+            height=total_height if height is None else height,
+            xaxis=dict(showticklabels=False, showline=False, ticks='', showgrid=True),
+            yaxis=dict(domain=yaxis_domain, visible=False),
+            yaxis2=dict(domain=yaxis2_domain)
+        )
+
+        fig = fig_subplots
+
+    # Set legend position
+    if legend_position == 'top':
+        fig.update_layout(
+            legend=dict(
+                orientation="h",  # Horizontal orientation
+                yanchor="top",    # Anchor to the top
+                y=y_for_legend,   # Vertical position
+                xanchor="center", # Anchor to the center
+                x=0.5             # Horizontal position
+            )
+        )
+    elif legend_position == 'right':
+        fig.update_layout(
+            legend=dict(
+                orientation="v",  # Vertical orientation
+                yanchor="top",    # Anchor to the top
+                y=1,              # Vertical position
+                xanchor="left",   # Anchor to the left
+                x=1.05            # Horizontal position
+            )
+        )
+
+    # Update axis titles
+    if show_box:
+        fig.update_layout(yaxis2_title='Density', xaxis2_title=xaxis_title)
+    else:
+        fig.update_layout(yaxis_title='Density', xaxis_title=xaxis_title)
+
+    # Finalize figure layout
+    fig_update(fig, height=height, width=width, title=title, margin=dict(l=50, r=50, b=50, t=60))
+
+    return fig  # Return the final figure
