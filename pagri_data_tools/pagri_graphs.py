@@ -1139,7 +1139,7 @@ def bar(
     show_ci: bool = False,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
-    observed_for_groupby: bool = False,
+    observed_for_groupby: bool = True,
     agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
@@ -1331,7 +1331,7 @@ def line(
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
-    observed_for_groupby: bool = False,
+    observed_for_groupby: bool = True,
     agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
@@ -1506,7 +1506,7 @@ def area(
     update_layout: bool = True,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
-    observed_for_groupby: bool = False,
+    observed_for_groupby: bool = True,
     agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
@@ -1665,10 +1665,12 @@ def area(
 
 def box(
     data_frame: pd.DataFrame = None,
-    top_n: int = None,
-    lower_quantile: float = None,
-    upper_quantile: float = None,
-    sort: bool = False,
+    top_n_trim: int = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    sort: bool = True,
+    dual: bool = False,
+    agg_func_for_top_n: bool = 'count',
     **kwargs
 ) -> go.Figure:
     """
@@ -1679,7 +1681,7 @@ def box(
     data_frame : pd.DataFrame, optional
         The DataFrame containing the data to be plotted.
 
-    top_n : int, optional
+    top_n_trim : int, optional
         The number of top categories to display. If None, all categories are shown.
 
     lower_quantile : float, optional
@@ -1689,7 +1691,7 @@ def box(
         The upper quantile for filtering the data. Value should be in the range [0, 1].
 
     sort : bool, optional
-        If True, sorts categories by median. Default is False.
+        If True, sorts categories by median. Default is True.
 
     x : str, optional
         Column name to be used for the x-axis.
@@ -1711,7 +1713,11 @@ def box(
 
     template : str, optional
         The template to use for the plot.
-
+    dual: bool, optional
+        Whether to show 2 boxplots, left origin, right trimmed by quantile
+    agg_func_for_top_n : str, optional
+        Aggregation function for top_n_trim. Options: 'mean', 'median', 'sum', 'count', 'nunique'.
+        By default agg_func_for_top_n = 'count'
     **kwargs :
         Additional parameters that can be passed to the Plotly Express box function.
 
@@ -1721,17 +1727,100 @@ def box(
         A Figure object containing the box plot.
     """
 
-    # Function to trim the data based on specified quantiles
-    # def trim_by_quantiles(group):
-    #     # Calculate the lower bound using the lower quantile
-    #     lower_bound = group.quantile(lower_quantile)
-    #     # Calculate the upper bound using the upper quantile
-    #     upper_bound = group.quantile(upper_quantile)
-    #     # Return the group filtered between the lower and upper bounds
-    #     return group[(group >= lower_bound) & (group <= upper_bound)]
 
+    def trim_by_quantiles(config, kwargs):
+        x = kwargs.get('x')
+        y = kwargs.get('y')
+        lower_quantile = config['lower_quantile']
+        upper_quantile = config['upper_quantile']
+        color = [kwargs['color']] if kwargs.get('color') else []
+        cat_col = [config['cat_col']]
+        columns_for_groupby = color + cat_col
+        data_frame = config['data_frame']
+        if columns_for_groupby:
+            # Функция для обрезки значений по квантилям
+            def trim_by_quantiles_in(group):
+                lower_bound = group.quantile(lower_quantile)  # 0-й квантиль
+                upper_bound = group.quantile(upper_quantile)  # 95-й квантиль
+                return group[(group >= lower_bound) & (group <= upper_bound)]
+
+            # Применение функции к каждой категории
+            trimmed_data_frame = data_frame.groupby(columns_for_groupby, observed=False)[config['num_col']].apply(trim_by_quantiles_in).reset_index()
+        else:
+            if isinstance(x, str):
+                if pd.api.types.is_numeric_dtype(data_frame[x]):
+                    # Trim x based on the specified quantiles
+                    lower_quantile_x = data_frame[x].quantile(lower_quantile)
+                    upper_quantile_x = data_frame[x].quantile(upper_quantile)
+                    trimmed_data_frame = data_frame[data_frame[x].between(lower_quantile_x, upper_quantile_x)]
+            else:
+                if pd.api.types.is_numeric_dtype(x):
+                    # Trim x based on the specified quantiles
+                    trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
+                    x = x[trimmed_column]
+            if isinstance(y, str):
+                if pd.api.types.is_numeric_dtype(data_frame[y]):
+                    # Trim x based on the specified quantiles
+                    lower_quantile_y = data_frame[y].quantile(lower_quantile)
+                    upper_quantile_y = data_frame[y].quantile(upper_quantile)
+                    trimmed_data_frame = data_frame[data_frame[y].between(lower_quantile_y, upper_quantile_y)]
+            else:
+                if pd.api.types.is_numeric_dtype(y):
+                    # Trim x based on the specified quantiles
+                    trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
+                    y = y[trimmed_column]
+            if dual_hist:
+                kwargs_dual['x'] = x
+                kwargs_dual['y'] = y
+            else:
+                kwargs['x'] = x
+                kwargs['y'] = y
+        if dual:
+            config['trimmed_data_frame'] = trimmed_data_frame
+        else:
+            config['data_frame'] = trimmed_data_frame
+
+    def prepare_df(config, kwargs):
+        data_frame = config['data_frame']
+        top_n_trim = config['top_n_trim']
+        num_col = config['num_col']
+        cat_col = config['cat_col']
+        agg_func_for_top_n = config['agg_func_for_top_n']
+        # Initialize categories variable
+        categories = None
+        # Check if sorting is not required
+        if not config['sort']:
+            # If top_n is specified, get the top n categories based on value counts
+            if top_n_trim:
+                categories = data_frame.groupby(cat_col, observed=False)[num_col].agg(agg_func_for_top_n).nlargest(top_n_trim).index.tolist()
+                config['data_frame'] = data_frame[data_frame[cat_col].isin(categories)]
+        else:
+
+            # categories = data_frame.groupby(cat_col, observed=False).agg(
+            #         col_for_top_n_trim = (num_col, agg_func_for_top_n)
+            #         , median_for_sort = (num_col, 'median')
+            #     ).sort_values('col_for_top_n_trim', ascending=False)[:top_n_trim].sort_values('median_for_sort', ascending=False).index.tolist()
+            # if top_n_trim:
+            #     categories = categories[:top_n_trim]
+            # kwargs['category_orders'] = {cat_col: categories}
+            if top_n_trim:
+                categories = data_frame.groupby(cat_col, observed=False)[num_col].agg(agg_func_for_top_n).nlargest(top_n_trim).index.tolist()
+                data_frame = data_frame[data_frame[cat_col].isin(categories)]
+            if config['orientation'] is None or config['orientation'] == 'v':
+                ascending = False
+            else:
+                ascending = True
+            data_frame['temp_for_sort'] = data_frame.groupby(cat_col, observed=False)[num_col].transform('median')
+            data_frame = data_frame.sort_values('temp_for_sort', ascending=ascending).drop('temp_for_sort', axis=1)
+            config['data_frame'] = data_frame
+
+    if data_frame is not None and not isinstance(data_frame, pd.DataFrame):
+        raise TypeError("data_frame must be a pandas DataFrame.")
     # Assign the input data frame to a variable
-    df = data_frame
+    if dual:
+        if upper_quantile == 1 and lower_quantile == 0:
+            raise ValueError('For dual mode must be define lower or upper quantile')
+        kwargs_dual = kwargs.copy()
 
     # Retrieve the orientation parameter from kwargs
     orientation = kwargs.get('orientation')
@@ -1741,91 +1830,88 @@ def box(
     y = kwargs.get('y')
     # Retrieve the color variable from kwargs
     color = kwargs.get('color')
-
+    config = dict(
+        data_frame = data_frame,
+        lower_quantile = lower_quantile,
+        upper_quantile = upper_quantile,
+        sort = sort,
+        top_n_trim = top_n_trim,
+        agg_func_for_top_n = agg_func_for_top_n,
+        orientation = orientation,
+    )
     # Determine the categorical and numerical variables based on orientation
     if orientation is None or orientation == 'v':
-        cat_var = x
-        num_var = y
+        config['cat_col'] = x
+        cat_col = x
+        config['num_col'] = y
+        num_col = y
+        if kwargs.get('labels') is not None:
+            if config['num_col'] in kwargs['labels']:
+                config['yaxis_title'] = kwargs['labels'][config['num_col']]
+            if config['cat_col'] in kwargs['labels']:
+                config['xaxis_title'] = kwargs['labels'][config['cat_col']]
     else:
-        cat_var = y
-        num_var = x
+        config['cat_col'] = y
+        cat_col = y
+        config['num_col'] = x
+        num_col = x
+        if kwargs.get('labels') is not None:
+            if config['num_col'] in kwargs['labels']:
+                config['xaxis_title'] = kwargs['labels'][config['num_col']]
+            if config['cat_col'] in kwargs['labels']:
+                config['yaxis_title'] = kwargs['labels'][config['cat_col']]
+    prepare_df(config, kwargs)
 
-    # Initialize categories variable
-    categories = None
-    # Check if sorting is not required
-    if not sort:
-        # If top_n is specified, get the top n categories based on value counts
-        if top_n:
-            # categories = df[cat_var].value_counts().nlargest(top_n).index.tolist()
-            categories = df.groupby(cat_var, observed=False)[num_var].median().nlargest(top_n).index.tolist()
-    else:
-        # If the categorical variable is of type Categorical, get its categories
-        # if isinstance(df[cat_var], pd.CategoricalDtype):
-        #     categories = df[cat_var].cat.categories.tolist()
-        # # If the categorical variable is numeric, sort and get unique values
-        # elif pd.api.types.is_numeric_dtype(df[cat_var]):
-        #     categories = sorted(df[cat_var].unique().tolist())
-        # # For other types, get unique values directly
-        # else:
-        #     categories = df[cat_var].unique().tolist()
-        categories = df.groupby(cat_var, observed=False)[num_var].median().sort_values(ascending=False).index.tolist()
-        kwargs['category_orders'] = {cat_var: categories}
-
-        # If top_n is specified, limit the categories to top_n
-        if top_n:
-            categories = categories[:top_n]
-
-    # Filter the dataframe to include only the selected categories
-    if categories:
-        df = df[df[cat_var].isin(categories)]
-
-    # Initialize trimmed_df with the original dataframe
-    trimmed_df = df
-
-    # Check if quantile trimming is required
-    if upper_quantile or lower_quantile:
-        # Set default upper quantile if not provided
-        if not upper_quantile:
-            upper_quantile = 1
-        # Set default lower quantile if not provided
-        if not lower_quantile:
-            lower_quantile = 0
-
-        # Prepare columns for grouping
-        columns_for_groupby = [cat_var]
-        # If color is specified, include it in the grouping
-        if color:
-            columns_for_groupby.append(color)
-
-        # Apply the trim_by_quantiles function to the grouped data
-        temp_for_range = df.groupby(columns_for_groupby, observed=False)[num_var].quantile([lower_quantile, upper_quantile]).unstack()
-        lower_range = temp_for_range.iloc[:, 0].min()
-        upper_range = temp_for_range.iloc[:, 1].max()
-        lower_range -= (upper_range - lower_range) * 0.05
-
+    if upper_quantile != 1 or lower_quantile != 0:
+        if not (0 <= lower_quantile <= 1 and 0 <= upper_quantile <= 1):
+            raise ValueError("lower_quantile and upper_quantile must be between 0 and 1.")
+        if lower_quantile > upper_quantile:
+            raise ValueError("lower_quantile must be less than or equal to upper_quantile.")
+        trim_by_quantiles(config, kwargs)
     # Create a box plot using the trimmed dataframe
-    fig = px.box(trimmed_df, **kwargs)
-
+    fig = px.box(config['data_frame'], **kwargs)
+    if dual:
+        # categoryarray = fig.layout.yaxis.categoryarray
+        # categoryorder = fig.layout.yaxis.categoryorder
+        fig_new = make_subplots(rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.05)
+        for trace in fig.data:
+            fig_new.add_trace(trace, row=1, col=1)
+        fig_trimmed = px.box(config['trimmed_data_frame'], **kwargs)
+        for trace in fig_trimmed.data:
+            fig_new.add_trace(trace, row=1, col=2)
+        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=1, col=2)
+        fig_new.update_yaxes(title_text=config.get('yaxis_title'), row=1, col=1)
+        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=1, col=1)
+        fig_new.update_layout(title_text=kwargs.get('title'))
+        fig = fig_new
+        # if orientation is None or orientation == 'v':
+        #     fig_new.layout.xaxis.categoryorder = categoryorder
+        #     fig_new.layout.xaxis.categoryarray = categoryarray
+        # else:
+        #     fig_new.layout.yaxis.categoryorder = categoryorder
+        #     fig_new.layout.yaxis.categoryarray = categoryarray
     # Initialize a dictionary to update figure configuration
     fig_update_config = dict()
-
     # Configure the figure based on orientation
     if orientation is None or orientation == 'v':
         # Disable grid lines for the y-axis
-        fig_update_config['yaxis_showgrid'] = False
-        # Update hover template for each trace
-        for trace in fig.data:
-            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
-    else:
-        # Disable grid lines for the x-axis
         fig_update_config['xaxis_showgrid'] = False
         # Update hover template for each trace
         for trace in fig.data:
             trace.hovertemplate = trace.hovertemplate.replace('{y}', '{y:.2f}')
+    else:
+        # Disable grid lines for the x-axis
+        fig_update_config['yaxis_showgrid'] = False
+        # Update hover template for each trace
+        for trace in fig.data:
+            trace.hovertemplate = trace.hovertemplate.replace('{x}', '{x:.2f}')
 
     # Set default width if not specified
     if not kwargs.get('width'):
-        fig_update_config['width'] = 800
+        if dual:
+            fig_update_config['width'] = 900
+        else:
+            fig_update_config['width'] = 700
     # Set default height if not specified
     if not kwargs.get('height'):
         fig_update_config['height'] = 400
@@ -1834,11 +1920,6 @@ def box(
     if kwargs.get('color'):
         fig_update_config['legend_position'] = 'top'
         fig_update_config['legend_title'] = ''
-    if upper_quantile or lower_quantile:
-        if kwargs.get('orientation') == 'h':
-            fig.update_xaxes(range=[lower_range, upper_range])
-        else:
-            fig.update_yaxes(range=[lower_range, upper_range])
     # Update the figure with the specified configurations
     fig = fig_update(fig, **fig_update_config)
 
@@ -8268,6 +8349,10 @@ def histogram(
 
             # Применение функции к каждой категории
             trimmed_data_frame = data_frame.groupby(columns_for_groupby, observed=False)[config['num_col']].apply(trim_by_quantiles_in).reset_index()
+            if dual_hist or dual_box:
+                config['trimmed_data_frame'] = trimmed_data_frame
+            else:
+                config['data_frame'] = trimmed_data_frame
         else:
             if isinstance(x, str):
                 if pd.api.types.is_numeric_dtype(data_frame[x]):
@@ -8297,10 +8382,6 @@ def histogram(
             else:
                 kwargs['x'] = x
                 kwargs['y'] = y
-        if dual_hist or dual_box:
-            config['trimmed_data_frame'] = trimmed_data_frame
-        else:
-            config['data_frame'] = trimmed_data_frame
 
     def get_row_col_from_axis(axis_name, config):
         cols = config['cols']
@@ -8453,10 +8534,16 @@ def histogram(
             subplots_fig.update_yaxes(showgrid=True, row=row_hist, col=col)
             if show_box:
                 # Создаем боксплот для данных гистограммы
-                if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
-                    label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
+                if config['data_frame'] is not None:
+                    if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
+                        label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
+                    else:
+                        label_for_box_hovertemplate = 'Значение'
                 else:
-                    label_for_box_hovertemplate = 'Значение'
+                    if kwargs.get('labels') is not None and 'x' in kwargs['labels']:
+                        label_for_box_hovertemplate = kwargs['labels']['x']
+                    else:
+                        label_for_box_hovertemplate = 'Значение'
                 if kwargs.get('color') is not None:
                     if kwargs['color'] in kwargs['labels']:
                         hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
@@ -8473,7 +8560,7 @@ def histogram(
                 row_box = row_hist - 1
                 subplots_fig.add_trace(box, row=row_box, col=col)
                 subplots_fig.update_xaxes(
-                    showticklabels=False, showline=False, ticks='', showgrid=False, row=row_box, col=col
+                    showticklabels=False, showline=False, ticks='', showgrid=True, row=row_box, col=col
                 )
                 subplots_fig.update_yaxes(
                     visible=False, matches=None, row=row_box, col=col
@@ -8599,27 +8686,41 @@ def histogram(
     )
     if 'color' in kwargs:
         kwargs.setdefault('barmode', 'overlay')
-    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('nbins', 50)
     if show_kde:
         kwargs.setdefault('histnorm', 'probability density')
     else:
         kwargs.setdefault('histnorm', 'probability')
     kwargs.setdefault('color_discrete_sequence', config['colorway'])
-    if kwargs.get('x') and kwargs.get('y'):
+    if kwargs.get('x') is not None and kwargs.get('y') is not None:
         raise ValueError('Must be define x or y not both')
-    if kwargs.get('x'):
+    if kwargs.get('histnorm') == 'probability density':
+        hist_norm_title = 'Плотность'
+    if kwargs.get('histnorm') == 'probability':
+        hist_norm_title= 'Доля'
+    elif kwargs.get('histnorm') is None:
+        hist_norm_title = 'Количество'
+    if kwargs.get('x') is not None:
         config['num_col'] = kwargs.get('x')
+        config['yaxis_title'] = hist_norm_title
+        if isinstance(config['num_col'], str):
+            kwargs['hover_data'] = {config['num_col']: ':.2f'}
+            config['xaxis_title'] = kwargs['labels'][config['num_col']]
+        else:
+            # kwargs['hover_data'] = {'x': ':.2f'}
+            config['is_x_series'] = True
+            config['xaxis_title'] = kwargs['labels']['x']
     else:
         config['num_col'] = kwargs.get('y')
-    kwargs['hover_data'] = {config['num_col']: ':.2f'}
-    if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
-        config['xaxis_title'] = kwargs['labels'][config['num_col']]
-    if kwargs.get('histnorm') == 'probability density':
-        config['yaxis_title'] = 'Плотность'
-    if kwargs.get('histnorm') == 'probability':
-        config['yaxis_title'] = 'Доля'
-    elif kwargs.get('histnorm') is None:
-        config['yaxis_title'] = 'Количество'
+        config['xaxis_title'] = hist_norm_title
+        if isinstance(config['num_col'], str):
+            kwargs['hover_data'] = {config['num_col']: ':.2f'}
+            config['yaxis_title'] = kwargs['labels'][config['num_col']]
+        else:
+            # kwargs['hover_data'] = {'y': ':.2f'}
+            config['is_y_series'] = True
+            config['yaxis_title'] = kwargs['labels']['y']
+
     if dual_hist or dual_box:
         kwargs_dual = kwargs.copy()
 
@@ -8638,7 +8739,7 @@ def histogram(
             kwargs_dual['category_orders'][kwargs_dual['color']] = sorted_color_labels
 
     # Create the histogram figure using Plotly Express
-    fig = px.histogram(config['data_frame'], **kwargs)
+    fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
     # print(fig._grid_str)
     if not dual_hist and not dual_box and not show_qqplot:
         if kwargs.get('marginal') is None:
@@ -8661,9 +8762,9 @@ def histogram(
                 if layout_key.startswith('xaxis'):
                     fig_new.layout[layout_key].domain = fig.layout[layout_key].domain
     elif dual_hist == True:
-        if 'trimmed_data_frame' not in config:
+        if upper_quantile == 1 and lower_quantile == 0:
             raise ValueError('For dual mode must be define lower or upper quantile')
-        fig_trimmed = px.histogram(config['trimmed_data_frame'], **kwargs_dual)
+        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **kwargs_dual)
         # labels_fig = {label: index for index, label in enumerate(group_labels)}
         # distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
         fig_dual = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
@@ -8684,9 +8785,9 @@ def histogram(
         # if kwargs.get('histnorm') is None:
         #     fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
     elif dual_box == True:
-        if 'trimmed_data_frame' not in config:
+        if upper_quantile == 1 and lower_quantile == 0:
             raise ValueError('For dual mode must be define lower or upper quantile')
-        fig_trimmed = px.histogram(config['trimmed_data_frame'], **kwargs_dual)
+        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **kwargs_dual)
         # labels_fig = {label: index for index, label in enumerate(group_labels)}
         # distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
         config['rows'] = len(fig._grid_ref)
@@ -8751,7 +8852,10 @@ def histogram(
         fig_new.update_yaxes(title_text=config.get('yaxis_title'), row=2, col=2)
         fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=1, col=1)
         fig_new.update_yaxes(visible=False, row=1, col=1)
-
+        fig_new.update_xaxes(showgrid=True, row=1, col=1)
+        fig_new.update_xaxes(showgrid=True, row=1, col=2)
+        fig_new.update_xaxes(showgrid=True, row=2, col=2)
+        fig_new.update_yaxes(showgrid=True, row=2, col=2)
         # if kwargs.get('histnorm') == 'probability':
         #     fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
         # if kwargs.get('histnorm') is None:
