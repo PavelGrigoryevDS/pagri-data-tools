@@ -303,8 +303,6 @@ def fig_update(
     GRID_COLOR = "rgba(0, 0, 0, 0.1)"
     HOVER_BGCOLOR = "white"
     GRID_WIDTH = 1
-
-
     # Layout updates
     layout_updates = {
         'title_text': title,
@@ -313,7 +311,7 @@ def fig_update(
         'legend_title_text': legend_title,
         'showlegend': showlegend,
         'template': template,
-        'hoverlabel': {'bgcolor': HOVER_BGCOLOR, 'align': hoverlabel_align},
+        # 'hoverlabel': {'bgcolor': HOVER_BGCOLOR, 'align': hoverlabel_align},
         'hovermode': hovermode,
         'bargap': bargap,
         'bargroupgap': bargroupgap,
@@ -7587,7 +7585,7 @@ def qqplot(data, numeric_col=None, facet_col=None, facet_col_wrap=None, plot_wid
         plt.tight_layout(pad=2)
         plt.show()
 
-def histogram(
+def histogram_old(
     data_frame: pd.DataFrame = None,
     lower_quantile: float = 0,
     upper_quantile: float = 1,
@@ -8183,3 +8181,541 @@ def distplot(
     fig_update(fig, height=height, width=width, title=title, margin=dict(l=50, r=50, b=50, t=60))
 
     return fig  # Return the final figure
+
+def histogram(
+    data_frame: pd.DataFrame = None,
+    lower_quantile: float = 0,
+    upper_quantile: float = 1,
+    dual: bool = False,
+    show_qqplot: bool = False,
+    show_kde: bool = False,
+    show_hist: bool = True,
+    show_box: bool = True,
+    render_png: bool = False,
+    legend_position: str = 'top',
+    **kwargs
+) -> go.Figure:
+    """
+    Creates a histogram chart using the Plotly Express library. This function is a wrapper around Plotly Express bar and accepts all the same parameters, allowing for additional customization and functionality.
+
+    Parameters
+    ----------
+    data_frame : pd.DataFrame, optional
+        DataFrame containing the data to be plotted
+    lower_quantile : float, optional
+        The lower quantile for data filtering (default is 0).
+    upper_quantile : float, optional
+        The upper quantile for data filtering (default is 1).
+    x : str, optional
+        The name of the column in `data_frame` to be used for the x-axis. If not provided, the function will attempt to use the first column.
+    y : str, optional
+        The name of the column in `data_frame` to be used for the y-axis. If not provided, the function will count occurrences.
+    color : str, optional
+        The name of the column in `data_frame` to be used for color encoding. This will create a separate histogram for each unique value in this column.
+    barmode : str, optional
+        The mode for the bars in the histogram. Options include 'group', 'overlay', and 'relative'. Default is 'overlay'.
+    nbins : int, optional
+        The number of bins to use for the histogram. If not specified, the function will automatically determine the number of bins.
+    histnorm : str, optional
+        Normalization method for the histogram. Options include 'percent', 'probability', 'density', and 'probability density'. Default is None (no normalization).
+    barnorm : str, optional
+        Specifies how to normalize the heights of the bars in the histogram. Possible values include:
+        - 'fraction': normalizes the heights of the bars so that the sum of all heights equals 1 (fraction of the total count).
+        - 'percent': normalizes the heights of the bars so that the sum of all heights equals 100 (percentage of the total count).
+        - 'density': normalizes the heights of the bars so that the area under the histogram equals 1 (probability density).
+        - None: by default, the heights of the bars are not normalized.
+    template : str, optional
+        The name of the template to use for the figure. Default is None, which uses the default Plotly template.
+    title : str, optional
+        The title of the histogram. Default is None.
+    labels : dict, optional
+        A dictionary mapping column names to labels for the axes and legend.
+    dual: bool, optional
+        Whether to show 2 graphs, left origin, right trimmed by quantile
+    **kwargs : dict
+        Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
+
+    Returns
+    -------
+    go.Figure
+        Interactive Plotly histogram figure with custom hover labels and layout adjustments.
+    """
+    def trim_by_quantiles(config, kwargs):
+        x = kwargs.get('x')
+        y = kwargs.get('y')
+        lower_quantile = config['lower_quantile']
+        upper_quantile = config['upper_quantile']
+        color = [kwargs['color']] if kwargs.get('color') else []
+        facet_col = [kwargs['facet_col']] if kwargs.get('facet_col') else []
+        facet_row = [kwargs['facet_row']] if kwargs.get('facet_row') else []
+        animation_frame = [kwargs['animation_frame']] if kwargs.get('animation_frame') else []
+        columns_for_groupby = color + facet_col + facet_row + animation_frame
+        data_frame = config['data_frame']
+        if columns_for_groupby:
+            # Функция для обрезки значений по квантилям
+            def trim_by_quantiles_in(group):
+                lower_bound = group.quantile(lower_quantile)  # 0-й квантиль
+                upper_bound = group.quantile(upper_quantile)  # 95-й квантиль
+                return group[(group >= lower_bound) & (group <= upper_bound)]
+
+            # Применение функции к каждой категории
+            trimmed_data_frame = data_frame.groupby(columns_for_groupby, observed=False)[config['num_col']].apply(trim_by_quantiles_in).reset_index()
+        else:
+            if isinstance(x, str):
+                if pd.api.types.is_numeric_dtype(data_frame[x]):
+                    # Trim x based on the specified quantiles
+                    lower_quantile_x = data_frame[x].quantile(lower_quantile)
+                    upper_quantile_x = data_frame[x].quantile(upper_quantile)
+                    trimmed_data_frame = data_frame[data_frame[x].between(lower_quantile_x, upper_quantile_x)]
+            else:
+                if pd.api.types.is_numeric_dtype(x):
+                    # Trim x based on the specified quantiles
+                    trimmed_column = x.between(x.quantile(lower_quantile), x.quantile(upper_quantile))
+                    x = x[trimmed_column]
+            if isinstance(y, str):
+                if pd.api.types.is_numeric_dtype(data_frame[y]):
+                    # Trim x based on the specified quantiles
+                    lower_quantile_y = data_frame[y].quantile(lower_quantile)
+                    upper_quantile_y = data_frame[y].quantile(upper_quantile)
+                    trimmed_data_frame = data_frame[data_frame[y].between(lower_quantile_y, upper_quantile_y)]
+            else:
+                if pd.api.types.is_numeric_dtype(y):
+                    # Trim x based on the specified quantiles
+                    trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
+                    y = y[trimmed_column]
+            if dual:
+                kwargs_dual['x'] = x
+                kwargs_dual['y'] = y
+            else:
+                kwargs['x'] = x
+                kwargs['y'] = y
+        if dual:
+            config['trimmed_data_frame'] = trimmed_data_frame
+        else:
+            config['data_frame'] = trimmed_data_frame
+
+    def get_row_col_from_axis(axis_name, config):
+        cols = config['cols']
+        if not axis_name:
+            return 1, 1
+        # Имя оси имеет формат "xaxis", "xaxis2", "xaxis3" и т.д.
+        if axis_name == 'x':
+            axis_number = 1
+        else:
+            axis_number = int(axis_name.replace("x", "")) if axis_name.startswith("x") else 1
+        row = (axis_number - 1) // cols + 1
+        col = (axis_number - 1) % cols + 1
+        return row, col
+    def make_kde_trace(trace, config):
+        label_for_kde = trace.name
+        kde_data = trace.x
+        color_for_kde = trace.marker.color
+        if len(kde_data) < 2:
+            print(f'In group "{label_for_kde}" number of elements less then 2. KDE line cannot be constructed.')
+            return
+        kde_obj = gaussian_kde(kde_data)
+        x_values_kde = np.linspace(min(kde_data), max(kde_data), 1000)
+        y_values_kde = kde_obj(x_values_kde)
+        # Добавление линии KDE на график
+        if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
+            label_for_kde_hovertemplate = kwargs['labels'][config['num_col']]
+        else:
+            label_for_kde_hovertemplate = 'Значение'
+        hovertemplate_kde = ''
+        if kwargs.get('color') is not None:
+            if kwargs['color'] in kwargs['labels']:
+                hovertemplate_kde += f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>'
+        if 'labels' in kwargs and kwargs['x'] in kwargs['labels']:
+            hovertemplate_kde += f'{kwargs['labels'][kwargs['x']]} = ' + '%{x:.2f}<br>'
+        hovertemplate_kde += f'Плотность = ' + '%{y:.2f}'
+        hovertemplate_kde += '<extra></extra>'
+        kde_trace = go.Scatter(
+            x=x_values_kde
+            , y=y_values_kde.round(7)
+            , mode='lines'
+            , name=label_for_kde
+            , legendgroup=label_for_kde
+            , line=dict(color=color_for_kde)
+            , hovertemplate=hovertemplate_kde
+            , xaxis=trace.xaxis
+            , yaxis=trace.yaxis
+        )
+        if config['show_hist']:
+            kde_trace.showlegend = False
+        elif config['dual']:
+            kde_trace.showlegend = trace.showlegend
+        else:
+            True
+        return kde_trace
+    def make_subplots_fig(data, config, kwargs):
+        rows = config['rows']
+        cols = config['cols']
+        show_kde = config['show_kde']
+        show_box = config['show_box']
+        if show_box:
+            new_rows = rows * 2
+        else:
+            new_rows = rows
+
+        # Add box plots if enabled
+        if show_box:
+            if 'color' in kwargs:
+                group_labels = config['data_frame'][kwargs['color']].unique()
+                categories_cnt = len(group_labels)
+                # # Calculate height increase based on the number of categories
+                # if categories_cnt <= 5:
+                #     coef_for_increase = 20
+                # else:
+                #     coef_for_increase = 22
+                height_increase = categories_cnt * 20  # Increase height by 30 pixels for each box plot
+                base_height = 400
+                total_height = base_height + height_increase
+                kwargs.setdefault('height', total_height)
+                if categories_cnt == 1:
+                    row_heights_box = 0.07
+                    row_heights_hist = 0.93
+                if categories_cnt <= 2:
+                    row_heights_box = 0.13
+                    row_heights_hist = 0.87
+                elif categories_cnt <= 5:
+                    row_heights_box = 0.2
+                    row_heights_hist = 0.8
+                elif categories_cnt <= 8:
+                    row_heights_box = 0.25
+                    row_heights_hist = 0.75
+                else:
+                    row_heights_box = 0.3
+                    row_heights_hist = 0.7
+            else:
+                row_heights_box = 0.07
+                row_heights_hist = 0.93
+        subplots_fig = make_subplots(
+            rows=new_rows, cols=cols,  # Удваиваем строки
+            shared_xaxes=True,  # Синхронизируем оси X
+            shared_yaxes=True, #False if config['dual'] else True,  # Синхронизируем оси Y
+            vertical_spacing=0.05, horizontal_spacing=0.05,
+            row_heights=[row_heights_box, row_heights_hist] * rows if show_box else None,  # Боксплоты занимают 20% высоты, гистограммы — 80%
+            start_cell='top-left',
+        )
+        for trace in data:
+            # Определяем строку и столбец по оси
+            # print(trace.xaxis)
+            row, col = get_row_col_from_axis(trace.xaxis, config)
+            # print(row, col)
+            # Гистограммы размещаем в нижних строк
+            if show_box:
+                last_row = rows * 2
+                if rows ==  1:
+                    row_hist = row + 1
+                else:
+                    row_hist = row * 2
+                    # нужно перевернуть порядок
+                    row_hist = rows * 2 - row_hist + 2
+            else:
+                last_row = rows
+                row_hist = rows - row + 1
+            # print(rows, cols)
+            # print(row, col)
+            # print(row_hist)
+            # print()
+            subplots_fig.add_trace(trace, row=row_hist, col=col)
+            if show_kde:
+                kde_trace = make_kde_trace(trace, config)
+                subplots_fig.add_trace(kde_trace, row=row_hist, col=col)
+            if col == 1:
+                subplots_fig.update_yaxes(
+                    title=config.get('yaxis_title')
+                    , row=row_hist, col=col
+                )
+            else:
+                subplots_fig.update_yaxes(showticklabels=False, row=row_hist, col=col)
+            if row_hist == last_row:
+                subplots_fig.update_xaxes(
+                    title=config.get('xaxis_title')
+                    , row=row_hist, col=col
+                )
+            subplots_fig.update_xaxes(showgrid=True, row=row_hist, col=col)
+            subplots_fig.update_yaxes(showgrid=True, row=row_hist, col=col)
+            if show_box:
+                # Создаем боксплот для данных гистограммы
+                if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
+                    label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
+                else:
+                    label_for_box_hovertemplate = 'Значение'
+                if kwargs.get('color') is not None:
+                    if kwargs['color'] in kwargs['labels']:
+                        hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+                else:
+                    hovertemplate_box = f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+                box = go.Box(
+                    x=trace.x,
+                    showlegend= False if config['show_kde'] or config['show_hist'] else True,
+                    hovertemplate=hovertemplate_box,
+                    marker_color=trace.marker.color,
+                    legendgroup=trace.name
+                )
+                # Боксплоты размещаем в верхних строках
+                row_box = row_hist - 1
+                subplots_fig.add_trace(box, row=row_box, col=col)
+                subplots_fig.update_xaxes(
+                    showticklabels=False, showline=False, ticks='', showgrid=False, row=row_box, col=col
+                )
+                subplots_fig.update_yaxes(
+                    visible=False, matches=None, row=row_box, col=col
+                )
+
+        return subplots_fig
+
+    def update_fig(fig, config, kwargs):
+        TITLE_FONT_SIZE = 15
+        FONT_SIZE = 13
+        AXIS_TITLE_FONT_SIZE = 13
+        TICK_FONT_SIZE = 13
+        LEGEND_TITLE_FONT_SIZE = 13
+        FONT_FAMILY = "Noto Sans"
+        FONT_COLOR = "rgba(0, 0, 0, 0.7)"
+        LINE_COLOR = "rgba(0, 0, 0, 0.4)"
+        GRID_COLOR = "rgba(0, 0, 0, 0.1)"
+        HOVER_BGCOLOR = "white"
+        GRID_WIDTH = 1
+        # Layout updates
+        layout_updates = {
+            'font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+            'title_font': {'size': TITLE_FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+            'title_text': kwargs.get('title'),
+            'barmode': kwargs.get('barmode'),
+            'height': kwargs.get('height'),
+            'width': kwargs.get('width'),
+            'margin': None if 'color' in kwargs else dict(l=50, r=50, b=50, t=50),
+        }
+        # Update layout only if there are updates
+        layout_updates = {k: v for k, v in layout_updates.items() if v is not None}
+        if layout_updates:
+            fig.update_layout(**layout_updates)
+        # X-axis settings
+        xaxis_updates = {
+            'linecolor': LINE_COLOR,
+            'tickcolor': LINE_COLOR,
+            'gridwidth': GRID_WIDTH,
+            'gridcolor': GRID_COLOR,
+            'title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+            'tickfont': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        }
+        fig.update_xaxes(**{k: v for k, v in xaxis_updates.items() if v is not None})
+
+        # Y-axis settings
+        yaxis_updates = {
+            'linecolor': LINE_COLOR,
+            'tickcolor': LINE_COLOR,
+            'gridwidth': GRID_WIDTH,
+            'gridcolor': GRID_COLOR,
+            'title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+            'tickfont': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+        }
+        fig.update_yaxes(**{k: v for k, v in yaxis_updates.items() if v is not None})
+
+        # Legend settings
+        legend_updates = {
+            'legend_title_font': {'size': FONT_SIZE, 'family': FONT_FAMILY, 'color': FONT_COLOR},
+            'legend_font_color': FONT_COLOR,
+            'legend_itemwidth': 30 ,
+            'legend_orientation': 'h',
+            'legend_xanchor': "center",
+            'legend_x': 0.5,
+            'legend_y': 1.15 ,
+            'legend_itemsizing': "constant",
+        }
+        fig.update_layout(**{k: v for k, v in legend_updates.items() if v is not None})
+        if not config['show_hist']:
+            fig.update_traces(selector={'type': 'histogram'}, visible=False)
+        if 'color' not in kwargs:
+            fig.update_traces(selector={'type': 'histogram'}, opacity=1)
+        for trace in fig.data:
+            if trace.hovertemplate is not None:
+                # print(trace.hovertemplate)
+                trace.hovertemplate = trace.hovertemplate.replace('probability density', 'Плотность')
+                trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')
+                trace.hovertemplate = trace.hovertemplate.replace('y', 'y:.2f')
+                trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
+        return fig
+
+    if data_frame is not None and not isinstance(data_frame, pd.DataFrame):
+        raise TypeError("data_frame must be a pandas DataFrame.")
+    if kwargs.get('marginal') is not None:
+        raise ValueError("marginal can not be used, use show_box instead")
+    if dual and show_qqplot:
+        raise ValueError('dual mode can not be use together with show_qqplot')
+    if dual and (kwargs.get('facet_col') is not None or kwargs.get('facet_row') is not None or kwargs.get('facet_col_wrap') is not None
+                 or kwargs.get('animation_frame') is not None):
+        raise ValueError('dual mode can not be use together with any facet or animation_frame')
+    if show_qqplot and (kwargs.get('facet_col') is not None or kwargs.get('facet_row') is not None or kwargs.get('facet_col_wrap') is not None
+                 or kwargs.get('animation_frame') is not None):
+        raise ValueError('show_qqplot can not be use together with any facet or animation_frame')
+    if kwargs.get('color') is not None and data_frame is None:
+        raise ValueError('For use color data_frame must be difine')
+    if kwargs.get('facet_col') is not None and data_frame is None:
+        raise ValueError('For use facet_col data_frame must be difine')
+    if kwargs.get('facet_row') is not None and data_frame is None:
+        raise ValueError('For use facet_row data_frame must be difine')
+    if kwargs.get('animation_frame') is not None and data_frame is None:
+        raise ValueError('For use animation_frame data_frame must be difine')
+    # Set default values for the figure dimensions and bar mode
+    config = dict(
+        data_frame = data_frame,
+        lower_quantile = lower_quantile,
+        upper_quantile = upper_quantile,
+        dual = dual,
+        show_qqplot = show_qqplot,
+        show_kde = show_kde,
+        show_hist = show_hist,
+        show_box = show_box,
+        render_png = render_png,
+        colorway = colorway_for_stacked_histogram if kwargs.get('color_discrete_sequence') is None else kwargs['color_discrete_sequence'],
+        legend_position = legend_position,
+    )
+    if 'color' in kwargs:
+        kwargs.setdefault('barmode', 'overlay')
+    kwargs.setdefault('nbins', 30)
+    kwargs.setdefault('histnorm', 'probability density')
+    kwargs.setdefault('color_discrete_sequence', config['colorway'])
+    if dual or show_qqplot or kwargs.get('facet_col'):
+        kwargs.setdefault('width', 900)
+    else:
+        kwargs.setdefault('width', 600)
+    kwargs.setdefault('height', 400)
+    if kwargs.get('x') and kwargs.get('y'):
+        raise ValueError('Must be define x or y not both')
+    if kwargs.get('x'):
+        config['num_col'] = kwargs.get('x')
+    else:
+        config['num_col'] = kwargs.get('y')
+    kwargs['hover_data'] = {config['num_col']: ':.2f'}
+    if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
+        config['xaxis_title'] = kwargs['labels'][config['num_col']]
+    if kwargs.get('histnorm') == 'probability density':
+        config['yaxis_title'] = 'Плотность'
+    elif kwargs.get('histnorm') is None:
+        config['yaxis_title'] = 'Количество'
+    if dual:
+        kwargs_dual = kwargs.copy()
+
+    if upper_quantile != 1 or lower_quantile != 0:
+        trim_by_quantiles(config, kwargs)
+
+    # чтобы синхронизировать порядок trace в режиме dual, зададим порядок, если он не задан
+    if kwargs.get('color') is not None:
+        sorted_color_labels = sorted(data_frame[kwargs['color']].unique())
+        if kwargs.get('category_orders') is None:
+            kwargs['category_orders'] = dict()
+        if dual and kwargs_dual.get('category_orders') is None:
+            kwargs_dual['category_orders'] = dict()
+        kwargs['category_orders'][kwargs['color']] = sorted_color_labels
+        if dual:
+            kwargs_dual['category_orders'][kwargs_dual['color']] = sorted_color_labels
+
+    # Create the histogram figure using Plotly Express
+    fig = px.histogram(config['data_frame'], **kwargs)
+    # print(fig._grid_str)
+    if not dual and not show_qqplot:
+        if kwargs.get('marginal') is None:
+            config['rows'] = len(fig._grid_ref)
+            config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
+            fig_new = make_subplots_fig(fig.data, config, kwargs)
+            fig_frames = fig.frames
+            if fig_frames:
+                fig_new.frames = fig_frames
+                for i, frame in enumerate(fig_frames):
+                    fig_for_frame = make_subplots_fig(frame.data, config, kwargs)
+                    fig_new.frames[i].data = fig_for_frame.data
+
+            fig_new.update_layout(
+                annotations = fig.layout.annotations
+            )
+            fig_new.layout.updatemenus = fig.layout.updatemenus
+            fig_new.layout.sliders = fig.layout.sliders
+            for layout_key in fig.layout:
+                if layout_key.startswith('xaxis'):
+                    fig_new.layout[layout_key].domain = fig.layout[layout_key].domain
+    elif dual == True:
+        if 'trimmed_data_frame' not in config:
+            raise ValueError('For dual mode must be define lower or upper quantile')
+        fig_trimmed = px.histogram(config['trimmed_data_frame'], **kwargs_dual)
+        # labels_fig = {label: index for index, label in enumerate(group_labels)}
+        # distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
+        fig_dual = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
+        for trace in fig.data:
+            trace.bingroup = None
+            fig_dual.add_trace(trace, row=1, col=1)
+        for trace in fig_trimmed.data:
+            trace.bingroup = None
+            trace.showlegend = False
+            fig_dual.add_trace(trace, row=1, col=2)
+        config['rows'] = len(fig_dual._grid_ref)
+        config['cols'] = len(fig_dual._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_new = make_subplots_fig(fig_dual.data, config, kwargs)
+        # fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=1)
+        # fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=2)
+        # if kwargs.get('histnorm') == 'probability':
+        #     fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
+        # if kwargs.get('histnorm') is None:
+        #     fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+
+    elif show_qqplot == True:
+        if kwargs['x'] is not None:
+            if isinstance(kwargs['x'], str):
+                data_for_qqplot = data_frame[kwargs['x']]
+            else:
+                data_for_qqplot = kwargs['x']
+        elif kwargs['y'] is not None:
+            if isinstance(kwargs['y'], str):
+                data_for_qqplot = data_frame[kwargs['y']]
+            else:
+                data_for_qqplot = kwargs['y']
+        else:
+            raise ValueError('For qqplot must be define x or y, not both')
+        config['rows'] = len(fig._grid_ref)
+        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_hist = make_subplots_fig(fig.data, config, kwargs)
+        if show_box:
+            fig_new = make_subplots(rows=2, cols=2, horizontal_spacing=0.1
+                                    , row_heights=[0.07, 0.93]
+                                    , specs=[
+                                        [{'colspan': 1}, {'rowspan': 2}],
+                                        [{'colspan': 1}, None]
+                                    ])
+            for trace in fig_hist.data:
+                if trace.type == 'histogram':
+                    fig_new.add_trace(trace, row=2, col=1)
+                else:
+                    fig_new.add_trace(trace, row=1, col=1)
+                    fig_new.update_xaxes(
+                        showticklabels=False, showline=False, ticks='', showgrid=True, row=1, col=1
+                    )
+                    fig_new.update_yaxes(
+                        visible=False, row=1, col=1
+                    )
+        else:
+            fig_new = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+            for trace in fig_hist.data:
+                fig_new.add_trace(trace, row=1, col=1)
+        qqplot = qqplot_plotly(data_for_qqplot)
+        for trace in qqplot.data:
+            fig_new.add_trace(
+                trace
+                , row=1, col=2
+            )
+        for annotation in qqplot.layout.annotations:
+            # Обновляем ссылки на оси (xref и yref) для подграфика
+            annotation.update(xref='x2', yref='y2')
+            fig_new.add_annotation(annotation)
+        fig_new.update_xaxes(title_text='Теоретические квантили', row=1, col=2)
+        fig_new.update_yaxes(title_text='Упорядоченные квантили', row=1, col=2)
+        if kwargs.get('histnorm') == 'probability density':
+            fig_new.update_yaxes(title_text='Плотность', row=1, col=1)  # Set x-axis title to 'Доля' for probability
+        if kwargs.get('histnorm') is None:
+            fig_new.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+        fig_new.update_traces(showlegend=False)
+    fig_new.update_layout(annotations=fig.layout.annotations)
+    fig_new = update_fig(fig_new, config, kwargs)
+    return fig_new
+
