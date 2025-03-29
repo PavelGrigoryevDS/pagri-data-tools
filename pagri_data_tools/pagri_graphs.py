@@ -1053,6 +1053,9 @@ def _create_base_fig_for_bar_line_area(
                 kwargs['labels']['margin_of_error'] = 'Предельная ошибка'
         kwargs['hover_data'] = hover_data
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
+        if config.get('show_group_size') == True:
+            for trace in fig.data:
+                trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         if graph_type == 'bar' and config['top_and_bottom']:
             fig = _create_top_and_bottom_fig(fig, df, config, kwargs)
@@ -1062,9 +1065,6 @@ def _create_base_fig_for_bar_line_area(
 
         if graph_type == 'bar' and config['show_box']:
             fig = _add_boxplot(fig, df, config, kwargs)
-        if config.get('show_group_size') == True:
-            for trace in fig.data:
-                trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
     # Handle data in normal mode
     else:
         num_column_for_subplots = None
@@ -1127,7 +1127,7 @@ def bar(
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
-    show_group_size: bool = False,
+    show_group_size: bool = True,
     min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
@@ -1325,7 +1325,7 @@ def line(
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
-    show_group_size: bool = False,
+    show_group_size: bool = True,
     min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
@@ -1500,7 +1500,7 @@ def area(
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
-    show_group_size: bool = False,
+    show_group_size: bool = True,
     min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
@@ -7159,7 +7159,7 @@ def pie_bar(
     sort_facet_col: bool = True,
     sort_facet_row: bool = True,
     sort_animation_frame: bool = True,
-    show_group_size: bool = False,
+    show_group_size: bool = True,
     min_group_size: int = None,
     decimal_places: int = 2,
     update_layout: bool = True,
@@ -7175,6 +7175,8 @@ def pie_bar(
     agg_func_for_top_n: bool = None,
     hole: float = None,
     label_for_others_in_pie: str = 'others',
+    pie_textinfo: str = 'percent',
+    agg_func_for_pie_others: str = 'sum',
     **kwargs
 ) -> go.Figure:
     """
@@ -7302,6 +7304,10 @@ def pie_bar(
         Size of pie hole. May be from 0 to 1.
     label_for_others_in_pie : str, optional
         Label for others part in pie
+    pie_textinfo : str, optional
+        textinfo parametr for px.pie. Options: 'value', 'percent', 'label', and their combinations
+    agg_func_for_pie_others: str, optional
+        function for aggregate others part in pie chart. Default is sum
     **kwargs
         Additional keyword arguments to pass to the Plotly Express function. Default is None
 
@@ -7342,6 +7348,7 @@ def pie_bar(
         'observed_for_groupby': observed_for_groupby,
         'agg_func_for_top_n': agg_func_for_top_n,
         'hole': hole,
+        'agg_func_for_pie_others': agg_func_for_pie_others
     }
     config = {k: v for k,v in config.items() if v is not None}
     if kwargs.get('color_discrete_sequence') is None:
@@ -7362,19 +7369,41 @@ def pie_bar(
             cat_column_axis = kwargs['x']
     if config.get('agg_func') is None:
         raise ValueError('agg_func must be defined')
-    df_for_pie = data_frame.groupby(cat_column_axis, observed=config.get('observed_for_groupby'))[num_column].agg(config['agg_func'])
-    max_cat_for_exclude = df_for_pie.idxmax()
+    if pie_textinfo == 'value' and (label_for_others_in_pie == 'others'):
+        label_for_others_in_pie = 'sum others'
+    df_for_pie = (data_frame.groupby(cat_column_axis, observed=config.get('observed_for_groupby'))
+                  .agg(
+                      num_column = (num_column, config['agg_func'])
+                      , count_for_show_group_size = (num_column, 'count')
+                    )
+    )
+    max_cat_for_exclude = df_for_pie[num_column].idxmax()
     df_for_pie = df_for_pie.reset_index()
-    df_for_pie['new_cat_column'] = df_for_pie[cat_column_axis].apply(lambda x: max_cat_for_exclude if x == max_cat_for_exclude else 'others')
+    df_for_pie['new_cat_column'] = df_for_pie[cat_column_axis].apply(lambda val: val if val == max_cat_for_exclude else label_for_others_in_pie)
+    df_for_pie = (df_for_pie.groupby('new_cat_column', observed=config.get('observed_for_groupby'))
+                  .agg(
+                      num_column = (num_column, config['agg_func_for_pie_others'])
+                      , count_for_show_group_size = (count_for_show_group_size, 'sum')
+                   )
+                  .reset_index()
+    )
+    df_for_pie['count_for_show_group_size'] = df_for_pie['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
+    custom_data = [df_for_pie['count_for_show_group_size']]
     df_for_pie = df_for_pie.sort_values(num_column, ascending=False)
+    if pie_textinfo == 'value':
+        df_for_pie[num_column] = df_for_pie[num_column].round(decimal_places)
     labels['new_cat_column'] = kwargs.get('labels').get(cat_column_axis)
     pie_fig = px.pie(df_for_pie
                      , values=num_column
                      , names='new_cat_column'
                      , labels=labels
-                     , hover_data = {num_column: False} if norm_by == 'all' else None
+                     , hover_data = {num_column: False} if norm_by == 'all' else {num_column: ':.2f'}
                      , hole=hole
     )
+    if config.get('show_group_size') == True:
+        for trace in pie_fig.data:
+            trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
+    pie_fig.update_traces(textinfo=pie_textinfo)
     # pie_fig.update_traces(textinfo='value')
     df_for_bar = data_frame[data_frame[cat_column_axis] != max_cat_for_exclude]
     bar_fig = _create_base_fig_for_bar_line_area(df=df_for_bar, config=config, kwargs=kwargs, graph_type='bar')
