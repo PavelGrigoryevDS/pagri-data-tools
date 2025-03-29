@@ -777,7 +777,7 @@ def _create_base_fig_for_bar_line_area(
         # print()
         func_df = _sort_data(func_df, config, kwargs)
         # Format the 'count' column
-        func_df['count_for_show_group_size'] = func_df['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
+        func_df['count_for_show_group_size'] = func_df['count_for_subplots'].apply(lambda x: f'{x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
         func_df[cat_columns] = func_df[cat_columns].astype('str')
         return func_df.rename(columns={'num_in_prepare_df': num_column})
 
@@ -7171,7 +7171,7 @@ def pie_bar(
     show_ci: bool = False,
     trim_top_or_bottom: str = 'top',
     show_legend_title: bool = False,
-    observed_for_groupby: bool = False,
+    observed_for_groupby: bool = True,
     agg_func_for_top_n: bool = None,
     hole: float = None,
     label_for_others_in_pie: str = 'others',
@@ -7376,19 +7376,20 @@ def pie_bar(
                       num_column = (num_column, config['agg_func'])
                       , count_for_show_group_size = (num_column, 'count')
                     )
+                  .rename(columns = {'num_column': num_column})
     )
     max_cat_for_exclude = df_for_pie[num_column].idxmax()
     df_for_pie = df_for_pie.reset_index()
     df_for_pie['new_cat_column'] = df_for_pie[cat_column_axis].apply(lambda val: val if val == max_cat_for_exclude else label_for_others_in_pie)
     df_for_pie = (df_for_pie.groupby('new_cat_column', observed=config.get('observed_for_groupby'))
-                  .agg(
-                      num_column = (num_column, config['agg_func_for_pie_others'])
-                      , count_for_show_group_size = (count_for_show_group_size, 'sum')
-                   )
+                  .agg({
+                      num_column: config['agg_func_for_pie_others']
+                      ,'count_for_show_group_size': 'sum'
+                   })
                   .reset_index()
     )
-    df_for_pie['count_for_show_group_size'] = df_for_pie['count_for_subplots'].apply(lambda x: f'= {x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
-    custom_data = [df_for_pie['count_for_show_group_size']]
+    df_for_pie['count_for_show_group_size'] = df_for_pie['count_for_show_group_size'].apply(lambda x: f'{x}' if x <= 1e3 else 'больше 1000' if x > 1e3 else 0)
+    custom_data = df_for_pie['count_for_show_group_size']
     df_for_pie = df_for_pie.sort_values(num_column, ascending=False)
     if pie_textinfo == 'value':
         df_for_pie[num_column] = df_for_pie[num_column].round(decimal_places)
@@ -7402,6 +7403,8 @@ def pie_bar(
     )
     if config.get('show_group_size') == True:
         for trace in pie_fig.data:
+            trace.customdata = custom_data
+            trace.hovertemplate = trace.hovertemplate.replace('customdata[0]', 'value')
             trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
     pie_fig.update_traces(textinfo=pie_textinfo)
     # pie_fig.update_traces(textinfo='value')
