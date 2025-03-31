@@ -323,6 +323,10 @@ def fig_update(
     layout_updates = {k: v for k, v in layout_updates.items() if v is not None}
     if layout_updates:
         fig.update_layout(**layout_updates)
+    for annotation in fig.layout.annotations:
+        annotation.font.size = FONT_SIZE
+        annotation.font.family = FONT_FAMILY
+        annotation.font.color = FONT_COLOR
 
     # X-axis settings
     xaxis_updates = {
@@ -1751,7 +1755,7 @@ def box(
     """
 
 
-    def trim_by_quantiles(config, kwargs):
+    def _trim_by_quantiles(config, kwargs):
         x = kwargs.get('x')
         y = kwargs.get('y')
         lower_quantile = config['lower_quantile']
@@ -1760,6 +1764,7 @@ def box(
         cat_col = [config['cat_col']]
         columns_for_groupby = color + cat_col
         data_frame = config['data_frame']
+        dual = config['dual']
         if columns_for_groupby:
             # Функция для обрезки значений по квантилям
             def trim_quantiles(group):
@@ -1793,7 +1798,7 @@ def box(
                     # Trim x based on the specified quantiles
                     trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
                     y = y[trimmed_column]
-            if dual_hist:
+            if dual:
                 kwargs_dual['x'] = x
                 kwargs_dual['y'] = y
             else:
@@ -1926,7 +1931,7 @@ def box(
                 raise ValueError("lower_quantile and upper_quantile must be between 0 and 1.")
             if lower_quantile > upper_quantile:
                 raise ValueError("lower_quantile must be less than or equal to upper_quantile.")
-            trim_by_quantiles(config, kwargs)
+            _trim_by_quantiles(config, kwargs)
         # Create a box plot using the trimmed dataframe
         fig = px.box(config['data_frame'], **kwargs)
         if dual:
@@ -1972,7 +1977,7 @@ def box(
                 raise ValueError("lower_quantile and upper_quantile must be between 0 and 1.")
             if lower_quantile > upper_quantile:
                 raise ValueError("lower_quantile must be less than or equal to upper_quantile.")
-            trim_by_quantiles(config, kwargs)
+            _trim_by_quantiles(config, kwargs)
         # Create a box plot using the trimmed dataframe
         fig = px.box(config['data_frame'], **kwargs)
     fig = fig_update_in(fig)
@@ -5372,40 +5377,7 @@ def bar_categories(
         The created bar chart
 
     """
-                                           
-    # if 'orientation' in config and config['orientation'] == 'h':
-    #     config['x'], config['y'] = config['y'], config['x']
 
-    # if titles_for_axis:
-    #     if not config['title']:
-    #         config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']][0]
-    #         column_for_axis_label_for_title = titles_for_axis[config['column_for_axis']][1]
-    #         if config['column_for_legend']:
-    #             config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']][0]
-    #             column_for_legend_label_for_title = titles_for_axis[config['column_for_legend']][1]
-    #             temp_title = f'Распределение долей для {column_for_axis_label_for_title} и {column_for_legend_label_for_title}'
-    #         else:
-    #             config['column_for_legend_label'] = None
-    #             temp_title = f'Распределение долей для {column_for_axis_label_for_title}'
-    #         if config['normalized_mode'] == 'col':
-    #             config['title'] = temp_title + f" c нормализацией"
-    #         elif config['normalized_mode'] == 'row':
-    #             config['title'] = temp_title + f" c нормализацией"
-    #         else:
-    #             config['title'] = temp_title
-    #     else:
-    #         config['column_for_axis_label'] = titles_for_axis[config['column_for_axis']]
-    #         if config['column_for_legend']:
-    #             config['column_for_legend_label'] = titles_for_axis[config['column_for_legend']]
-    #         else:
-    #             config['column_for_legend_label'] = None
-    # else:
-    #     if 'column_for_axis_label' not in config:
-    #         config['column_for_axis_label'] = None
-    #     if 'column_for_legend_label' not in config:
-    #         config['column_for_legend_label'] = None
-    #     if 'title' not in config:
-    #         config['title'] = None 
             
     def make_df_for_fig(crosstab_for_figs, mode):
         if mode == 'all':
@@ -8357,9 +8329,7 @@ def histogram(
     data_frame: pd.DataFrame = None,
     lower_quantile: float = 0,
     upper_quantile: float = 1,
-    dual_hist: bool = False,
-    dual_box: bool = False,
-    show_qqplot: bool = False,
+    mode: str = 'base',
     show_kde: bool = False,
     show_hist: bool = True,
     show_box: bool = True,
@@ -8372,6 +8342,16 @@ def histogram(
 
     Parameters
     ----------
+    mode : str, optional
+        Specifies the type of visualization to be displayed. Available options are:
+        - 'base': Display simple histogram
+        - 'dual_hist_trim': Displays a dual plot with the original histogram on the left
+                            and a trimmed histogram (based on quantiles) on the right.
+        - 'dual_box_trim': Displays a dual plot with a boxplot on the left and a trimmed
+                        histogram (based on quantiles) on the right.
+        - 'dual_hist_qq': Displays a dual plot with the original histogram on the left
+                        and a QQ-plot on the right.
+        Default is 'base'.
     data_frame : pd.DataFrame, optional
         DataFrame containing the data to be plotted
     lower_quantile : float, optional
@@ -8402,10 +8382,6 @@ def histogram(
         The title of the histogram. Default is None.
     labels : dict, optional
         A dictionary mapping column names to labels for the axes and legend.
-    dual_hist: bool, optional
-        Whether to show 2 histogram graphs, left origin, right trimmed by quantile
-    dual_box: bool, optional
-        Whether to show left boxes and right histogram graphs, left origin, right trimmed by quantile
     **kwargs : dict
         Any additional keyword arguments accepted by `px.histogram`. This includes parameters like `opacity`, `hover_data`, `text`, `category_orders`, and more.
 
@@ -8414,7 +8390,90 @@ def histogram(
     go.Figure
         Interactive Plotly histogram figure with custom hover labels and layout adjustments.
     """
-    def trim_by_quantiles(config, kwargs):
+
+    def _validate_params_and_set_config(config, kwargs):
+        mode = config['mode']
+        data_frame = config['data_frame']
+        show_kde = config['show_kde']
+        valid_modes = ['base', 'dual_hist_trim', 'dual_box_trim', 'dual_hist_qq']
+        if mode not in valid_modes:
+            raise ValueError(
+                f"Invalid mode '{mode}'. Expected one of: {', '.join(valid_modes)}"
+            )
+        if data_frame is not None and not isinstance(data_frame, pd.DataFrame):
+            raise TypeError("data_frame must be a pandas DataFrame.")
+        if kwargs.get('marginal') is not None:
+            raise ValueError("marginal can not be used, use show_box instead")
+        if (mode != 'base') and (kwargs.get('facet_col') or kwargs.get('facet_row')  or kwargs.get('facet_col_wrap')
+                    or kwargs.get('animation_frame')):
+            raise ValueError('Only base mode can be use together with any facet or animation_frame')
+        if kwargs.get('color') is not None and data_frame is None:
+            raise ValueError('For use color data_frame must be difine')
+        if kwargs.get('facet_col') is not None and data_frame is None:
+            raise ValueError('For use facet_col data_frame must be difine')
+        if kwargs.get('facet_row') is not None and data_frame is None:
+            raise ValueError('For use facet_row data_frame must be difine')
+        if kwargs.get('animation_frame') is not None and data_frame is None:
+            raise ValueError('For use animation_frame data_frame must be difine')
+
+        # Set default values for the figure dimensions and bar mode
+        # kwargs['data_frame'] = data_frame
+        if 'color' in kwargs:
+            kwargs.setdefault('barmode', 'overlay')
+        kwargs.setdefault('nbins', 50)
+        if show_kde:
+            kwargs.setdefault('histnorm', 'probability density')
+        else:
+            kwargs.setdefault('histnorm', 'probability')
+        kwargs.setdefault('color_discrete_sequence', config['colorway'])
+        if kwargs.get('x') is not None and kwargs.get('y') is not None:
+            raise ValueError('Must be define x or y not both')
+        if kwargs.get('histnorm') == 'probability density':
+            hist_norm_title = 'Плотность'
+        elif kwargs.get('histnorm') == 'probability':
+            hist_norm_title= 'Доля'
+        elif kwargs.get('histnorm') is None:
+            hist_norm_title = 'Количество'
+        else:
+            hist_norm_title = None
+        if kwargs.get('x') is not None:
+            config['num_col'] = kwargs.get('x')
+            config['yaxis_title'] = hist_norm_title
+            if isinstance(config['num_col'], str):
+                kwargs['hover_data'] = {config['num_col']: ':.2f'}
+                config['xaxis_title'] = kwargs['labels'][config['num_col']] if 'labels' in kwargs else None
+            else:
+                # kwargs['hover_data'] = {'x': ':.2f'}
+                config['is_x_series'] = True
+                config['xaxis_title'] = kwargs['labels']['x'] if 'labels' in 'kwargs' else None
+        else:
+            config['num_col'] = kwargs.get('y')
+            config['xaxis_title'] = hist_norm_title
+            if isinstance(config['num_col'], str):
+                kwargs['hover_data'] = {config['num_col']: ':.2f'}
+                config['yaxis_title'] = kwargs['labels'][config['num_col']] if 'labels' in kwargs else None
+            else:
+                # kwargs['hover_data'] = {'y': ':.2f'}
+                config['is_y_series'] = True
+                config['yaxis_title'] = kwargs['labels']['y'] if 'labels' in kwargs else None
+
+        if mode in ['dual_hist_trim', 'dual_box_trim']:
+            config['kwargs_dual'] = kwargs.copy()
+        else:
+            config['kwargs_dual'] = None
+
+        # чтобы синхронизировать порядок trace в режиме dual, зададим порядок, если он не задан
+        if kwargs.get('color') is not None:
+            sorted_color_labels = sorted(data_frame[kwargs['color']].unique())
+            if kwargs.get('category_orders') is None:
+                kwargs['category_orders'] = dict()
+            if mode == 'dual_hist_trim' and config['kwargs_dual'].get('category_orders') is None:
+                config['kwargs_dual']['category_orders'] = dict()
+            kwargs['category_orders'].setdefault(kwargs['color'], sorted_color_labels)
+            if mode == 'dual_hist_trim':
+                config['kwargs_dual']['category_orders'].setdefault(config['kwargs_dual']['color'], sorted_color_labels)
+
+    def _trim_by_quantiles(config, kwargs):
         x = kwargs.get('x')
         y = kwargs.get('y')
         lower_quantile = config['lower_quantile']
@@ -8428,7 +8487,7 @@ def histogram(
         trimmed_data_frame = None
         if columns_for_groupby:
             # Функция для обрезки значений по квантилям
-            def trim_by_quantiles_in(group):
+            def trim_quantiles(group):
                 lower_bound = group.quantile(lower_quantile)  # 0-й квантиль
                 upper_bound = group.quantile(upper_quantile)  # 95-й квантиль
                 return (group >= lower_bound) & (group <= upper_bound)
@@ -8460,18 +8519,18 @@ def histogram(
                     # Trim x based on the specified quantiles
                     trimmed_column = y.between(y.quantile(lower_quantile), y.quantile(upper_quantile))
                     y = y[trimmed_column]
-            if dual_hist:
-                kwargs_dual['x'] = x
-                kwargs_dual['y'] = y
+            if mode == 'dual_hist_trim':
+                config['kwargs_dual']['x'] = x
+                config['kwargs_dual']['y'] = y
             else:
                 kwargs['x'] = x
                 kwargs['y'] = y
-        if dual_hist or dual_box:
+        if mode in ['dual_hist_trim', 'dual_box_trim']:
             config['trimmed_data_frame'] = trimmed_data_frame
         else:
             config['data_frame'] = trimmed_data_frame
 
-    def get_row_col_from_axis(axis_name, config):
+    def _get_row_col_from_axis(axis_name, config):
         cols = config['cols']
         if not axis_name:
             return 1, 1
@@ -8483,7 +8542,8 @@ def histogram(
         row = (axis_number - 1) // cols + 1
         col = (axis_number - 1) % cols + 1
         return row, col
-    def make_kde_trace(trace, config):
+
+    def _make_kde_trace(trace, config):
         label_for_kde = trace.name
         kde_data = trace.x
         color_for_kde = trace.marker.color
@@ -8521,12 +8581,13 @@ def histogram(
         )
         if config['show_hist']:
             kde_trace.showlegend = False
-        elif config['dual_hist']:
+        elif config['mode'] == 'dual_hist_trim':
             kde_trace.showlegend = trace.showlegend
         else:
             True
         return kde_trace
-    def make_subplots_fig(data, config, kwargs):
+
+    def _make_subplots_fig(data, config, kwargs):
         rows = config['rows']
         cols = config['cols']
         show_kde = config['show_kde']
@@ -8573,7 +8634,7 @@ def histogram(
         subplots_fig = make_subplots(
             rows=new_rows, cols=cols,  # Удваиваем строки
             shared_xaxes=True,  # Синхронизируем оси X
-            shared_yaxes=False if config['dual_hist'] else True,  # Синхронизируем оси Y
+            shared_yaxes=False if config['mode'] == 'dual_hist_trim' else True,  # Синхронизируем оси Y
             vertical_spacing=0.05, horizontal_spacing=0.05,
             row_heights=[row_heights_box, row_heights_hist] * rows if show_box else None,  # Боксплоты занимают 20% высоты, гистограммы — 80%
             start_cell='top-left',
@@ -8582,7 +8643,7 @@ def histogram(
             # print(trace.name)
             # Определяем строку и столбец по оси
             # print(trace.xaxis)
-            row, col = get_row_col_from_axis(trace.xaxis, config)
+            row, col = _get_row_col_from_axis(trace.xaxis, config)
             # print(row, col)
             # Гистограммы размещаем в нижних строк
             if show_box:
@@ -8603,7 +8664,7 @@ def histogram(
             trace.hovertemplate = trace.hovertemplate.replace('%{y}', '%{y:.2f}')
             subplots_fig.add_trace(trace, row=row_hist, col=col)
             if show_kde:
-                kde_trace = make_kde_trace(trace, config)
+                kde_trace = _make_kde_trace(trace, config)
                 if kde_trace:
                     subplots_fig.add_trace(kde_trace, row=row_hist, col=col)
             if col == 1:
@@ -8612,7 +8673,7 @@ def histogram(
                     , row=row_hist, col=col
                 )
             else:
-                if not config['dual_hist']:
+                if not config['mode'] == 'dual_hist_trim':
                     subplots_fig.update_yaxes(showticklabels=False, row=row_hist, col=col)
             if row_hist == last_row:
                 subplots_fig.update_xaxes(
@@ -8654,11 +8715,181 @@ def histogram(
                 subplots_fig.update_yaxes(
                     visible=False, matches=None, row=row_box, col=col
                 )
-
         return subplots_fig
 
-    def update_fig(fig, config, kwargs):
-        if dual_hist or dual_box or show_qqplot or kwargs.get('facet_col'):
+    def _base_histogram(config, kwargs):
+        if upper_quantile != 1 or lower_quantile != 0:
+            _trim_by_quantiles(config, kwargs)
+        # Create the histogram figure using Plotly Express
+        fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
+        config['rows'] = len(fig._grid_ref)
+        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_new = _make_subplots_fig(fig.data, config, kwargs)
+        fig_frames = fig.frames
+        if fig_frames:
+            fig_new.frames = fig_frames
+            for i, frame in enumerate(fig_frames):
+                fig_for_frame = _make_subplots_fig(frame.data, config, kwargs)
+                fig_new.frames[i].data = fig_for_frame.data
+
+        fig_new.update_layout(
+            annotations = fig.layout.annotations
+        )
+        fig_new.layout.updatemenus = fig.layout.updatemenus
+        fig_new.layout.sliders = fig.layout.sliders
+        for layout_key in fig.layout:
+            if layout_key.startswith('xaxis'):
+                fig_new.layout[layout_key].domain = fig.layout[layout_key].domain
+        return fig_new
+
+    def _dual_histogram_trimmed_histogram(config, kwargs):
+        if upper_quantile == 1 and lower_quantile == 0:
+            raise ValueError('For dual_hist_trim lower, at least one of the following conditions must be met: the lower quantile should not be 0, or the upper quantile should not be 1.')
+        _trim_by_quantiles(config, kwargs)
+        fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
+        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **config['kwargs_dual'])
+        fig_dual = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
+        for trace in fig.data:
+            trace.bingroup = None
+            fig_dual.add_trace(trace, row=1, col=1)
+        for trace in fig_trimmed.data:
+            trace.bingroup = None
+            trace.showlegend = False
+            fig_dual.add_trace(trace, row=1, col=2)
+        config['rows'] = len(fig_dual._grid_ref)
+        config['cols'] = len(fig_dual._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_new = _make_subplots_fig(fig_dual.data, config, kwargs)
+        return fig_new
+
+    def _dual_box_trimmed_histogram(config, kwargs):
+        if upper_quantile == 1 and lower_quantile == 0:
+            raise ValueError('For dual_box_trim, at least one of the following conditions must be met: the lower quantile should not be 0, or the upper quantile should not be 1.')
+        _trim_by_quantiles(config, kwargs)
+        fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
+        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **config['kwargs_dual'])
+        config['rows'] = len(fig._grid_ref)
+        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_hist = _make_subplots_fig(fig_trimmed.data, config, kwargs)
+        if show_box:
+            row_heights_box = config['row_heights_box']
+            row_heights_hist = config['row_heights_hist']
+            fig_new = make_subplots(rows=2, cols=2
+                                    , row_heights=[row_heights_box, row_heights_hist] if show_box else None
+                                    , vertical_spacing=0.05
+                                    , shared_xaxes=True if show_box else None
+                                    , specs=[
+                                        [{'rowspan': 2}, {'colspan': 1}],
+                                        [None, {'colspan': 1}]
+                                    ])
+            for trace in fig_hist.data:
+                if trace.type == 'box':
+                    fig_new.add_trace(trace, row=1, col=2)
+                    fig_new.update_xaxes(
+                        showticklabels=False, showline=False, ticks='', showgrid=True, row=1, col=2
+                    )
+                    fig_new.update_yaxes(
+                        visible=False, row=1, col=2
+                    )
+                else:
+                    fig_new.add_trace(trace, row=2, col=2)
+        else:
+            fig_new = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+            for trace in fig_hist.data:
+                fig_new.add_trace(trace, row=1, col=2)
+        fig_new.update_xaxes(
+                showticklabels=False, showline=False, ticks='', showgrid=False, row=1, col=2
+        )
+        fig_new.update_yaxes(
+            visible=False, matches=None, row=1, col=2
+        )
+        for trace in fig.data:
+            if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
+                label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
+            else:
+                label_for_box_hovertemplate = 'Значение'
+            if kwargs.get('color') is not None:
+                if kwargs['color'] in kwargs['labels']:
+                    hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+            else:
+                hovertemplate_box = f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+            box = go.Box(
+                        x=trace.x,
+                        showlegend= False,
+                        hovertemplate=hovertemplate_box,
+                        marker_color=trace.marker.color,
+                        legendgroup=trace.name,
+                        name=trace.name
+                )
+            fig_new.add_trace(
+                box
+                , row=1, col=1
+            )
+        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=2, col=2)
+        fig_new.update_yaxes(title_text=config.get('yaxis_title'), row=2, col=2)
+        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=1, col=1)
+        fig_new.update_yaxes(visible=False, row=1, col=1)
+        fig_new.update_xaxes(showgrid=True, row=1, col=1)
+        fig_new.update_xaxes(showgrid=True, row=1, col=2)
+        fig_new.update_xaxes(showgrid=True, row=2, col=2)
+        fig_new.update_yaxes(showgrid=True, row=2, col=2)
+        return fig_new
+
+    def _dual_histogram_qqplot(config, kwargs):
+        if kwargs['x'] is not None:
+            if isinstance(kwargs['x'], str):
+                data_for_qqplot = data_frame[kwargs['x']]
+            else:
+                data_for_qqplot = kwargs['x']
+        elif kwargs['y'] is not None:
+            if isinstance(kwargs['y'], str):
+                data_for_qqplot = data_frame[kwargs['y']]
+            else:
+                data_for_qqplot = kwargs['y']
+        else:
+            raise ValueError('For qqplot must be define x or y, not both')
+        config['rows'] = len(fig._grid_ref)
+        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
+        fig_hist = _make_subplots_fig(fig.data, config, kwargs)
+        if show_box:
+            fig_new = make_subplots(rows=2, cols=2, horizontal_spacing=0.1
+                                    , row_heights=[0.07, 0.93]
+                                    , specs=[
+                                        [{'colspan': 1}, {'rowspan': 2}],
+                                        [{'colspan': 1}, None]
+                                    ])
+            for trace in fig_hist.data:
+                if trace.type == 'histogram':
+                    fig_new.add_trace(trace, row=2, col=1)
+                else:
+                    fig_new.add_trace(trace, row=1, col=1)
+                    fig_new.update_xaxes(
+                        showticklabels=False, showline=False, ticks='', showgrid=True, row=1, col=1
+                    )
+                    fig_new.update_yaxes(
+                        visible=False, row=1, col=1
+                    )
+        else:
+            fig_new = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+            for trace in fig_hist.data:
+                fig_new.add_trace(trace, row=1, col=1)
+        qqplot = qqplot_plotly(data_for_qqplot)
+        for trace in qqplot.data:
+            fig_new.add_trace(
+                trace
+                , row=1, col=2
+            )
+        for annotation in qqplot.layout.annotations:
+            # Обновляем ссылки на оси (xref и yref) для подграфика
+            annotation.update(xref='x2', yref='y2')
+            fig_new.add_annotation(annotation)
+        fig_new.update_xaxes(title_text='Теоретические квантили', row=1, col=2)
+        fig_new.update_yaxes(title_text='Упорядоченные квантили', row=1, col=2)
+        fig_new.update_yaxes(title_text=config.get('xaxis_title'), row=1, col=1)
+        fig_new.update_traces(showlegend=False)
+        return fig_new
+
+    def _update_fig(fig, config, kwargs):
+        if config['mode'] != 'base' or kwargs.get('facet_col'):
             kwargs.setdefault('width', 900)
         else:
             kwargs.setdefault('width', 600)
@@ -8740,37 +8971,11 @@ def histogram(
             fig.update_layout(legend_traceorder='reversed')
         return fig
 
-    if data_frame is not None and not isinstance(data_frame, pd.DataFrame):
-        raise TypeError("data_frame must be a pandas DataFrame.")
-    if kwargs.get('marginal') is not None:
-        raise ValueError("marginal can not be used, use show_box instead")
-    if (dual_hist or dual_box) and show_qqplot:
-        raise ValueError('dual mode can not be use together with show_qqplot')
-    if (dual_hist or dual_box) and (kwargs.get('facet_col') is not None or kwargs.get('facet_row') is not None or kwargs.get('facet_col_wrap') is not None
-                 or kwargs.get('animation_frame') is not None):
-        raise ValueError('dual mode can not be use together with any facet or animation_frame')
-    if show_qqplot and (kwargs.get('facet_col') is not None or kwargs.get('facet_row') is not None or kwargs.get('facet_col_wrap') is not None
-                 or kwargs.get('animation_frame') is not None):
-        raise ValueError('show_qqplot can not be use together with any facet or animation_frame')
-    if kwargs.get('color') is not None and data_frame is None:
-        raise ValueError('For use color data_frame must be difine')
-    if kwargs.get('facet_col') is not None and data_frame is None:
-        raise ValueError('For use facet_col data_frame must be difine')
-    if kwargs.get('facet_row') is not None and data_frame is None:
-        raise ValueError('For use facet_row data_frame must be difine')
-    if kwargs.get('animation_frame') is not None and data_frame is None:
-        raise ValueError('For use animation_frame data_frame must be difine')
-    if dual_hist and dual_box:
-        raise ValueError('dual_hist and dual_box can not be use together')
-    # Set default values for the figure dimensions and bar mode
-    # kwargs['data_frame'] = data_frame
     config = dict(
         data_frame = data_frame,
         lower_quantile = lower_quantile,
         upper_quantile = upper_quantile,
-        dual_hist = dual_hist,
-        dual_box = dual_box,
-        show_qqplot = show_qqplot,
+        mode = mode,
         show_kde = show_kde,
         show_hist = show_hist,
         show_box = show_box,
@@ -8778,237 +8983,288 @@ def histogram(
         colorway = colorway_tableau if kwargs.get('color_discrete_sequence') is None else kwargs['color_discrete_sequence'],
         legend_position = legend_position,
     )
-    if 'color' in kwargs:
-        kwargs.setdefault('barmode', 'overlay')
-    kwargs.setdefault('nbins', 50)
-    if show_kde:
-        kwargs.setdefault('histnorm', 'probability density')
-    else:
-        kwargs.setdefault('histnorm', 'probability')
-    kwargs.setdefault('color_discrete_sequence', config['colorway'])
-    if kwargs.get('x') is not None and kwargs.get('y') is not None:
-        raise ValueError('Must be define x or y not both')
-    if kwargs.get('histnorm') == 'probability density':
-        hist_norm_title = 'Плотность'
-    if kwargs.get('histnorm') == 'probability':
-        hist_norm_title= 'Доля'
-    elif kwargs.get('histnorm') is None:
-        hist_norm_title = 'Количество'
-    if kwargs.get('x') is not None:
-        config['num_col'] = kwargs.get('x')
-        config['yaxis_title'] = hist_norm_title
-        if isinstance(config['num_col'], str):
-            kwargs['hover_data'] = {config['num_col']: ':.2f'}
-            config['xaxis_title'] = kwargs['labels'][config['num_col']]
-        else:
-            # kwargs['hover_data'] = {'x': ':.2f'}
-            config['is_x_series'] = True
-            config['xaxis_title'] = kwargs['labels']['x']
-    else:
-        config['num_col'] = kwargs.get('y')
-        config['xaxis_title'] = hist_norm_title
-        if isinstance(config['num_col'], str):
-            kwargs['hover_data'] = {config['num_col']: ':.2f'}
-            config['yaxis_title'] = kwargs['labels'][config['num_col']]
-        else:
-            # kwargs['hover_data'] = {'y': ':.2f'}
-            config['is_y_series'] = True
-            config['yaxis_title'] = kwargs['labels']['y']
 
-    if dual_hist or dual_box:
-        kwargs_dual = kwargs.copy()
+    _validate_params_and_set_config(config, kwargs)
 
-    if upper_quantile != 1 or lower_quantile != 0:
-        trim_by_quantiles(config, kwargs)
-
-    # чтобы синхронизировать порядок trace в режиме dual, зададим порядок, если он не задан
-    if kwargs.get('color') is not None:
-        sorted_color_labels = sorted(data_frame[kwargs['color']].unique())
-        if kwargs.get('category_orders') is None:
-            kwargs['category_orders'] = dict()
-        if dual_hist and kwargs_dual.get('category_orders') is None:
-            kwargs_dual['category_orders'] = dict()
-        kwargs['category_orders'].setdefault(kwargs['color'], sorted_color_labels)
-        if dual_hist:
-            kwargs_dual['category_orders'].setdefault(kwargs_dual['color'], sorted_color_labels)
-
-    # Create the histogram figure using Plotly Express
-    fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
     # print(fig)
     # print(fig._grid_str)
-    if not dual_hist and not dual_box and not show_qqplot:
-        if kwargs.get('marginal') is None:
-            config['rows'] = len(fig._grid_ref)
-            config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
-            fig_new = make_subplots_fig(fig.data, config, kwargs)
-            fig_frames = fig.frames
-            if fig_frames:
-                fig_new.frames = fig_frames
-                for i, frame in enumerate(fig_frames):
-                    fig_for_frame = make_subplots_fig(frame.data, config, kwargs)
-                    fig_new.frames[i].data = fig_for_frame.data
+    if mode == 'base':
+        fig_new = _base_histogram(config, kwargs)
 
-            fig_new.update_layout(
-                annotations = fig.layout.annotations
-            )
-            fig_new.layout.updatemenus = fig.layout.updatemenus
-            fig_new.layout.sliders = fig.layout.sliders
-            for layout_key in fig.layout:
-                if layout_key.startswith('xaxis'):
-                    fig_new.layout[layout_key].domain = fig.layout[layout_key].domain
-    elif dual_hist == True:
-        if upper_quantile == 1 and lower_quantile == 0:
-            raise ValueError('For dual mode must be define lower or upper quantile')
-        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **kwargs_dual)
-        # labels_fig = {label: index for index, label in enumerate(group_labels)}
-        # distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
-        fig_dual = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
-        for trace in fig.data:
-            trace.bingroup = None
-            fig_dual.add_trace(trace, row=1, col=1)
-        for trace in fig_trimmed.data:
-            trace.bingroup = None
-            trace.showlegend = False
-            fig_dual.add_trace(trace, row=1, col=2)
-        config['rows'] = len(fig_dual._grid_ref)
-        config['cols'] = len(fig_dual._grid_ref[0]) if config['rows'] > 0 else 0
-        fig_new = make_subplots_fig(fig_dual.data, config, kwargs)
-        # fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=1)
-        # fig_subplots.update_xaxes(title_text=x_for_box_hovertemplate, row=1, col=2)
-        # if kwargs.get('histnorm') == 'probability':
-        #     fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
-        # if kwargs.get('histnorm') is None:
-        #     fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
-    elif dual_box == True:
-        if upper_quantile == 1 and lower_quantile == 0:
-            raise ValueError('For dual mode must be define lower or upper quantile')
-        fig_trimmed = px.histogram(data_frame=config.get('trimmed_data_frame'), **kwargs_dual)
-        # labels_fig = {label: index for index, label in enumerate(group_labels)}
-        # distplot_data = [distplot_data[labels_map[cat]] for cat in ordered_categories]
-        config['rows'] = len(fig._grid_ref)
-        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
-        fig_hist = make_subplots_fig(fig_trimmed.data, config, kwargs)
-        if show_box:
-            row_heights_box = config['row_heights_box']
-            row_heights_hist = config['row_heights_hist']
-        if show_box:
-            fig_new = make_subplots(rows=2, cols=2
-                                    , row_heights=[row_heights_box, row_heights_hist] if show_box else None
-                                    , vertical_spacing=0.05
-                                    , shared_xaxes=True if show_box else None
-                                    , specs=[
-                                        [{'rowspan': 2}, {'colspan': 1}],
-                                        [None, {'colspan': 1}]
-                                    ])
-            for trace in fig_hist.data:
-                if trace.type == 'box':
-                    fig_new.add_trace(trace, row=1, col=2)
-                    fig_new.update_xaxes(
-                        showticklabels=False, showline=False, ticks='', showgrid=True, row=1, col=2
-                    )
-                    fig_new.update_yaxes(
-                        visible=False, row=1, col=2
-                    )
-                else:
-                    fig_new.add_trace(trace, row=2, col=2)
-        else:
-            fig_new = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
-            for trace in fig_hist.data:
-                fig_new.add_trace(trace, row=1, col=2)
-        fig_new.update_xaxes(
-                showticklabels=False, showline=False, ticks='', showgrid=False, row=1, col=2
-        )
-        fig_new.update_yaxes(
-            visible=False, matches=None, row=1, col=2
-        )
-        for trace in fig.data:
-            if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
-                label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
-            else:
-                label_for_box_hovertemplate = 'Значение'
-            if kwargs.get('color') is not None:
-                if kwargs['color'] in kwargs['labels']:
-                    hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
-            else:
-                hovertemplate_box = f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
-            box = go.Box(
-                        x=trace.x,
-                        showlegend= False,
-                        hovertemplate=hovertemplate_box,
-                        marker_color=trace.marker.color,
-                        legendgroup=trace.name,
-                        name=trace.name
-                )
-            fig_new.add_trace(
-                box
-                , row=1, col=1
-            )
-        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=2, col=2)
-        fig_new.update_yaxes(title_text=config.get('yaxis_title'), row=2, col=2)
-        fig_new.update_xaxes(title_text=config.get('xaxis_title'), row=1, col=1)
-        fig_new.update_yaxes(visible=False, row=1, col=1)
-        fig_new.update_xaxes(showgrid=True, row=1, col=1)
-        fig_new.update_xaxes(showgrid=True, row=1, col=2)
-        fig_new.update_xaxes(showgrid=True, row=2, col=2)
-        fig_new.update_yaxes(showgrid=True, row=2, col=2)
-        # if kwargs.get('histnorm') == 'probability':
-        #     fig_subplots.update_yaxes(title_text='Доля', row=1, col=1)  # Set x-axis title to 'Доля' for probability
-        # if kwargs.get('histnorm') is None:
-        #     fig_subplots.update_yaxes(title_text='Количество', row=1, col=1)  # Set x-axis title to 'Количество' for count
+    elif mode == 'dual_hist_trim':
+        fig_new = _dual_histogram_trimmed_histogram(config, kwargs)
 
-    elif show_qqplot == True:
-        if kwargs['x'] is not None:
-            if isinstance(kwargs['x'], str):
-                data_for_qqplot = data_frame[kwargs['x']]
-            else:
-                data_for_qqplot = kwargs['x']
-        elif kwargs['y'] is not None:
-            if isinstance(kwargs['y'], str):
-                data_for_qqplot = data_frame[kwargs['y']]
-            else:
-                data_for_qqplot = kwargs['y']
-        else:
-            raise ValueError('For qqplot must be define x or y, not both')
-        config['rows'] = len(fig._grid_ref)
-        config['cols'] = len(fig._grid_ref[0]) if config['rows'] > 0 else 0
-        fig_hist = make_subplots_fig(fig.data, config, kwargs)
-        if show_box:
-            fig_new = make_subplots(rows=2, cols=2, horizontal_spacing=0.1
-                                    , row_heights=[0.07, 0.93]
-                                    , specs=[
-                                        [{'colspan': 1}, {'rowspan': 2}],
-                                        [{'colspan': 1}, None]
-                                    ])
-            for trace in fig_hist.data:
-                if trace.type == 'histogram':
-                    fig_new.add_trace(trace, row=2, col=1)
-                else:
-                    fig_new.add_trace(trace, row=1, col=1)
-                    fig_new.update_xaxes(
-                        showticklabels=False, showline=False, ticks='', showgrid=True, row=1, col=1
-                    )
-                    fig_new.update_yaxes(
-                        visible=False, row=1, col=1
-                    )
-        else:
-            fig_new = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
-            for trace in fig_hist.data:
-                fig_new.add_trace(trace, row=1, col=1)
-        qqplot = qqplot_plotly(data_for_qqplot)
-        for trace in qqplot.data:
-            fig_new.add_trace(
-                trace
-                , row=1, col=2
-            )
-        for annotation in qqplot.layout.annotations:
-            # Обновляем ссылки на оси (xref и yref) для подграфика
-            annotation.update(xref='x2', yref='y2')
-            fig_new.add_annotation(annotation)
-        fig_new.update_xaxes(title_text='Теоретические квантили', row=1, col=2)
-        fig_new.update_yaxes(title_text='Упорядоченные квантили', row=1, col=2)
-        fig_new.update_yaxes(title_text=config.get('xaxis_title'), row=1, col=1)
-        fig_new.update_traces(showlegend=False)
+    elif mode == 'dual_box_trim':
+        fig_new = _dual_box_trimmed_histogram(config, kwargs)
+
+    elif mode == 'dual_hist_qq':
+        fig_new =_dual_histogram_qqplot(config, kwargs)
     fig_new.update_layout(annotations=fig.layout.annotations)
-    fig_new = update_fig(fig_new, config, kwargs)
+    fig_new = _update_fig(fig_new, config, kwargs)
     return fig_new
 
+def cat_compare(
+    data_frame: pd.DataFrame,
+    cat1: str,
+    cat2: str = None,
+    top_n_trim_cat1: int = None,
+    top_n_trim_cat2: int = None,
+    barmode: str = 'group',
+    text_auto: bool | str = False,
+    labels: dict = None,
+    category_orders: dict = None,
+    hover_name: str = None,
+    hover_data: list | dict = None,
+    return_figs: bool = False,
+    legend_position: bool = 'top',
+    fig_layouts: list = None,
+    height: int = 400,
+    width: int = 1000,
+    graph_to_show: list = [1, 2, 3],
+    **kwargs
+):
+    """
+    Compares two categorical variables in a DataFrame and visualizes the results using bar charts.
+
+    Parameters:
+    - data_frame (pd.DataFrame): The input DataFrame containing the data to be analyzed.
+    - cat1 (str): The first categorical variable to compare.
+    - cat2 (str, optional): The second categorical variable to compare. Defaults to None.
+    - top_n_trim_cat1 (int, optional): The number of top categories to display for cat1. Defaults to None.
+    - top_n_trim_cat2 (int, optional): The number of top categories to display for cat2. Defaults to None.
+    - barmode (str, optional): The mode for the bar chart (e.g., 'group', 'stack'). Defaults to 'group'.
+    - text_auto (bool | str, optional): Whether to automatically display text on bars. Defaults to False.
+    - labels (dict, optional): A dictionary for custom labels for the categories. Defaults to None.
+    - category_orders (dict, optional): A dictionary to specify the order of categories. Defaults to None.
+    - hover_name (str, optional): Column name to use for hover information. Defaults to None.
+    - hover_data (list | dict, optional): Additional data to display on hover. Defaults to None.
+    - return_figs (bool, optional): Whether to return the figures instead of displaying them. Defaults to False.
+    - legend_position (bool, optional): Position of the legend ('top' or 'right'). Defaults to 'top'.
+    - fig_layouts (list, optional): List of layout configurations for each figure. Defaults to None.
+    - height (int, optional): Height of each figure.
+    - width (int, optional): Width of each figure.
+    - **kwargs: Additional keyword arguments for customization.
+
+    Returns:
+    - List of figures if return_figs is True; otherwise, displays the figures.
+    """
+
+    def _normalize_crosstab(crosstab: pd.DataFrame, mode: str) -> pd.DataFrame:
+        """Normalizes the crosstab based on the specified mode."""
+        if mode == 'all':
+            return crosstab / crosstab.sum().sum()
+        elif mode == 'columns':
+            return crosstab / crosstab.sum()
+        elif mode == 'index':
+            return crosstab.div(crosstab.sum(axis=1), axis=0)
+        else:
+            raise ValueError("Unsupported normalization mode. Use 'all', 'columns', or 'index'.")
+
+    def _make_df_for_fig(crosstab_for_figs: pd.DataFrame, cat1: str, cat2: str, graph_type: str, mode: str):
+        # Normalize the crosstab
+        normalized = _normalize_crosstab(crosstab_for_figs, mode)
+
+        # Combine original and normalized data
+        result = pd.concat([normalized, crosstab_for_figs], axis=1, keys=['data_for_px_bar', 'customdata_for_px_bar'])
+
+        # Transform to "long" format
+        result = result.reset_index()
+        if graph_type in ['cat1', 'cat2']:
+            cat_col = cat1 if graph_type == 'cat1' else cat2
+            result.columns = [cat_col, 'data_for_px_bar', 'customdata_for_px_bar']
+            result_long = result.melt(id_vars=cat_col, var_name='type', value_name='value_for_px_bar')
+        else:
+            new_columns = result.columns.map(lambda x: f"{x[0]}__{x[1]}" if x[0] not in [cat1, cat2] else x[0]).tolist()
+            result.columns = new_columns
+            result_long = result.melt(
+                id_vars=cat1 if graph_type == 'cat1_by_cat2' else cat2,
+                var_name=f'type_{cat2 if graph_type == "cat1_by_cat2" else cat1}',
+                value_name='value_for_px_bar'
+            )
+            result_long[['type', cat2 if graph_type == 'cat1_by_cat2' else cat1]] = (
+                result_long[f'type_{cat2 if graph_type == "cat1_by_cat2" else cat1}'].str.split('__', n=1, expand=True)
+            )
+            result_long = result_long.drop(columns=f'type_{cat2 if graph_type == "cat1_by_cat2" else cat1}')
+
+        # Transform to final format
+        result_long = result_long.set_index(list(set(result_long.columns) - set(['value_for_px_bar'])))
+        result_long = result_long.unstack(level='type').droplevel(0, axis=1).reset_index()
+
+        return result_long
+
+    def _get_kwargs_for_graph_type(graph_type, cat1, cat2):
+        """Returns the appropriate keyword arguments for the specified graph type."""
+        if graph_type == 'cat1':
+            return {'x': cat1, 'y': 'data_for_px_bar', 'custom_data': 'customdata_for_px_bar'}
+        elif graph_type == 'cat2':
+            return {'x': cat2, 'y': 'data_for_px_bar', 'custom_data': 'customdata_for_px_bar'}
+        elif graph_type == 'cat1_by_cat2':
+            return {'x': cat1, 'y': 'data_for_px_bar', 'color': cat2, 'custom_data': 'customdata_for_px_bar'}
+        elif graph_type == 'cat2_by_cat1':
+            return {'x': cat2, 'y': 'data_for_px_bar', 'color': cat1, 'custom_data': 'customdata_for_px_bar'}
+        return {}
+
+    def _add_traces_to_fig(fig, fig_for_subplots, col):
+        """Adds traces from the subplot figure to the main figure."""
+        for trace in fig_for_subplots.data:
+            trace.hovertemplate += '<br>Количество = %{customdata}'
+            fig.add_trace(trace, row=1, col=col)
+
+    def _update_axes(fig, fig_for_subplots, col):
+        """Updates the axes of the main figure based on the subplot."""
+        xaxis_properties = fig_for_subplots.layout.xaxis.to_plotly_json()
+        xaxis_properties.pop('anchor', None)
+        xaxis_properties.pop('domain', None)
+        fig.update_xaxes(**xaxis_properties, row=1, col=col)
+        if col == 1:
+            fig.update_yaxes(title_text='Доля', row=1, col=1)
+        elif col == 2:
+            fig.update_traces(showlegend=False, row=1, col=2)
+
+    def _create_fig_for_row(row_sets, cat1, cat2, kwargs):
+        """Creates a figure for a row of subplots."""
+        fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+        for col, (df_for_fig, graph_type, normalized_mode) in enumerate(row_sets):
+            df_for_fig = _make_df_for_fig(df_for_fig, cat1, cat2, graph_type, normalized_mode)
+            kwargs.update(_get_kwargs_for_graph_type(graph_type, cat1, cat2))
+            fig_for_subplots = px.bar(df_for_fig, **kwargs)
+            _add_traces_to_fig(fig, fig_for_subplots, col + 1)
+            _update_axes(fig, fig_for_subplots, col + 1)
+        return fig
+
+    def _fig_update_layout(fig, legend_position, height, width, graphs_row, labels, cat1, cat2, fig_layout=None):
+        """Updates the layout of the figure, including legend position and size."""
+        fig.update_layout(
+            xaxis_showgrid=False,
+            yaxis_showgrid=True,
+            height=height,
+            width=width
+        )
+        if graphs_row != 0:
+            fig.update_layout(
+                yaxis_domain = [0, 0.85]
+                , yaxis2_domain = [0, 0.85]
+            )
+        if graphs_row == 1:  # For the second row
+            annotation_text_left = 'нормирование по оси'
+            annotation_text_right = 'нормирование по легенде'
+            fig.add_annotation(
+                text=annotation_text_left,
+                xref="paper", yref="paper",
+                xanchor="center",
+                x=0.25, y=0.93,  # Position above the graph
+                showarrow=False,
+                font_size=12
+            )
+            fig.add_annotation(
+                text=annotation_text_right,
+                xref="paper", yref="paper",
+                xanchor="center",
+                x=0.75, y=0.93,  # Position above the graph
+                showarrow=False,
+                font_size=12
+            )
+        elif graphs_row == 2:  # For the third row
+            annotation_text_left = 'нормирование по оси'
+            annotation_text_right = 'нормирование по легенде'
+            fig.add_annotation(
+                text=annotation_text_left,
+                xref="paper", yref="paper",
+                xanchor="center",
+                x=0.25, y=0.93,  # Position above the graph
+                showarrow=False,
+                font_size=12
+            )
+            fig.add_annotation(
+                text=annotation_text_right,
+                xref="paper", yref="paper",
+                xanchor="center",
+                x=0.75, y=0.93,  # Position above the graph
+                showarrow=False,
+                font_size=12
+            )
+        if legend_position == 'top':
+            fig.update_layout(
+                legend=dict(
+                    orientation="h",  # Horizontal layout
+                    yanchor="top",    # Anchor to the top
+                    y=1.05,             # Vertical position (negative value moves it down)
+                    xanchor="center",  # Anchor to the center
+                    x=0.5,             # Center horizontally
+                    itemsizing="constant"
+                )
+            )
+        elif legend_position == 'right':
+            fig.update_layout(
+                legend=dict(
+                    orientation="v",  # Vertical layout
+                    yanchor="top",    # Anchor to the top
+                    y=1,              # Vertical position (negative value moves it down)
+                    xanchor="left",   # Anchor to the left
+                    x=1.1,            # Position horizontally
+                    itemsizing="constant"
+                )
+            )
+        # Apply additional layout settings if provided
+        if fig_layout:
+            fig.update_layout(**fig_layout)
+        fig = fig_update(
+            fig
+            , xaxis_showgrid = False
+            , yaxis_showgrid = True
+        )
+        return fig
+
+    # Initialize labels if not provided
+    if not labels:
+        labels = dict()
+    labels.update(dict(data_for_px_bar='Доля'))  # Default label for the bar data
+
+    # Update kwargs with additional parameters
+    kwargs.update(dict(
+        barmode=barmode,
+        labels=labels,
+        category_orders=category_orders,
+        text_auto=text_auto,
+        hover_name=hover_name,
+        hover_data=hover_data
+    ))
+
+    # Prepare data for cat1 and cat2
+    df_cat1 = data_frame.groupby(data_frame[cat1], observed=False).size().to_frame('value_for_px_bar')
+    df_cat2 = data_frame.groupby(data_frame[cat2], observed=False).size().to_frame('value_for_px_bar')
+    df_cat1_by_cat2 = pd.crosstab(data_frame[cat1], data_frame[cat2])
+    df_cat2_by_cat1 = df_cat1_by_cat2.T
+
+    # Trim top N categories for cat1
+    if top_n_trim_cat1:
+        top_n_cat1 = df_cat1['value_for_px_bar'].nlargest(top_n_trim_cat1).index
+        df_cat1 = df_cat1.loc[top_n_cat1]
+        df_cat1_by_cat2 = df_cat1_by_cat2.loc[top_n_cat1]
+
+    # Trim top N categories for cat2
+    if top_n_trim_cat2:
+        top_n_cat2 = df_cat2['value_for_px_bar'].nlargest(top_n_trim_cat2).index
+        df_cat2 = df_cat2.loc[top_n_cat2]
+        df_cat2_by_cat1 = df_cat2_by_cat1.loc[top_n_cat2]
+
+    # Define row sets for the figures
+    row1_sets = [(df_cat1, 'cat1', 'all'), (df_cat2, 'cat2', 'all')]
+    row2_sets = [(df_cat1_by_cat2, 'cat1_by_cat2', 'index'), (df_cat1_by_cat2, 'cat1_by_cat2', 'columns')]
+    row3_sets = [(df_cat2_by_cat1, 'cat2_by_cat1', 'index'), (df_cat2_by_cat1, 'cat2_by_cat1', 'columns')]
+    rows_sets = [row1_sets, row2_sets, row3_sets]
+
+    figs = []
+    for i, row_sets in enumerate(rows_sets):
+        if i + 1 in graph_to_show:
+            fig = _create_fig_for_row(row_sets, cat1, cat2, kwargs)
+            if fig_layouts and i < len(fig_layouts):
+                _fig_update_layout(fig, legend_position, height=height, width=width, graphs_row=i, labels=labels, cat1=cat1, cat2=cat2, fig_layout=fig_layouts[i])
+            else:
+                _fig_update_layout(fig, legend_position, height=height, width=width, graphs_row=i, labels=labels, cat1=cat1, cat2=cat2)
+            fig.show()  # Display the figure
+            figs.append(fig)  # Append the figure to the list
+
+    # Return figures if requested
+    if return_figs:
+        return figs
