@@ -9142,8 +9142,8 @@ def cat_compare(
         )
         if graphs_row != 0:
             fig.update_layout(
-                yaxis_domain = [0, 0.85]
-                , yaxis2_domain = [0, 0.85]
+                yaxis_domain = [0, 0.83]
+                , yaxis2_domain = [0, 0.83]
             )
         if graphs_row == 1:  # For the second row
             annotation_text_left = 'нормирование по оси'
