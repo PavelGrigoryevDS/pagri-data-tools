@@ -802,6 +802,9 @@ def _create_base_fig_for_bar_line_area(
             is_num_integer = pd.api.types.is_integer_dtype(df_for_fig_bottom[config['num_column']])
         kwargs['custom_data'] = custom_data
         fig_bottom = px.bar(df_for_fig_bottom, **kwargs)
+        if config.get('show_group_size') == True and config.get('agg_func') not in ['count', 'nunique']:
+            for trace in fig_bottom.data:
+                trace.hovertemplate += '<br>Размер группы = %{customdata[0]}'
         fig.update_traces(error_x_color='rgba(50, 50, 50, 0.7)')
         fig_subplots.add_trace(fig_bottom.data[0], row=1, col=2)
         fig_subplots.update_layout(title_text=kwargs.get('title'))
@@ -9123,10 +9126,12 @@ def cat_compare(
 
     def _create_fig_for_row(row_sets, cat1, cat2, kwargs):
         """Creates a figure for a row of subplots."""
-        fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.1)
+        fig = make_subplots(rows=1, cols=2, horizontal_spacing=0.07)
         for col, (df_for_fig, graph_type, normalized_mode) in enumerate(row_sets):
             df_for_fig = _make_df_for_fig(df_for_fig, cat1, cat2, graph_type, normalized_mode)
             kwargs.update(_get_kwargs_for_graph_type(graph_type, cat1, cat2))
+            # display(kwargs)
+            # display(df_for_fig.head())
             fig_for_subplots = px.bar(df_for_fig, **kwargs)
             _add_traces_to_fig(fig, fig_for_subplots, col + 1)
             _update_axes(fig, fig_for_subplots, col + 1)
@@ -9219,7 +9224,9 @@ def cat_compare(
     if not labels:
         labels = dict()
     labels.update(dict(data_for_px_bar='Доля'))  # Default label for the bar data
-
+    if not hover_data:
+        hover_data = dict()
+    hover_data.update(dict(data_for_px_bar = ':.2f'))
     # Update kwargs with additional parameters
     kwargs.update(dict(
         barmode=barmode,
@@ -9234,7 +9241,6 @@ def cat_compare(
     df_cat1 = data_frame.groupby(data_frame[cat1], observed=False).size().to_frame('value_for_px_bar')
     df_cat2 = data_frame.groupby(data_frame[cat2], observed=False).size().to_frame('value_for_px_bar')
     df_cat1_by_cat2 = pd.crosstab(data_frame[cat1], data_frame[cat2])
-    df_cat2_by_cat1 = df_cat1_by_cat2.T
 
     # Trim top N categories for cat1
     if top_n_trim_cat1:
@@ -9246,7 +9252,8 @@ def cat_compare(
     if top_n_trim_cat2:
         top_n_cat2 = df_cat2['value_for_px_bar'].nlargest(top_n_trim_cat2).index
         df_cat2 = df_cat2.loc[top_n_cat2]
-        df_cat2_by_cat1 = df_cat2_by_cat1.loc[top_n_cat2]
+        df_cat1_by_cat2 = df_cat1_by_cat2[top_n_cat2]
+    df_cat2_by_cat1 = df_cat1_by_cat2.T
 
     # Define row sets for the figures
     row1_sets = [(df_cat1, 'cat1', 'all'), (df_cat2, 'cat2', 'all')]
@@ -9259,6 +9266,7 @@ def cat_compare(
         if i + 1 in graph_to_show:
             fig = _create_fig_for_row(row_sets, cat1, cat2, kwargs)
             if fig_layouts and i < len(fig_layouts):
+                # print(fig_layouts[i])
                 _fig_update_layout(fig, legend_position, height=height, width=width, graphs_row=i, labels=labels, cat1=cat1, cat2=cat2, fig_layout=fig_layouts[i])
             else:
                 _fig_update_layout(fig, legend_position, height=height, width=width, graphs_row=i, labels=labels, cat1=cat1, cat2=cat2)
