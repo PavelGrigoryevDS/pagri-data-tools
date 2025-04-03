@@ -4607,7 +4607,7 @@ def df_summary(dataframes: list | pd.DataFrame):
         .hide(axis="index")
     )
 
-def column_info_short(column, show_mode: bool=True):
+def column_info_short(column, show_mode: bool=True, quantiles: list=[0.25, 0.5, 0.75]):
     mean_ = format_number(column.mean())
     mode_ = column.mode()
     if mode_.size == 1:
@@ -4616,16 +4616,14 @@ def column_info_short(column, show_mode: bool=True):
         mode_ = [format_number(mode_el) for mode_el in mode_]
     if len(mode_) > 5:
         mode_ = '> 5 modes'
-    q_75 = format_number(column.quantile(0.75))
-    median_ = format_number(column.median())
-    q_25 = format_number(column.quantile(0.25))
+    q_for_summary = dict()
+    for quantile in quantiles:
+        q_for_summary[f'{quantile*100:.0f}%'] = [format_number(column.quantile(quantile))]
     column_summary = pd.DataFrame(
         {
             "Mean": [mean_],
             "Mode": [mode_],
-            "75%": [q_75],
-            "Median": [median_],
-            "25%": [q_25],
+            **q_for_summary
         }
     )
     result_df =  column_summary.T.reset_index()

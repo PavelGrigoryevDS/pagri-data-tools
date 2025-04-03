@@ -8743,6 +8743,7 @@ def histogram(
         for layout_key in fig.layout:
             if layout_key.startswith('xaxis'):
                 fig_new.layout[layout_key].domain = fig.layout[layout_key].domain
+        fig_new.update_layout(annotations=fig.layout.annotations)
         return fig_new
 
     def _dual_histogram_trimmed_histogram(config, kwargs):
@@ -9002,7 +9003,6 @@ def histogram(
 
     elif mode == 'dual_hist_qq':
         fig_new =_dual_histogram_qqplot(config, kwargs)
-    fig_new.update_layout(annotations=fig.layout.annotations)
     fig_new = _update_fig(fig_new, config, kwargs)
     return fig_new
 
