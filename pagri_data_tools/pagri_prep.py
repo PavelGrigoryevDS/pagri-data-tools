@@ -4460,8 +4460,13 @@ def count_df_mismatches_by_key(left_df, right_df, on=None, left_on=None, right_o
     # Check if left_on and right_on are provided
     if left_on is None or right_on is None:
         return "Please provide either 'on' or both 'left_on' and 'right_on'."
-    left_key_missting = left_df[left_on].isna().sum()
-    right_key_missting = right_df[right_on].isna().sum()
+
+    if isinstance(on, list):
+        left_key_missting = left_df[left_on].isna().sum().sum()
+        right_key_missting = right_df[right_on].isna().sum().sum()
+    else:
+        left_key_missting = left_df[left_on].isna().sum()
+        right_key_missting = right_df[right_on].isna().sum()
     if left_key_missting:
         print(f'В левом датафрейме в ключе есть пропуски: {left_key_missting}')
     if right_key_missting:
