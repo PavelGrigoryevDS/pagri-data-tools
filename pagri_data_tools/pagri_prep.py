@@ -3845,7 +3845,7 @@ def analyze_by_category_gen(series_for_analys, is_dash=False):
                     )
                 )
                 yield
-                yield series_for_analys[col].sort_values(col, ascending=False).head(10)
+                # yield series_for_analys[col].sort_values(col, ascending=False).head(10)
         caption  = f"Sample in {col} ({series_for_analys[col].shape[0]} <{cnt_for_display_in_sample:.2%}>)"
         if is_dash:
             yield caption, 'sample', col, None, series_for_analys[col].sort_values(col, ascending=False).head(10)
