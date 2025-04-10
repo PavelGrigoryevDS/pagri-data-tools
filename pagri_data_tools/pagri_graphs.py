@@ -19,6 +19,8 @@ from pingouin import qqplot as pg_qqplot
 from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.pyplot as plt
 from statsmodels.api import qqplot as sm_qqplot
+from textblob import TextBlob
+from IPython.display import display_html
 
 pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
 pio.renderers.default = "notebook"
@@ -9276,3 +9278,119 @@ def cat_compare(
     # Return figures if requested
     if return_figs:
         return figs
+
+def sentiment_analysis(df, text_column):
+    """
+    Perform sentiment analysis on the specified text column of the DataFrame.
+
+    Parameters:
+    df (pd.DataFrame): The input DataFrame containing text data.
+    text_column (str): The name of the column containing text for sentiment analysis.
+
+    Returns:
+    fig: A Plotly figure object representing the histogram of sentiment polarity.
+    """
+    def analyze_sentiment(text):
+        """Analyze the sentiment of the given text and return its polarity."""
+        blob = TextBlob(text)
+        return round(blob.sentiment.polarity, 2)  # Округляем до 2 знаков
+
+    def categorize_sentiment(score):
+        """Categorize sentiment based on the polarity score."""
+        if score > 0:
+            return "Positive count"
+        elif score < 0:
+            return "Negative count"
+        else:
+            return "Neutral count"
+    # Analyze sentiment
+    df['sentiment'] = df[text_column].apply(analyze_sentiment)
+
+    # Calculate statistics
+    avg_sentiment = round(df['sentiment'].mean(), 2)
+    sentiment_75_pct = round(df['sentiment'].quantile(0.75), 2)
+    median_sentiment = round(df['sentiment'].median(), 2)
+    sentiment_25_pct = round(df['sentiment'].quantile(0.25), 2)
+
+    # Categorize sentiment
+    df['sentiment_category'] = df['sentiment'].apply(categorize_sentiment)
+
+    # Count sentiment categories
+    sentiment_counts = df['sentiment_category'].value_counts().astype(str).reset_index()
+    sentiment_counts.columns = ['col1', 'col2']
+
+    # Create result DataFrame
+    statistics = pd.DataFrame(
+        {
+            "Mean": [avg_sentiment],
+            "75%": [sentiment_75_pct],
+            "Median": [median_sentiment],
+            "25%": [sentiment_25_pct],
+        }
+    )
+    statistics = statistics.T.astype(str).reset_index()
+    statistics.columns = ['col1', 'col2']
+    res_df = pd.concat([statistics, sentiment_counts], axis=1).T.reset_index(drop=True).T
+    res_df.insert(2, '', " "*10)
+    try:
+        res_df.insert(5, ' ', " "*10)
+        res_df.insert(8, '  ', " "*10)
+    except:
+        pass
+    res_df = res_df.fillna('')
+    display(
+        res_df.style\
+        .set_caption('Sentiment analysis')
+        .set_table_styles(
+            [
+                {
+                    "selector": "caption",
+                    "props": [
+                        ("font-size", "14px"),
+                        ("text-align", "left"),
+                        ("font-weight", "bold"),
+                    ],
+                }
+            ]
+        )
+        # .format('{:.2f}', subset='col2')
+        .hide(axis="index")
+        .hide(axis="columns")
+    )
+    # Create and return the histogram figure
+    labels = dict(sentiment = 'Полярность сентимента')
+    fig = histogram(df, x='sentiment', labels=labels, title='Распределение полярности сентимента')
+    return fig
+
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+
+def wordcloud(text, width=800, height=400, background_color='white', colormap='viridis'):
+    """
+    Generates a word cloud from the given text and displays it.
+
+    Parameters:
+    text (str): The text from which the word cloud will be created.
+    width (int, optional): The width of the word cloud image. Default is 800.
+    height (int, optional): The height of the word cloud image. Default is 400.
+    background_color (str, optional): The background color of the word cloud. Default is 'white'.
+    colormap (str, optional): The colormap for the word cloud. Default is 'viridis'.
+
+    Returns:
+    None: The function displays the word cloud but does not return anything.
+    """
+
+    # Create the word cloud
+    wordcloud = WordCloud(
+        width=width,
+        height=height,
+        background_color=background_color,
+        colormap=colormap,
+    ).generate(text)
+
+    # Display the word cloud
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()

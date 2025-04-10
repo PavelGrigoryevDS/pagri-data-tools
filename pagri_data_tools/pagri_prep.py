@@ -1,5 +1,3 @@
-# import importlib
-# importlib.reload(pgdt)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -8,11 +6,14 @@ import plotly.express as px
 # import matplotlib.pyplot as plt
 from ipywidgets import widgets, Layout
 from IPython.display import display, HTML
+from IPython.display import display_html
 from tqdm.auto import tqdm
 import itertools
 from pymystem3 import Mystem
 import io
 import base64 
+
+
 
 def count_share(series: pd.Series) -> str:
     """
@@ -1979,6 +1980,7 @@ def find_columns_with_duplicates(df, keep: str='first') -> pd.Series:
     pd.concat(res.to_list())
     """
     dfs_duplicated = pd.Series(dtype=int)
+    dfs_duplicated['origin_df_for_analyze'] = df
     cnt_duplicated = pd.Series(dtype=int)
     size = df.shape[0]
     for col in df.columns:
@@ -2147,6 +2149,7 @@ def find_columns_with_missing_values(df, is_display=True) -> pd.Series:
     pd.concat(res.to_list())
     """
     dfs_na = pd.Series(dtype=int)
+    dfs_na['origin_df_for_analyze'] = df
     cnt_missing = pd.Series(dtype=int)
     size = df.shape[0]
     for col in df.columns:
@@ -2893,15 +2896,16 @@ def find_columns_with_negative_values(df, df_name=None) -> pd.Series:
     Если нужно соеденить фреймы в один, то используем
     pd.concat(res.to_list())
     """
-    dfs_na = pd.Series(dtype=int)
+    dfs_negative = pd.Series(dtype=int)
+    dfs_negative['origin_df_for_analyze'] = df
     cnt_negative = pd.Series(dtype=int)
     size = df.shape[0]
     num_columns = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
     for col in num_columns:
         is_negative = df[col] < 0
         if is_negative.any():
-            dfs_na[col] = df[is_negative]
-            cnt_negative[col] = dfs_na[col].shape[0]
+            dfs_negative[col] = df[is_negative]
+            cnt_negative[col] = dfs_negative[col].shape[0]
     if cnt_negative.empty:
         if df_name:
             return
@@ -2928,7 +2932,7 @@ def find_columns_with_negative_values(df, df_name=None) -> pd.Series:
             )
             .hide(axis="columns"))
     if not df_name:
-        return dfs_na
+        return dfs_negative
 
 
 
@@ -3121,15 +3125,16 @@ def find_columns_with_zeros_values(df, df_name=None) -> pd.Series:
     Если нужно соеденить фреймы в один, то используем
     pd.concat(res.to_list())
     """
-    dfs_na = pd.Series(dtype=int)
+    dfs_zeros = pd.Series(dtype=int)
+    dfs_zeros['origin_df_for_analyze'] = df
     cnt_zeros = pd.Series(dtype=int)
     size = df.shape[0]
     num_columns = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
     for col in num_columns:
         is_zeros = df[col] == 0
         if is_zeros.any():
-            dfs_na[col] = df[is_zeros]
-            cnt_zeros[col] = dfs_na[col].shape[0]
+            dfs_zeros[col] = df[is_zeros]
+            cnt_zeros[col] = dfs_zeros[col].shape[0]
     if cnt_zeros.empty:
         if df_name:
             return
@@ -3158,7 +3163,7 @@ def find_columns_with_zeros_values(df, df_name=None) -> pd.Series:
             .hide(axis="columns")
         )
     if not df_name:
-        return dfs_na
+        return dfs_zeros
 
 
 def get_zeros_proportion_by_category(
@@ -3739,27 +3744,28 @@ def analyze_filtered_df_by_category(
             df.groupby(category_column, observed=False, dropna=False).size().reset_index(name="total")
         )
         result_df = pd.merge(analys_df, all_df, on=category_column)
-        result_df["count_in_total_pct"] = result_df["count"] / result_df["total"]
-        result_df["count_in_sum_count_pct"] = result_df["count"] / summ_counts
-        result_df["total_in_sum_total_pct"] = result_df["total"] / size_all
-        result_df["diff_sum_pct"] = (
-            result_df["count_in_sum_count_pct"] - result_df["total_in_sum_total_pct"]
+        result_df["total_share"] = result_df["total"] * 100 / size_all
+        result_df["count_share"] = result_df["count"] * 100 / summ_counts
+        result_df["count_norm_share"] = result_df["count"] * 100 / result_df["total"]
+        result_df["total_with_share"] = result_df["total"].astype(str) + ' (' + result_df["total_share"].round(1).astype(str) + '%)'
+        result_df["count_with_share"] = result_df["count"].astype(str) + ' (' + result_df["count_share"].round(1).astype(str) + '%)'
+        result_df["diff_shares"] = (
+            result_df["count_share"] - result_df["total_share"]
         )
+        result_df = result_df.sort_values("diff_shares", ascending=False).head(20)
         if is_dash:
             result_df = result_df[
                 [
                     category_column,
-                    "total",
-                    "count",
-                    "count_in_total_pct",
-                    "count_in_sum_count_pct",
-                    "total_in_sum_total_pct",
-                    "diff_sum_pct",
+                    "total_with_share",
+                    "count_with_share",
+                    "diff_shares",
+                    "count_norm_share",
                 ]
             ]
             for col in result_df.columns:
                 if pd.api.types.is_float_dtype(result_df[col]):
-                    result_df[col] = result_df[col].apply(lambda x: f"{x:.1%}")
+                    result_df[col] = result_df[col] .apply(lambda x: f"{x:.1f}")
             caption = f'Value in "{column_for_analys}" by category "{category_column}"'
             yield caption, 'by_category', column_for_analys, category_column, result_df
 
@@ -3768,12 +3774,10 @@ def analyze_filtered_df_by_category(
                 result_df[
                     [
                         category_column,
-                        "total",
-                        "count",
-                        "count_in_total_pct",
-                        "count_in_sum_count_pct",
-                        "total_in_sum_total_pct",
-                        "diff_sum_pct",
+                        "total_with_share",
+                        "count_with_share",
+                        "diff_shares",
+                        "count_norm_share",
                     ]
                 ]
                 .style.set_caption(
@@ -3792,12 +3796,10 @@ def analyze_filtered_df_by_category(
                     ]
                 )
                 .format(
-                    "{:.1%}",
+                    "{:.1f}%",
                     subset=[
-                        "count_in_total_pct",
-                        "count_in_sum_count_pct",
-                        "total_in_sum_total_pct",
-                        "diff_sum_pct",
+                        "count_norm_share"
+                        , "diff_shares"
                     ],
                 )
                 .hide(axis="index")
@@ -3805,7 +3807,7 @@ def analyze_filtered_df_by_category(
             yield
 
 
-def analyze_by_category_gen(df, series_for_analys, is_dash=False):
+def analyze_by_category_gen(series_for_analys, is_dash=False):
     """
     Генератор.
     Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
@@ -3814,8 +3816,11 @@ def analyze_by_category_gen(df, series_for_analys, is_dash=False):
     is_dash (bool):  режим работы в Dash или нет
 
     """
+    df = series_for_analys['origin_df_for_analyze']
     df_size = df.shape[0]
     for col in series_for_analys.index:
+        if col == 'origin_df_for_analyze':
+            continue
         cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
         if not series_for_analys[col][col].value_counts().empty:
             if is_dash:
@@ -3844,15 +3849,15 @@ def analyze_by_category_gen(df, series_for_analys, is_dash=False):
                 )
                 yield
                 yield series_for_analys[col].sort_values(col, ascending=False).head(10)
+        caption  = f"Sample in {col} ({series_for_analys[col].shape[0]} <{cnt_for_display_in_sample:.2%}>)"
         if is_dash:
-            caption  = f"Sample in {col} ({cnt_for_display_in_sample:.2%})"
             yield caption, 'sample', col, None, series_for_analys[col].sort_values(col, ascending=False).head(10)
         else: 
             display(
                 series_for_analys[col]
                 .sort_values(col, ascending=False)
                 .head(10)
-                .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
+                .style.set_caption(caption)
                 .set_table_styles(
                     [
                         {
@@ -4057,7 +4062,8 @@ def analyze_share_by_category(
     df: pd.DataFrame,
     df_for_analys: pd.DataFrame,
     column_for_analys: str,
-    category_column: str
+    category_column: str,
+    count_of_rows_to_display: int = 20,
 ):
     """
     Show statisctic column by categories in DataFrame
@@ -4080,26 +4086,27 @@ def analyze_share_by_category(
         df.groupby(category_column, observed=False, dropna=False).size().reset_index(name="total")
     )
     result_df = pd.merge(analys_df, all_df, on=category_column)
-    result_df["count_in_total_pct"] = result_df["count"] / result_df["total"]
-    result_df["count_in_sum_count_pct"] = result_df["count"] / summ_counts
-    result_df["total_in_sum_total_pct"] = result_df["total"] / size_all
-    result_df["diff_sum_pct"] = (
-        result_df["count_in_sum_count_pct"] - result_df["total_in_sum_total_pct"]
+    result_df["total_share"] = result_df["total"] * 100 / size_all
+    result_df["count_share"] = result_df["count"] * 100 / summ_counts
+    result_df["count_norm_share"] = result_df["count"] * 100 / result_df["total"]
+    result_df["total_with_share"] = result_df["total"].astype(str) + ' (' + result_df["total_share"].round(1).astype(str) + '%)'
+    result_df["count_with_share"] = result_df["count"].astype(str) + ' (' + result_df["count_share"].round(1).astype(str) + '%)'
+    result_df["diff_shares"] = (
+        result_df["count_share"] - result_df["total_share"]
     )
+    result_df = result_df.sort_values('diff_shares', ascending=False).head(count_of_rows_to_display)
     display(
         result_df[
             [
                 category_column,
-                "total",
-                "count",
-                "count_in_total_pct",
-                "count_in_sum_count_pct",
-                "total_in_sum_total_pct",
-                "diff_sum_pct",
+                "total_with_share",
+                "count_with_share",
+                "diff_shares",
+                "count_norm_share",
             ]
         ]
         .style.set_caption(
-            f'Share in "{column_for_analys}" by category "{category_column}"'
+            f'Shares in "{column_for_analys}" by category "{category_column}"'
         )
         .set_table_styles(
             [
@@ -4114,29 +4121,30 @@ def analyze_share_by_category(
             ]
         )
         .format(
-            "{:.1%}",
+            "{:.1f}%",
             subset=[
-                "count_in_total_pct",
-                "count_in_sum_count_pct",
-                "total_in_sum_total_pct",
-                "diff_sum_pct",
+                "count_norm_share"
+                , "diff_shares"
             ],
         )
         .hide(axis="index")
     )
 
 
-def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=None):
+def analyze_anomaly_by_category(series_for_analys, mode, col=None, category=None, count_of_rows_to_display: int = 20):
     """
     Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
     И затем выводит информацию по каждой категории в таблице.
 
-    df - исходный датафрейм
     series_for_analys - series c датафреймами, которые нужно проанализировать по категориям
     col - колонка, по которой будет проводиться анализ
     category - категория, по которой будет проводиться анализ
     mode - режим, в котором будет проводиться анализ (value_counts, sample, by_category)
+        - value_counts - применяет метод value_counts к столбцу (если в столбце пропуски, то будет пусто естественно)
+        - sample - выводит случайню выборки из основного датафрейма для выбранных аномалиий
+        - by_category - выводит таблицу с количеством и долями по выбранной категории. Для анализа аномалий в разрезе категории.
     """
+    df = series_for_analys['origin_df_for_analyze']
     df_size = df.shape[0]
     cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
     if mode == 'value_counts':
@@ -4182,7 +4190,7 @@ def analyze_anomaly_by_category(df, series_for_analys, mode, col=None, category=
         )
         return
     if mode == 'by_category':
-        analyze_share_by_category(df, series_for_analys[col], col, category)
+        analyze_share_by_category(df, series_for_analys[col], col, category, count_of_rows_to_display)
         
 def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
     """
@@ -4702,3 +4710,4 @@ def restore_full_index(df: pd.DataFrame, date_col: str, group_cols: list[str], f
     df = df.set_index([date_col] + group_cols).reindex(full_index, fill_value=fill_value).reset_index()
 
     return df
+
