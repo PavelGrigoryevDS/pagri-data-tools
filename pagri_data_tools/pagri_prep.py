@@ -4707,4 +4707,3 @@ def restore_full_index(df: pd.DataFrame, date_col: str, group_cols: list[str], f
     df = df.set_index([date_col] + group_cols).reindex(full_index, fill_value=fill_value).reset_index()
 
     return df
-
