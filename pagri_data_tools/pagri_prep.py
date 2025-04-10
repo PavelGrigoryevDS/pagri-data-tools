@@ -3804,7 +3804,7 @@ def analyze_filtered_df_by_category(
             yield
 
 
-def analyze_by_category_gen(series_for_analys, is_dash=False):
+def analyze_by_category_gen(series_for_analys, is_dash=False, show_sample=False):
     """
     Генератор.
     Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
@@ -3819,18 +3819,43 @@ def analyze_by_category_gen(series_for_analys, is_dash=False):
         if col == 'origin_df_for_analyze':
             continue
         cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
-        if not series_for_analys[col][col].value_counts().empty:
+        # if not series_for_analys[col][col].value_counts().empty:
+        #     if is_dash:
+        #         caption = f"Value counts ({cnt_for_display_in_sample:.2%})"
+        #         yield caption, 'value_counts', col, None, series_for_analys[col][col].value_counts().reset_index().head(10)
+        #     else:
+        #         print(f"Value counts ({cnt_for_display_in_sample:.2%})")
+        #         display(
+        #             series_for_analys[col][col]
+        #             .value_counts()
+        #             .to_frame("count")
+        #             .head(10)
+        #             .style.set_caption(f"{col}")
+        #             .set_table_styles(
+        #                 [
+        #                     {
+        #                         "selector": "caption",
+        #                         "props": [
+        #                             ("font-size", "18px"),
+        #                             ("text-align", "left"),
+        #                             ("font-weight", "bold"),
+        #                         ],
+        #                     }
+        #                 ]
+        #             )
+        #         )
+        #         yield
+                # yield series_for_analys[col].sort_values(col, ascending=False).head(10)
+        if show_sample:
+            caption  = f"Sample in {col} ({series_for_analys[col].shape[0]} <{cnt_for_display_in_sample:.2%}>)"
             if is_dash:
-                caption = f"Value counts ({cnt_for_display_in_sample:.2%})"
-                yield caption, 'value_counts', col, None, series_for_analys[col][col].value_counts().reset_index().head(10)
+                yield caption, 'sample', col, None, series_for_analys[col].sort_values(col, ascending=False).head(10)
             else:
-                print(f"Value counts ({cnt_for_display_in_sample:.2%})")
                 display(
-                    series_for_analys[col][col]
-                    .value_counts()
-                    .to_frame("count")
+                    series_for_analys[col]
+                    .sort_values(col, ascending=False)
                     .head(10)
-                    .style.set_caption(f"{col}")
+                    .style.set_caption(caption)
                     .set_table_styles(
                         [
                             {
@@ -3845,30 +3870,6 @@ def analyze_by_category_gen(series_for_analys, is_dash=False):
                     )
                 )
                 yield
-                # yield series_for_analys[col].sort_values(col, ascending=False).head(10)
-        caption  = f"Sample in {col} ({series_for_analys[col].shape[0]} <{cnt_for_display_in_sample:.2%}>)"
-        if is_dash:
-            yield caption, 'sample', col, None, series_for_analys[col].sort_values(col, ascending=False).head(10)
-        else: 
-            display(
-                series_for_analys[col]
-                .sort_values(col, ascending=False)
-                .head(10)
-                .style.set_caption(caption)
-                .set_table_styles(
-                    [
-                        {
-                            "selector": "caption",
-                            "props": [
-                                ("font-size", "18px"),
-                                ("text-align", "left"),
-                                ("font-weight", "bold"),
-                            ],
-                        }
-                    ]
-                )
-            )
-            yield
         if is_dash:
             gen = analyze_filtered_df_by_category(
                 df, series_for_analys[col], col, is_dash=True
