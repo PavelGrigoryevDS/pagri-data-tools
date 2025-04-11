@@ -3815,6 +3815,7 @@ def analyze_by_category_gen(series_for_analys, is_dash=False, show_sample=False)
     """
     df = series_for_analys['origin_df_for_analyze']
     df_size = df.shape[0]
+    is_first_gen = True
     for col in series_for_analys.index:
         if col == 'origin_df_for_analyze':
             continue
@@ -3871,6 +3872,10 @@ def analyze_by_category_gen(series_for_analys, is_dash=False, show_sample=False)
                 )
                 yield
         if is_dash:
+            if not is_first_gen:
+                is_first_gen = False
+                yield 'new_gen', col
+
             gen = analyze_filtered_df_by_category(
                 df, series_for_analys[col], col, is_dash=True
             )
@@ -4129,12 +4134,12 @@ def analyze_share_by_category(
     )
 
 
-def analyze_anomaly_by_category(series_for_analys, mode, col=None, category=None, count_of_rows_to_display: int = 20):
+def analyze_anomaly_by_category(series_with_anomalies, mode, index_in_series_with_anomalies=None, category=None, count_of_rows_to_display: int = 20):
     """
-    Для каждой колонки в series_for_analys функция выводит выборку датафрейма.
+    Для каждой колонки в series_with_anomalies функция выводит выборку датафрейма.
     И затем выводит информацию по каждой категории в таблице.
 
-    series_for_analys - series c датафреймами, которые нужно проанализировать по категориям
+    series_with_anomalies - series c датафреймами, которые нужно проанализировать по категориям
     col - колонка, по которой будет проводиться анализ
     category - категория, по которой будет проводиться анализ
     mode - режим, в котором будет проводиться анализ (value_counts, sample, by_category)
@@ -4142,13 +4147,14 @@ def analyze_anomaly_by_category(series_for_analys, mode, col=None, category=None
         - sample - выводит случайню выборки из основного датафрейма для выбранных аномалиий
         - by_category - выводит таблицу с количеством и долями по выбранной категории. Для анализа аномалий в разрезе категории.
     """
-    df = series_for_analys['origin_df_for_analyze']
+    df = series_with_anomalies['origin_df_for_analyze']
+    col = index_in_series_with_anomalies
     df_size = df.shape[0]
-    cnt_for_display_in_sample = series_for_analys[col].shape[0] / df_size
+    cnt_for_display_in_sample = series_with_anomalies[col].shape[0] / df_size
     if mode == 'value_counts':
         display(f"Value counts in {col} ({cnt_for_display_in_sample:.2%})")
         display(
-            series_for_analys[col][col]
+            series_with_anomalies[col][col]
             .value_counts()
             .to_frame("count")
             .head(10)
@@ -4169,7 +4175,7 @@ def analyze_anomaly_by_category(series_for_analys, mode, col=None, category=None
         return
     if mode == 'sample':
         display(
-            series_for_analys[col]
+            series_with_anomalies[col]
             .sort_values(col, ascending=False)            
             .head(10)
             .style.set_caption(f"Sample in {col} ({cnt_for_display_in_sample:.2%})")
@@ -4188,7 +4194,7 @@ def analyze_anomaly_by_category(series_for_analys, mode, col=None, category=None
         )
         return
     if mode == 'by_category':
-        analyze_share_by_category(df, series_for_analys[col], col, category, count_of_rows_to_display)
+        analyze_share_by_category(df, series_with_anomalies[col], col, category, count_of_rows_to_display)
         
 def value_counts_table(df, column, chunk_size=10, tables_in_row=5):
     """
