@@ -3883,6 +3883,7 @@ def analyze_by_category_gen(series_for_analys, is_dash=False, show_sample=False)
             gen = analyze_filtered_df_by_category(df, series_for_analys[col], col)
         for _ in gen:
             if is_dash:
+                # print(_)
                 yield _
             else:
                 yield
