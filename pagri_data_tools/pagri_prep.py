@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 import plotly.express as px
-# import seaborn as sns
-# import matplotlib.pyplot as plt
 from ipywidgets import widgets, Layout
 from IPython.display import display, HTML
 from IPython.display import display_html
@@ -11,6 +9,8 @@ import itertools
 from pymystem3 import Mystem
 import io
 import base64 
+# import seaborn as sns
+# import matplotlib.pyplot as plt
 
 def count_share(series: pd.Series) -> str:
     """
