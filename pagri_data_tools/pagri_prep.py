@@ -75,7 +75,10 @@ def pretty_value(value):
 
 def format_number(num):
     if num < 1000:
-        return f"{num:.2f}"
+        if num%1 == 0 and num != 0:
+            return num
+        else:
+            return f"{num:.2f}"
     elif num < 1_000_000:
         return f"{num / 1000:.2f}k"
     elif num < 1_000_000_000:
@@ -1221,7 +1224,7 @@ class info_gen:
             row_for_html = self.make_row_for_html(df, column, funcs_obj)
             # Отображение HTML-кода
             display(HTML(row_for_html))
-            yield                    
+            yield
         
     def pretty_value(value):
         """
@@ -1259,7 +1262,10 @@ class info_gen:
 
     def format_number(num):
         if num < 1000:
-            return f"{num:.2f}"
+            if num%1 == 0:
+                return num
+            else:
+                return f"{num:.2f}"
         elif num < 1_000_000:
             return f"{num / 1000:.2f}k"
         elif num < 1_000_000_000:

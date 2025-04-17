@@ -684,6 +684,9 @@ def _create_base_fig_for_bar_line_area(
         norm_by = config.get('norm_by')
         agg_func = config.get('agg_func')
         if sort_axis or sort_color or sort_facet_row or sort_facet_col + sort_animation_frame:
+            # For a line chart using color, all categories in color must have the same order of the variable that is positioned on the axis; otherwise, the lines will be mixed up.
+            if sort_axis == False and graph_type in ['line', 'area']:
+                sort_color=False
             num_column_for_sort = 'origin_num' if norm_by else 'num_in_prepare_df'
             # Determine sorting order
             if config['trim_top_or_bottom'] == 'top':
@@ -1064,6 +1067,7 @@ def _create_base_fig_for_bar_line_area(
             if kwargs.get('labels') is not None:
                 kwargs['labels']['margin_of_error'] = 'Предельная ошибка'
         kwargs['hover_data'] = hover_data
+        # display(df_for_fig)
         fig = figure_creators[graph_type](df_for_fig, **kwargs)
         if config.get('show_group_size') == True and config.get('agg_func') not in ['count', 'nunique']:
             for trace in fig.data:
