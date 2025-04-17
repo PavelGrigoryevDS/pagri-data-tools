@@ -9,6 +9,7 @@ import itertools
 from pymystem3 import Mystem
 import io
 import base64 
+import re
 # import seaborn as sns
 # import matplotlib.pyplot as plt
 
@@ -3684,29 +3685,39 @@ def check_missed_value_in_df(df):
     )
 
 
-def normalize_string_series(column: pd.Series, symbols: list=None) -> pd.Series:
+def normalize_string_series(column: pd.Series, symbols: list = None) -> pd.Series:
     """
     Normalize a pandas Series of strings by removing excess whitespace, trimming leading and trailing whitespace,
-    and converting all words to lowercase.
+    and converting all words to title case.
 
     Args:
         column (pd.Series): The input Series of strings to normalize
         symbols (list): List of symbols to remove from the input strings
-            Example: symbols = ['.', ',', '«', '»', '(', ')', '"', "'", "`"]
+            Default symbols = ['_', '.', ',', '«', '»', '(', ')', '"', "'", "`"]
     Returns:
         pd.Series: The normalized Series of strings
     """
     if not isinstance(column, pd.Series):
         raise ValueError("Input must be a pandas Series")
-    if not isinstance(column.dropna().iloc[0], str):
+    if not column.dropna().apply(lambda x: isinstance(x, str)).all():
         raise ValueError("Series must contain strings")
-    res = column.copy()
+    is_column_category = isinstance(column.dtype, pd.CategoricalDtype)
+    if symbols is None:
+        symbols = ['_', '.', ',', '«', '»', '(', ')', '"', "'", "`"]
+    # if symbols not empty list
     if symbols:
-        for symbol in symbols:
-            res = res.str.replace(symbol, " ")
-    res = res.str.lower().str.strip().str.replace(r"\s+", " ", regex=True)        
-    if isinstance(column.dtype, pd.CategoricalDtype):
+        symbols_pattern = '|'.join(map(re.escape, symbols))
+        column = column.str.replace(symbols_pattern, " ", regex=True)
+
+    res = (
+        column
+        .str.strip() 
+        .str.replace(r"\s+", " ", regex=True) 
+        .str.title()  
+    )
+    if is_column_category:
         res = res.astype('category')
+
     return res
 
 
