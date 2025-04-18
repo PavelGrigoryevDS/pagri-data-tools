@@ -1,3 +1,5 @@
+# import importlib
+# importlib.reload(pgdt)
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -4732,3 +4734,83 @@ def restore_full_index(df: pd.DataFrame, date_col: str, group_cols: list[str], f
     df = df.set_index([date_col] + group_cols).reindex(full_index, fill_value=fill_value).reset_index()
 
     return df
+
+def calc_target_category_share(
+        df
+        , category_column
+        , target_category
+        , group_columns=[]
+        , freq_for_grouper='ME'
+    ):
+    """
+    Calculate the share of a target category in the context of other categories.
+
+    Parameters:
+    df (pd.DataFrame): DataFrame containing  data.
+    category_column (str): Column name for the category to analyze
+    target_category (str): The specific category to calculate the share for.
+    group_columns (list): List of columns to group by.
+    freq_for_grouper (str): Frequency for time grouping if one of group columns is datetime type (default is 'ME' for month-end).
+
+    Returns:
+    pd.DataFrame: DataFrame containing the share of the target category grouped by specified columns.
+    """
+
+    columns = [category_column] + group_columns
+    if not group_columns:
+        raise ValueError('group_columns must be define')
+    for col in columns:
+        if col not in df.columns:
+            raise ValueError(f'{col} not in df.columns')
+    time_column_for_grouper = None
+    time_column_for_grouper_cnt = 0
+    for col in group_columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            group_columns.remove(col)
+            time_column_for_grouper = col
+            time_column_for_grouper_cnt += 1
+    if time_column_for_grouper_cnt > 1:
+        raise ValueError('Only one time column is allowed for grouping')
+
+    # Check for missing values
+    df_res = df[columns]
+    for col in columns:
+        if df_res[col].isna().sum() > 0:
+            raise ValueError(f'Missing values found in column: {col}')
+    # Check if there are any unique values in group_columns
+    for col in group_columns:
+        if df_res[col].nunique() == 0:
+            raise ValueError(f'No unique values found in grouping column: {col}')
+
+    # Create target indicator
+    df_res['is_target'] = df_res[category_column] == target_category
+
+    # Group by specified columns
+    group_columns_for_groupby = group_columns
+    if time_column_for_grouper:
+        group_columns_for_groupby = [pd.Grouper(key=time_column_for_grouper, freq=freq_for_grouper)] + group_columns
+
+    df_res = (
+        df_res.groupby(group_columns_for_groupby, observed=True, as_index=False)['is_target']
+        .mean()
+    )
+
+    # Create full index if time column is used
+    if time_column_for_grouper and group_columns:
+        full_index = (
+            pd.MultiIndex.from_product(
+                [
+                    pd.date_range(
+                        start=df_res[time_column_for_grouper].min(),
+                        end=df_res[time_column_for_grouper].max(),
+                        freq=freq_for_grouper
+                    ),
+                    df_res[group_columns[0]].unique()
+                ],
+                names=[time_column_for_grouper, group_columns[0]]
+            )
+        )
+        df_res = (
+            df_res.set_index([time_column_for_grouper, group_columns[0]])
+            .reindex(full_index, fill_value=0).reset_index()
+        )
