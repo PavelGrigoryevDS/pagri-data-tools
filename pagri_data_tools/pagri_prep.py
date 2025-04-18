@@ -4740,7 +4740,7 @@ def calc_target_category_share(
         , category_column
         , target_category
         , group_columns=[]
-        , freq_for_grouper='ME'
+        , resample_freq='ME'
     ):
     """
     Calculate the share of a target category in the context of other categories.
@@ -4750,7 +4750,7 @@ def calc_target_category_share(
     category_column (str): Column name for the category to analyze
     target_category (str): The specific category to calculate the share for.
     group_columns (list): List of columns to group by.
-    freq_for_grouper (str): Frequency for time grouping if one of group columns is datetime type (default is 'ME' for month-end).
+    resample_freq (str): Frequency for time grouping if one of group columns is datetime type (default is 'ME' for month-end).
 
     Returns:
     pd.DataFrame: DataFrame containing the share of the target category grouped by specified columns.
@@ -4788,7 +4788,7 @@ def calc_target_category_share(
     # Group by specified columns
     group_columns_for_groupby = group_columns
     if time_column_for_grouper:
-        group_columns_for_groupby = [pd.Grouper(key=time_column_for_grouper, freq=freq_for_grouper)] + group_columns
+        group_columns_for_groupby = [pd.Grouper(key=time_column_for_grouper, freq=resample_freq)] + group_columns
 
     df_res = (
         df_res.groupby(group_columns_for_groupby, observed=True, as_index=False)['is_target']
@@ -4803,7 +4803,7 @@ def calc_target_category_share(
                     pd.date_range(
                         start=df_res[time_column_for_grouper].min(),
                         end=df_res[time_column_for_grouper].max(),
-                        freq=freq_for_grouper
+                        freq=resample_freq
                     ),
                     df_res[group_columns[0]].unique()
                 ],
@@ -4814,3 +4814,5 @@ def calc_target_category_share(
             df_res.set_index([time_column_for_grouper, group_columns[0]])
             .reindex(full_index, fill_value=0).reset_index()
         )
+    return df_res
+
