@@ -4793,6 +4793,7 @@ def calc_target_category_share(
     df_res = (
         df_res.groupby(group_columns_for_groupby, observed=True, as_index=False)['is_target']
         .mean()
+        .rename(columns={'is_target': 'target_share'})
     )
 
     # Create full index if time column is used
