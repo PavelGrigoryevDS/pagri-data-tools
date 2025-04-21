@@ -43,7 +43,7 @@ poetry update
 #### 8. Import Module:  
 You can now import and use module in your Python scripts.
 ```python
-import pagri_data_tools
+import pagri_data_tools as pgdt
 ```
 
 
