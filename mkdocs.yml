@@ -1,0 +1,27 @@
+site_name: Pagri Data Tools
+theme:
+  name: material  # Тема Material for MkDocs
+  features:
+    - navigation.tabs
+    - content.code.annotate
+
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_root_heading: false
+            show_category_heading: true
+
+nav:
+  - Home: index.md
+  - Modules:
+    - pagri_prep: modules/pagri_prep.md
+    - pagri_graphs: modules/pagri_graphs.md
+    - pagri_stats: modules/pagri_stats.md
+    - pagri_nb_tools: modules/pagri_nb_tools.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
