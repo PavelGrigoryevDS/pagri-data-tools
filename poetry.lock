@@ -127,6 +127,21 @@ doc = ["doc8", "sphinx (>=7.0.0)", "sphinx-autobuild", "sphinx-autodoc-typehints
 test = ["dateparser (==1.*)", "pre-commit", "pytest", "pytest-cov", "pytest-mock", "pytz (==2021.1)", "simplejson (==3.*)"]
 
 [[package]]
+name = "astdoc"
+version = "1.1.8"
+description = "A lightweight Python library for parsing AST and extracting docstring information. Automatically generate documentation from Python source code by analyzing abstract syntax trees and docstrings."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "astdoc-1.1.8-py3-none-any.whl", hash = "sha256:15c459e3bb82620a5a1f2aa9f4973db57e8a0fba7335801fa1c05b7d3f03b18b"},
+    {file = "astdoc-1.1.8.tar.gz", hash = "sha256:289c247997787e6a06770b27e02c8e1313aa54637a92752f63797aa0a673e7ce"},
+]
+
+[package.dependencies]
+markdown = ">=3"
+
+[[package]]
 name = "astroid"
 version = "3.3.9"
 description = "An abstract syntax tree for Python with inference support."
@@ -1665,6 +1680,31 @@ docs = ["mdx_gh_links (>=0.2)", "mkdocs (>=1.6)", "mkdocs-gen-files", "mkdocs-li
 testing = ["coverage", "pyyaml"]
 
 [[package]]
+name = "markdown-it-py"
+version = "3.0.0"
+description = "Python port of markdown-it. Markdown parsing, done right!"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
+    {file = "markdown_it_py-3.0.0-py3-none-any.whl", hash = "sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1"},
+]
+
+[package.dependencies]
+mdurl = ">=0.1,<1.0"
+
+[package.extras]
+benchmarking = ["psutil", "pytest", "pytest-benchmark"]
+code-style = ["pre-commit (>=3.0,<4.0)"]
+compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "mistletoe (>=1.0,<2.0)", "mistune (>=2.0,<3.0)", "panflute (>=2.3,<3.0)"]
+linkify = ["linkify-it-py (>=1,<3)"]
+plugins = ["mdit-py-plugins"]
+profiling = ["gprof2dot"]
+rtd = ["jupyter_sphinx", "mdit-py-plugins", "myst-parser", "pyyaml", "sphinx", "sphinx-copybutton", "sphinx-design", "sphinx_book_theme"]
+testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions"]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.2"
 description = "Safely add untrusted strings to HTML/XML markup."
@@ -1809,6 +1849,18 @@ files = [
 traitlets = "*"
 
 [[package]]
+name = "mdurl"
+version = "0.1.2"
+description = "Markdown URL utilities"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
+    {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
+]
+
+[[package]]
 name = "mergedeep"
 version = "1.3.4"
 description = "A deep merge function for 🐍."
@@ -1831,6 +1883,25 @@ files = [
     {file = "mistune-3.1.1-py3-none-any.whl", hash = "sha256:02106ac2aa4f66e769debbfa028509a275069dcffce0dfa578edd7b991ee700a"},
     {file = "mistune-3.1.1.tar.gz", hash = "sha256:e0740d635f515119f7d1feb6f9b192ee60f0cc649f80a8f944f905706a21654c"},
 ]
+
+[[package]]
+name = "mkapi"
+version = "4.2.5"
+description = "A powerful MkDocs plugin for automatic API documentation generation from Python docstrings"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "mkapi-4.2.5-py3-none-any.whl", hash = "sha256:cc9af27a9b1ff8fa0e1454f7d299bf5191baa96875a2df189e28614400586211"},
+    {file = "mkapi-4.2.5.tar.gz", hash = "sha256:ea15fa850ad5e4ef2c7d199e4535cd3be9104fef29240a807da83f5eacacb9e6"},
+]
+
+[package.dependencies]
+astdoc = ">=1.1.5"
+jinja2 = "*"
+mkdocs = ">=1.6.0"
+mkdocs-material = "*"
+rich = "*"
 
 [[package]]
 name = "mkdocs"
@@ -3238,6 +3309,25 @@ files = [
 ]
 
 [[package]]
+name = "rich"
+version = "14.0.0"
+description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
+optional = false
+python-versions = ">=3.8.0"
+groups = ["main"]
+files = [
+    {file = "rich-14.0.0-py3-none-any.whl", hash = "sha256:1c9491e1951aac09caffd42f448ee3d04e58923ffe14993f6e83068dc395d7e0"},
+    {file = "rich-14.0.0.tar.gz", hash = "sha256:82f1bc23a6a21ebca4ae0c45af9bdbc492ed20231dcb63f297d6d1021a9d5725"},
+]
+
+[package.dependencies]
+markdown-it-py = ">=2.2.0"
+pygments = ">=2.13.0,<3.0.0"
+
+[package.extras]
+jupyter = ["ipywidgets (>=7.5.1,<9)"]
+
+[[package]]
 name = "roman-numerals-py"
 version = "3.1.0"
 description = "Manipulate well-formed Roman numerals"
@@ -4387,4 +4477,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "612a8c6be3932794ba93997361d95f951dee292d4be830283bfe4b02ab95f42f"
+content-hash = "d87da293053acbd728023ab0e0b1d7f295d4e4cd369ac47e24c670ba3108e0c8"

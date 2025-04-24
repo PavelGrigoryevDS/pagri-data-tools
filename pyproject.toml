@@ -2,8 +2,10 @@
 name = "pagri_data_tools"
 version = "0.1.0"
 description = "This repository contains data analysis modules, including tools for data preprocessing, visualization, statistical analysis."
+license = "MIT"
 authors = ["Pavel Grigoryev <pagri.analytics@gmail.com>"]
-readme = "README.md"
+repository = "https://github.com/PAGriAnalytics/pagri-data-tools"
+readme = ["README.md", "LICENSE"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -38,6 +40,7 @@ mkdocs = "^1.6.1"
 mkdocs-material = "^9.6.12"
 mkdocstrings = "^0.29.1"
 mkdocstrings-python = "^1.16.10"
+mkapi = "^4.2.5"
 
 [build-system]
 requires = ["poetry-core"]

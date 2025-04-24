@@ -13,14 +13,18 @@ plugins:
           options:
             show_root_heading: false
             show_category_heading: true
+  - mkapi
+  - search
 
 nav:
   - Home: index.md
-  - Modules:
-    - pagri_prep: modules/pagri_prep.md
+  - Модули:
+    - Предобработка: modules/pagri_prep.md
     - pagri_graphs: modules/pagri_graphs.md
     - pagri_stats: modules/pagri_stats.md
     - pagri_nb_tools: modules/pagri_nb_tools.md
+  - Reference:
+    - $api/package.***
 
 markdown_extensions:
   - admonition
