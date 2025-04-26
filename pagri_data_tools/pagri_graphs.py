@@ -1,7 +1,3 @@
-# import importlib
-# importlib.reload(pgdt)
-# make k format plotly - texttemplate='%{z:.2s}'
-# png render fig.show(config=dict(displayModeBar=False), renderer="png")
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -27,40 +23,59 @@ from wordcloud import WordCloud
 
 pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
 pio.renderers.default = "notebook"
-# colorway_for_line = ['rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
-#                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4', 'rgb(127, 60, 141)', 'rgb(17, 165, 121)', 'rgb(231, 63, 116)',
-#                      '#03A9F4', 'rgb(242, 183, 1)', '#8B9467', '#FFA07A', '#005A5B', '#66CCCC', '#B690C4']
 colorway_for_line = [
-    'rgb(127, 60, 141)',  # Цвет 1
-    'rgb(17, 165, 121)',   # Цвет 2
-    'rgb(231, 63, 116)',   # Цвет 3
-    'rgb(3, 169, 244)',    # Цвет 4
-    'rgb(242, 183, 1)',     # Цвет 5
-    'rgb(139, 148, 103)',   # Цвет 6
-    'rgb(255, 160, 122)',   # Цвет 7
-    'rgb(0, 90, 91)',       # Цвет 8
-    'rgb(102, 204, 204)',    # Цвет 9
-    'rgb(182, 144, 196)'     # Цвет 10
+    'rgb(127, 60, 141)',
+    'rgb(17, 165, 121)', 
+    'rgb(231, 63, 116)', 
+    'rgb(3, 169, 244)',  
+    'rgb(242, 183, 1)',   
+    'rgb(139, 148, 103)', 
+    'rgb(255, 160, 122)', 
+    'rgb(0, 90, 91)',     
+    'rgb(102, 204, 204)',  
+    'rgb(182, 144, 196)'    
 ]
-colorway_tableau = ['#1f77b4',  # muted blue
- '#ff7f0e',  # safety orange
- '#2ca02c',  # cooked asparagus green
- '#d62728',  # brick red
- '#9467bd',  # muted purple
- '#8c564b',  # chestnut brown
- '#e377c2',  # raspberry yogurt pink
- '#7f7f7f',  # middle gray
- '#bcbd22',  # curry yellow-green
- '#17becf']  # blue-teal
+colorway_tableau = [
+    '#1f77b4',  
+    '#ff7f0e',  
+    '#2ca02c',  
+    '#d62728',  
+    '#9467bd',  
+    '#8c564b',  
+    '#e377c2',  
+    '#7f7f7f',  
+    '#bcbd22',  
+    '#17becf'
+] 
 
-colorway_for_bar = ['rgba(128, 60, 170, 0.9)', '#049CB3', "rgba(112, 155, 219, 0.9)", "rgba(99, 113, 156, 0.9)", '#5c6bc0', '#B690C4', 'rgba(17, 100, 120, 0.9)', 'rgba(194, 143, 113, 0.8)', '#B690C4', '#03A9F4', '#8B9467', '#a771f2', 'rgba(102, 204, 204, 0.9)', 'rgba(168, 70, 90, 0.9)', 'rgba(50, 152, 103, 0.8)', '#8F7A7A', 'rgba(156, 130, 217, 0.9)'
-                    ]
-colorway_for_stacked_histogram =['#2ecc71', '#e74c3c', '#3498db', '#f1c40f', '#9b59b6']
-# colorway_for_bar = ['rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
-#                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2', 'rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
-#                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2', 'rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
-#                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2', 'rgba(128, 60, 170, 0.9)', '#049CB3', '#84a9e9', '#B690C4',
-#                     '#5c6bc0', '#005A5B', '#63719C', '#03A9F4', '#66CCCC', '#a771f2']
+colorway_for_bar = [
+    'rgba(128, 60, 170, 0.9)', 
+    '#049CB3', 
+    "rgba(112, 155, 219, 0.9)", 
+    "rgba(99, 113, 156, 0.9)", 
+    '#5c6bc0', 
+    '#B690C4', 
+    'rgba(17, 100, 120, 0.9)', 
+    'rgba(194, 143, 113, 0.8)', 
+    '#B690C4', 
+    '#03A9F4', 
+    '#8B9467', 
+    '#a771f2', 
+    'rgba(102, 204, 204, 0.9)', 
+    'rgba(168, 70, 90, 0.9)', 
+    'rgba(50, 152, 103, 0.8)', 
+    '#8F7A7A', 
+    'rgba(156, 130, 217, 0.9)'
+]
+
+colorway_for_stacked_histogram =[
+    '#2ecc71', 
+    '#e74c3c', 
+    '#3498db', 
+    '#f1c40f', 
+    '#9b59b6'
+]
+
 colorway_for_treemap = [
     'rgba(148, 100, 170, 1)',
     'rgba(50, 156, 179, 1)',
@@ -73,15 +88,13 @@ colorway_for_treemap = [
     'rgba(134, 96, 147, 1)',
     'rgba(132, 169, 233, 1)']
 colorway_for_heatmap = [[0, 'rgba(204, 153, 255, 0.1)'], [1, 'rgb(127, 60, 141)']]
-# default setting for Plotly
-# for line plot
+
 pio.templates["custom_theme_for_line"] = go.layout.Template(
     layout=go.Layout(
         colorway=colorway_for_line
     )
 )
-# pio.templates.default = 'simple_white+custom_theme_for_line'
-# for bar plot
+
 pio.templates["custom_theme_for_bar"] = go.layout.Template(
     layout=go.Layout(
         colorway=colorway_for_bar
@@ -89,16 +102,13 @@ pio.templates["custom_theme_for_bar"] = go.layout.Template(
 )
 pio.templates.default = 'simple_white+custom_theme_for_bar'
 
-# default setting for Plotly express
 px.defaults.template = "simple_white"
 px.defaults.color_continuous_scale = color_continuous_scale = [
     [0, 'rgba(0.018, 0.79, 0.703, 1.0)'],
     [0.5, 'rgba(64, 120, 200, 0.9)'],
     [1, 'rgba(128, 60, 170, 0.9)']
 ]
-# px.defaults.color_discrete_sequence = colorway_for_line
 px.defaults.color_discrete_sequence = colorway_for_bar
-# px.defaults.color_discrete_sequence =  px.colors.qualitative.Bold
 # px.defaults.width = 500
 # px.defaults.height = 300
 
