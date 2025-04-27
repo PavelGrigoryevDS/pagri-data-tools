@@ -2,7 +2,7 @@
 This repository contains data analysis modules, including tools for data preprocessing, visualization, statistical analysis. The modules can be used to tackle a wide range of data analysis tasks.
 
 ***
-
+ 
 ### Quick Steps to Use Module with Poetry
 #### 1. Install Poetry:  
 This command installs Poetry on your system.
