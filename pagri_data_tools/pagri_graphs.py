@@ -35,19 +35,30 @@ colorway_for_line = [
     'rgb(102, 204, 204)',  
     'rgb(182, 144, 196)'    
 ]
+# colorway_tableau = [
+#     '#1f77b4',  
+#     '#ff7f0e',  
+#     '#2ca02c',  
+#     '#d62728',  
+#     '#9467bd',  
+#     '#8c564b',  
+#     '#e377c2',  
+#     '#7f7f7f',  
+#     '#bcbd22',  
+#     '#17becf'
+# ] 
 colorway_tableau = [
-    '#1f77b4',  
-    '#ff7f0e',  
-    '#2ca02c',  
-    '#d62728',  
-    '#9467bd',  
-    '#8c564b',  
-    '#e377c2',  
-    '#7f7f7f',  
-    '#bcbd22',  
-    '#17becf'
-] 
-
+    '#4C78A8',
+    '#FF9E4A',
+    '#57B16E',
+    '#E25559',
+    '#8B6BB7',
+    '#A17C6B',
+    '#E377C2',
+    '#7F7F7F',
+    '#B5BD4E',
+    '#5BB0D9' 
+]
 colorway_for_bar = [
     'rgba(128, 60, 170, 0.9)', 
     '#049CB3', 
@@ -97,18 +108,18 @@ pio.templates["custom_theme_for_line"] = go.layout.Template(
 
 pio.templates["custom_theme_for_bar"] = go.layout.Template(
     layout=go.Layout(
-        colorway=colorway_for_bar
+        colorway=colorway_tableau
     )
 )
-pio.templates.default = 'simple_white+custom_theme_for_bar'
+pio.templates.default = 'plotly_white+custom_theme_for_bar'
 
-px.defaults.template = "simple_white"
+px.defaults.template = "plotly_white"
 px.defaults.color_continuous_scale = color_continuous_scale = [
     [0, 'rgba(0.018, 0.79, 0.703, 1.0)'],
     [0.5, 'rgba(64, 120, 200, 0.9)'],
     [1, 'rgba(128, 60, 170, 0.9)']
 ]
-px.defaults.color_discrete_sequence = colorway_for_bar
+px.defaults.color_discrete_sequence = colorway_tableau
 # px.defaults.width = 500
 # px.defaults.height = 300
 
@@ -7529,8 +7540,8 @@ def qqplot_plotly(x, show_skew_curt=True, **kwargs):
     points_y = qqplot_data[0].get_ydata()  # Эмпирические квантили
     red_line_x = qqplot_data[1].get_xdata()  # Линия теоретических квантилей
     red_line_y = qqplot_data[1].get_ydata()  # Линия эмпирических квантилей
-    point_color ='rgba(25, 108, 181, 0.9)'
-    line_color ='rgba(200, 0, 0, 0.9)'
+    point_color ='rgba(40, 115, 168, 0.9)'
+    line_color ='rgba(226, 85, 89, 0.9)'
     # Create a Plotly figure
     fig = go.Figure()
 
@@ -8451,11 +8462,11 @@ def histogram(
         if kwargs.get('x') is not None and kwargs.get('y') is not None:
             raise ValueError('Must be define x or y not both')
         if kwargs.get('histnorm') == 'probability density':
-            hist_norm_title = 'Плотность'
+            hist_norm_title = 'Density'
         elif kwargs.get('histnorm') == 'probability':
-            hist_norm_title= 'Доля'
+            hist_norm_title= 'Probability'
         elif kwargs.get('histnorm') is None:
-            hist_norm_title = 'Количество'
+            hist_norm_title = 'Count'
         else:
             hist_norm_title = None
         if kwargs.get('x') is not None:
@@ -8467,7 +8478,7 @@ def histogram(
             else:
                 # kwargs['hover_data'] = {'x': ':.2f'}
                 config['is_x_series'] = True
-                config['xaxis_title'] = kwargs['labels']['x'] if 'labels' in 'kwargs' else None
+                config['xaxis_title'] = kwargs['labels']['x'] if 'labels' in kwargs else None
         else:
             config['num_col'] = kwargs.get('y')
             config['xaxis_title'] = hist_norm_title
@@ -8581,14 +8592,14 @@ def histogram(
         if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
             label_for_kde_hovertemplate = kwargs['labels'][config['num_col']]
         else:
-            label_for_kde_hovertemplate = 'Значение'
+            label_for_kde_hovertemplate = 'Value'
         hovertemplate_kde = ''
         if kwargs.get('color') is not None:
             if kwargs['color'] in kwargs['labels']:
                 hovertemplate_kde += f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>'
         if 'labels' in kwargs and kwargs['x'] in kwargs['labels']:
             hovertemplate_kde += f'{kwargs['labels'][kwargs['x']]} = ' + '%{x:.2f}<br>'
-        hovertemplate_kde += f'Плотность = ' + '%{y:.2f}'
+        hovertemplate_kde += f'Density = ' + '%{y:.2f}'
         hovertemplate_kde += '<extra></extra>'
         kde_trace = go.Scatter(
             x=x_values_kde
@@ -8710,12 +8721,12 @@ def histogram(
                     if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
                         label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
                     else:
-                        label_for_box_hovertemplate = 'Значение'
+                        label_for_box_hovertemplate = 'Value'
                 else:
                     if kwargs.get('labels') is not None and 'x' in kwargs['labels']:
                         label_for_box_hovertemplate = kwargs['labels']['x']
                     else:
-                        label_for_box_hovertemplate = 'Значение'
+                        label_for_box_hovertemplate = 'Value'
                 if kwargs.get('color') is not None:
                     if kwargs['color'] in kwargs['labels']:
                         hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
@@ -8829,7 +8840,7 @@ def histogram(
             if kwargs.get('labels') is not None and config['num_col'] in kwargs['labels']:
                 label_for_box_hovertemplate = kwargs['labels'][config['num_col']]
             else:
-                label_for_box_hovertemplate = 'Значение'
+                label_for_box_hovertemplate = 'Value'
             if kwargs.get('color') is not None:
                 if kwargs['color'] in kwargs['labels']:
                     hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
@@ -8858,6 +8869,7 @@ def histogram(
         return fig_new
 
     def _dual_histogram_qqplot(config, kwargs):
+        fig = px.histogram(data_frame=config.get('data_frame'), **kwargs)
         if kwargs['x'] is not None:
             if isinstance(kwargs['x'], str):
                 data_for_qqplot = data_frame[kwargs['x']]
@@ -8905,9 +8917,9 @@ def histogram(
             # Обновляем ссылки на оси (xref и yref) для подграфика
             annotation.update(xref='x2', yref='y2')
             fig_new.add_annotation(annotation)
-        fig_new.update_xaxes(title_text='Теоретические квантили', row=1, col=2)
-        fig_new.update_yaxes(title_text='Упорядоченные квантили', row=1, col=2)
-        fig_new.update_yaxes(title_text=config.get('xaxis_title'), row=1, col=1)
+        fig_new.update_xaxes(title_text='Theoretical quantiles', row=1, col=2)
+        fig_new.update_yaxes(title_text='Ordered quantiles', row=1, col=2)
+        fig_new.update_yaxes(title_text=config.get('yaxis_title'), row=2, col=1)
         fig_new.update_traces(showlegend=False)
         return fig_new
 
@@ -8984,9 +8996,9 @@ def histogram(
         for trace in fig.data:
             if trace.hovertemplate is not None:
                 # print(trace.hovertemplate)
-                trace.hovertemplate = trace.hovertemplate.replace('probability density', 'Плотность')
-                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Доля')
-                trace.hovertemplate = trace.hovertemplate.replace('count', 'Количество')
+                trace.hovertemplate = trace.hovertemplate.replace('probability density', 'Density')
+                trace.hovertemplate = trace.hovertemplate.replace('probability', 'Probability')
+                trace.hovertemplate = trace.hovertemplate.replace('count', 'Count')
                 trace.hovertemplate = re.sub(r'\s*=\s*', ' = ', trace.hovertemplate)
         if 'color' in kwargs:
             # Чтобы по вертикали порядок шел сверху вниз
@@ -9008,7 +9020,6 @@ def histogram(
     )
 
     _validate_params_and_set_config(config, kwargs)
-
     # print(fig)
     # print(fig._grid_str)
     if mode == 'base':

@@ -1,3 +1,5 @@
+<!-- Убрать лишние пакеты из toml -->
+
 # Description  
 This repository contains data analysis modules, including tools for data preprocessing, visualization, statistical analysis. The modules can be used to tackle a wide range of data analysis tasks.
 

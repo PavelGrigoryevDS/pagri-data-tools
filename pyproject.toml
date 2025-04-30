@@ -41,6 +41,7 @@ mkdocs-material = "^9.6.12"
 mkdocstrings = "^0.29.1"
 mkdocstrings-python = "^1.16.10"
 mkapi = "^4.2.5"
+altair = "^5.5.0"
 
 [build-system]
 requires = ["poetry-core"]
