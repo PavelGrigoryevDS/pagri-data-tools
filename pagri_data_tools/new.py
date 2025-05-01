@@ -16,7 +16,7 @@ Example:
     >>> print(report)  # HTML formatted analysis
 """
 
-from typing import Union, List, Dict, Tuple
+from typing import Union, List, Dict, Tuple, Any
 from enum import Enum, auto
 import io
 import base64
@@ -73,9 +73,27 @@ class DataAnalyzer:
         df: The DataFrame being analyzed
         display_mode: Histogram display mode (SIMPLE or DUAL)
     """
-    def __init__(self, df: pd.DataFrame):
+    def __init__(self, df: pd.DataFrame, visualization_config: Optional[Dict] = None):
+        """
+        Initialize DataAnalyzer with optional visualization configuration.
+        
+        Args:
+            df: Input pandas DataFrame for analysis
+            visualization_config: Dictionary with visualization settings including:
+                - colors: Color palette for charts
+                - sizes: Default dimensions for visualizations
+                - font: Font settings
+                - template: Plotly template name
+        """
         self._validate_input(df)
         self.df = df
+        self._cache = {}
+        self.visualization_config = visualization_config or {
+            'colors': px.colors.qualitative.Plotly,
+            'sizes': {'width': 800, 'height': 500},
+            'font': {'family': "Arial", 'size': 12},
+            'template': 'plotly_white'
+        }
 
     def _validate_input(self, df: pd.DataFrame):
         """Validate input DataFrame"""
@@ -439,9 +457,32 @@ class DataAnalyzer:
     # ========
     # Numeric
     # ========
+    def _get_cached_result(self, column: pd.Series, func_name: str) -> Any:
+        """
+        Gets cached result or calculates and caches if not available.
+        
+        Args:
+            column: Column to use as cache key
+            func_name: Name of the generating function
+            
+        Returns:
+            Cached or newly calculated result
+        """
+        cache_key = (column.name, func_name)
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        # Dynamically call the function based on name
+        func = getattr(self, func_name)
+        result = func(column)
+        self._cache[cache_key] = result
+        return result
+
     def _generate_summary_for_numeric(self, column: pd.Series) -> pd.DataFrame:
         """
         Generates basic summary statistics for numeric columns in HTML-friendly format.
+        
+        Note: Results are cached based on column name
         """
         len_column = len(column)
         # Calculate basic metrics
@@ -511,7 +552,7 @@ class DataAnalyzer:
             "50%": column.median(),
             "25%": column.quantile(0.25),
             "5%": column.quantile(0.05),
-            "1%": column.quantile(0.05),
+            "1%": column.quantile(0.01),
             "Min": column.min()
         }
         
@@ -573,58 +614,98 @@ class DataAnalyzer:
         df_res['Count'] = df_res['Count'].apply(lambda x: self._format_count_with_percentage(x, len_column))
         return df_res.reset_index(drop=True)
     
+    def _combine_numeric_stats(self, *stats_dfs: pd.DataFrame) -> pd.DataFrame:
+        """
+        Combines multiple statistics DataFrames into a single styled summary.
+        
+        Args:
+            *stats_dfs: Variable number of DataFrames to combine
+            
+        Returns:
+            Styled DataFrame with multi-level columns
+        """
+        # Concatenate all DataFrames along the columns (axis=1)
+        combined_df = pd.concat(stats_dfs, axis=1)
+        
+        # Create multi-level column names
+        column_tuples = []
+        for i, df in enumerate(stats_dfs):
+            section_name = [
+                'Summary', 'Percentiles', 
+                'Detailed Stats', 'Value Counts'
+            ][i]
+            for col in df.columns:
+                column_tuples.append((section_name, col))
+                
+        combined_df.columns = pd.MultiIndex.from_tuples(column_tuples)
+        return combined_df
+
     def _generate_full_numeric_summary(self, column: pd.Series) -> pd.DataFrame:
         """
-        Combines all numeric statistics into a single DataFrame.
+        Generates complete styled summary for numeric columns.
+        
+        Args:
+            column: Numeric pandas Series to analyze
+            
+        Returns:
+            Styled DataFrame with all statistics
         """
         column_name = column.name
-        basic_summary = self._generate_summary_for_numeric(column)
-        percentiles_stats = self._generate_percentiles_for_numeric(column)
-        column_stats = self._generate_stats_for_numeric(column)
-        value_counts_stats = self._generate_value_counts_for_numeric(column)
-        # Concatenate all DataFrames along the columns (axis=1)
-        full_summary = pd.concat([basic_summary, percentiles_stats, column_stats, value_counts_stats], axis=1)
-        full_summary.columns = pd.MultiIndex.from_tuples(
-            [('Summary', 'Metric'), ('Summary', 'Value'),
-            ('Percentiles', 'Metric'), ('Percentiles', 'Value'),
-            ('Detailed Stats', 'Metric'), ('Detailed Stats', 'Value'),
-            ('Value Counts', 'Value'), ('Value Counts', 'Count')]
-        )
-        full_summary = self._add_empty_columns_for_df(full_summary, [2, 4, 6])
         column_type = self._get_column_type(column_name)
+        
+        # Generate all component statistics
+        stats = [
+            self._generate_summary_for_numeric(column),
+            self._generate_percentiles_for_numeric(column),
+            self._generate_stats_for_numeric(column),
+            self._generate_value_counts_for_numeric(column)
+        ]
+        
+        # Combine and style
+        full_summary = self._combine_numeric_stats(*stats)
+        full_summary = self._add_empty_columns_for_df(full_summary, [2, 4, 6])
         caption = f'Summary Statistics for "{column_name}" (Type: {column_type})'
-        styled_summary = self._style_dataframe(full_summary, level=1, caption=caption, header_alignment='center')
-        return styled_summary
+        return self._style_dataframe(
+            full_summary, 
+            level=1, 
+            caption=caption, 
+            header_alignment='center'
+        )
 
-    def _generate_histogram(self, column: pd.Series) -> go.Figure:
+    def _generate_histogram(self, column: pd.Series, **kwargs) -> go.Figure:
         """
         Generates an interactive histogram with box plot for numeric data.
 
         Args:
             column: Numeric pandas Series to visualize
+            **kwargs: Override default visualization settings:
+                - color: Bar color
+                - width: Figure width
+                - height: Figure height
+                - title: Custom title
 
         Returns:
-            Plotly Figure object with these features:
-            - Dual-axis chart (histogram + boxplot)
-            - Outlier-aware bin sizing
-            - Adaptive tick formatting
-            - Professional color scheme
-            - Responsive design settings
-
-        Visual Features:
-        - Main histogram with density overlay
-        - Marginal box plot
-        - Outlier detection
-        - Adaptive bin count (FD rule)
-        - Smart axis labeling
+            Plotly Figure object with histogram visualization
         """
-        # Calculate optimal bins using Freedman-Diaconis rule
+        # Merge config with kwargs (kwargs take precedence)
+        config = {**self.visualization_config, **kwargs}
+        
         fig = pgdt.histogram(
-            x=column
-            , mode='dual_hist_qq'
-            , title=f'Histogram and qq-plot for "{column.name}"'
+            x=column,
+            mode='dual_hist_qq',
+            title=config.get('title', f'Histogram and qq-plot for "{column.name}"'),
+            width=config['sizes']['width'],
+            height=config['sizes']['height'],
+            template=config['template']
         )
-
+        
+        # Update font if specified
+        if 'font' in config:
+            fig.update_layout(
+                font_family=config['font']['family'],
+                font_size=config['font']['size']
+            )
+            
         return fig
 
     # ========
