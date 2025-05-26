@@ -8596,9 +8596,9 @@ def histogram(
         hovertemplate_kde = ''
         if kwargs.get('color') is not None:
             if kwargs['color'] in kwargs['labels']:
-                hovertemplate_kde += f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>'
+                hovertemplate_kde += f'{kwargs["labels"][kwargs["color"]]} = {trace.name}<br>'
         if 'labels' in kwargs and kwargs['x'] in kwargs['labels']:
-            hovertemplate_kde += f'{kwargs['labels'][kwargs['x']]} = ' + '%{x:.2f}<br>'
+            hovertemplate_kde += f'{kwargs["labels"][kwargs["x"]]} = ' + '%{x:.2f}<br>'
         hovertemplate_kde += f'Density = ' + '%{y:.2f}'
         hovertemplate_kde += '<extra></extra>'
         kde_trace = go.Scatter(
@@ -8729,7 +8729,7 @@ def histogram(
                         label_for_box_hovertemplate = 'Value'
                 if kwargs.get('color') is not None:
                     if kwargs['color'] in kwargs['labels']:
-                        hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+                        hovertemplate_box = f'{kwargs["labels"][kwargs["color"]]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
                 else:
                     hovertemplate_box = f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
                 box = go.Box(
@@ -8843,7 +8843,7 @@ def histogram(
                 label_for_box_hovertemplate = 'Value'
             if kwargs.get('color') is not None:
                 if kwargs['color'] in kwargs['labels']:
-                    hovertemplate_box = f'{kwargs['labels'][kwargs['color']]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
+                    hovertemplate_box = f'{kwargs["labels"][kwargs["color"]]} = {trace.name}<br>' + f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
             else:
                 hovertemplate_box = f'{label_for_box_hovertemplate} = ' + '%{x:.2f}<extra></extra>'
             box = go.Box(
