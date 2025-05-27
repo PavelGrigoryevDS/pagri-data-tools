@@ -1013,19 +1013,21 @@ def add_dataframe_columns_exploration(notebook_path: str, df_name: str, df, head
     
     # Создаем новые ячейки для каждой колонки
     new_cells = []
-    # 1. Ячейка с заголовком
+    
     header_cell = nb_v4.new_markdown_cell(
-        f"{'#' * heading_level} {df_name}"
+        f"{'#' * heading_level}  Таблица {df_name}"
+    )
+    code_cell_1 = nb_v4.new_code_cell(
+        f"{df_name}.head(1)"
     )
     cell_1 = nb_v4.new_markdown_cell(
         "Посмотрим на информацию о датафрейме."
     )
-    # 2. Ячейка с кодом для анализа
-    code_cell = nb_v4.new_code_cell(
+    
+    code_cell_2 = nb_v4.new_code_cell(
         f"{df_name}.explore.info()"
     )
     
-    # 3. Ячейка с наблюдениями
     cell_2 = nb_v4.new_markdown_cell(
         "Изучим по отдельности каждый столбец на пропуски, выбросы и прочие аномалии."
     )
