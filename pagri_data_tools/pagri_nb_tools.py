@@ -989,3 +989,71 @@ def split_text_to_cells(notebook_path_for_find: str, notebook_path_for_save: str
     with open(notebook_path_for_save, 'w', encoding='utf-8') as out_f:
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {notebook_path_for_save}")                   
+    
+def add_dataframe_columns_exploration(notebook_path: str, df_name: str, df, heading_level: int = 4):
+    """
+    Добавляет в Jupyter notebook ячейки для анализа каждой колонки датафрейма.
+    
+    Args:
+        notebook_path (str): Путь к файлу .ipynb
+        df_name (str): Имя датафрейма как строка (для использования в коде)
+        df: Сам датафрейм (используется только для получения списка колонок)
+        heading_level (int): Уровень заголовка (количество '#')
+    """
+    try:
+        # Читаем существующий notebook
+        with open(notebook_path, 'r', encoding='utf-8') as f:
+            nb = nb_read(f, as_version=4)
+    except FileNotFoundError:
+        print(f"Error: File not found - {notebook_path}")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON format - {notebook_path}")
+        return
+    
+    # Создаем новые ячейки для каждой колонки
+    new_cells = []
+    # 1. Ячейка с заголовком
+    header_cell = nb_v4.new_markdown_cell(
+        f"{'#' * heading_level} {df_name}"
+    )
+    cell_1 = nb_v4.new_markdown_cell(
+        "Посмотрим на информацию о датафрейме."
+    )
+    # 2. Ячейка с кодом для анализа
+    code_cell = nb_v4.new_code_cell(
+        f"{df_name}.explore.info()"
+    )
+    
+    # 3. Ячейка с наблюдениями
+    cell_2 = nb_v4.new_markdown_cell(
+        "Изучим по отдельности каждый столбец на пропуски, выбросы и прочие аномалии."
+    )
+    new_cells.extend([header_cell, cell_1, code_cell, cell_2])
+    for column in df.columns:
+        # 1. Ячейка с заголовком
+        header_cell = nb_v4.new_markdown_cell(
+            f"{'#' * (heading_level+1)} {column}"
+        )
+        
+        # 2. Ячейка с кодом для анализа
+        code_cell = nb_v4.new_code_cell(
+            f"{df_name}['{column}'].explore.info()"
+        )
+        
+        # 3. Ячейка с наблюдениями
+        observations_cell = nb_v4.new_markdown_cell(
+            "**Наблюдения:**  \n\n"
+            "- Комментарии\n"
+        )
+        
+        new_cells.extend([header_cell, code_cell, observations_cell])
+    
+    # Вставляем новые ячейки в начало notebook
+    nb.cells = new_cells + nb.cells
+    
+    # Сохраняем изменения
+    with open(notebook_path, 'w', encoding='utf-8') as f:
+        nb_write(nb, f)
+    
+    print(f"Added exploration cells for {len(df.columns)} columns to {notebook_path}")    
