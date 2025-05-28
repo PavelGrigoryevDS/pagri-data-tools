@@ -22,7 +22,7 @@ from IPython.display import display_html
 from wordcloud import WordCloud
 
 pd_style_cmap = LinearSegmentedColormap.from_list("custom_white_purple", ['#f1edf5', '#7f3c8d'])
-pio.renderers.default = "notebook"
+# pio.renderers.default = "notebook"
 colorway_for_line = [
     'rgb(127, 60, 141)',
     'rgb(17, 165, 121)', 
@@ -100,26 +100,26 @@ colorway_for_treemap = [
     'rgba(132, 169, 233, 1)']
 colorway_for_heatmap = [[0, 'rgba(204, 153, 255, 0.1)'], [1, 'rgb(127, 60, 141)']]
 
-pio.templates["custom_theme_for_line"] = go.layout.Template(
-    layout=go.Layout(
-        colorway=colorway_for_line
-    )
-)
-
-pio.templates["custom_theme_for_bar"] = go.layout.Template(
-    layout=go.Layout(
-        colorway=colorway_tableau
-    )
-)
-pio.templates.default = 'plotly_white+custom_theme_for_bar'
-
-px.defaults.template = "plotly_white"
-px.defaults.color_continuous_scale = color_continuous_scale = [
-    [0, 'rgba(0.018, 0.79, 0.703, 1.0)'],
-    [0.5, 'rgba(64, 120, 200, 0.9)'],
-    [1, 'rgba(128, 60, 170, 0.9)']
-]
-px.defaults.color_discrete_sequence = colorway_tableau
+# pio.templates["custom_theme_for_line"] = go.layout.Template(
+#     layout=go.Layout(
+#         colorway=colorway_for_line
+#     )
+# )
+#
+# pio.templates["custom_theme_for_bar"] = go.layout.Template(
+#     layout=go.Layout(
+#         colorway=colorway_tableau
+#     )
+# )
+# pio.templates.default = 'plotly_white+custom_theme_for_bar'
+#
+# px.defaults.template = "plotly_white"
+# px.defaults.color_continuous_scale = color_continuous_scale = [
+#     [0, 'rgba(0.018, 0.79, 0.703, 1.0)'],
+#     [0.5, 'rgba(64, 120, 200, 0.9)'],
+#     [1, 'rgba(128, 60, 170, 0.9)']
+# ]
+# px.defaults.color_discrete_sequence = colorway_tableau
 # px.defaults.width = 500
 # px.defaults.height = 300
 
