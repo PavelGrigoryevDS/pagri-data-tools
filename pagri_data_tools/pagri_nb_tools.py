@@ -990,15 +990,14 @@ def split_text_to_cells(notebook_path_for_find: str, notebook_path_for_save: str
         nb_write(nb, out_f, version=4)
     print(f"Corrected notebook saved to {notebook_path_for_save}")                   
     
-def add_dataframe_columns_exploration(notebook_path: str, df_name: str, df, heading_level: int = 4):
+def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: int = 4):
     """
-    Добавляет в Jupyter notebook ячейки для анализа каждой колонки датафрейма.
+    Добавляет в Jupyter notebook ячеек для раздела изучение данных
     
     Args:
         notebook_path (str): Путь к файлу .ipynb
-        df_name (str): Имя датафрейма как строка (для использования в коде)
-        df: Сам датафрейм (используется только для получения списка колонок)
-        heading_level (int): Уровень заголовка (количество '#')
+        dfs (dict): Словарь где ключ это название датафрейма, а значение - сам датафрейм
+        start_heading_level (int): Начальный уровень заголовка для разделов таблиц
     """
     try:
         # Читаем существующий notebook
@@ -1014,43 +1013,110 @@ def add_dataframe_columns_exploration(notebook_path: str, df_name: str, df, head
     # Создаем новые ячейки для каждой колонки
     new_cells = []
     
-    header_cell = nb_v4.new_markdown_cell(
-        f"{'#' * heading_level}  Таблица {df_name}"
-    )
-    code_cell_1 = nb_v4.new_code_cell(
-        f"{df_name}.head(1)"
-    )
-    cell_1 = nb_v4.new_markdown_cell(
-        "Посмотрим на информацию о датафрейме."
-    )
-    
-    code_cell_2 = nb_v4.new_code_cell(
-        f"{df_name}.explore.info()"
-    )
-    
-    cell_2 = nb_v4.new_markdown_cell(
-        "Изучим по отдельности каждый столбец на пропуски, выбросы и прочие аномалии."
-    )
-    new_cells.extend([header_cell, cell_1, code_cell, cell_2])
-    for column in df.columns:
-        # 1. Ячейка с заголовком
-        header_cell = nb_v4.new_markdown_cell(
-            f"{'#' * (heading_level+1)} {column}"
+    for df_name, df in dfs.items():
+        header_table = nb_v4.new_markdown_cell(
+            f"{'#' * start_heading_level} Таблица {df_name}"
         )
+        code_cell_1 = nb_v4.new_code_cell(
+            f"{df_name}.head(1)"
+        )
+        cell_1 = nb_v4.new_markdown_cell(
+            "Посмотрим на информацию о датафрейме."
+        )
+        code_cell_2 = nb_v4.new_code_cell(
+            f"{df_name}.explore.info()"
+        )
+        eda_columns = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Первичный анализ столбцов"
+        )
+    
+        cell_2 = nb_v4.new_markdown_cell(
+            "Изучим по отдельности каждый столбец."
+        )
+        new_cells.extend([header_table, code_cell_1, cell_1, code_cell_2, eda_columns, cell_2])
         
-        # 2. Ячейка с кодом для анализа
+        for column in df.columns:
+            column_name_cell = nb_v4.new_markdown_cell(
+                f"**{column}**"
+            )
+            code_cell = nb_v4.new_code_cell(
+                f"{df_name}['{column}'].explore.info()"
+            )
+            
+            # 3. Ячейка с наблюдениями
+            observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+            
+            new_cells.extend([column_name_cell, code_cell, observations_cell])
+        new_temp_dim_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Добавление временных измерений"
+        )
+        new_cells.append(new_temp_dim_header)
+        md_cell = nb_v4.new_markdown_cell(
+            "Для изучения аномалий в разных разрезах добавим временные измерения.  \n"
+            "Добавим в их название префикс 'tmp_', чтобы понимать что это временные измерения и потом их удалить.  \n"
+            "Они временные, так как после предобработки данные могут измениться.  \n"
+            "Поэтому основные измерения будут созданы после предобработки.\n"
+        )
+        new_cells.append(md_cell)
+        md_cell = nb_v4.new_markdown_cell(
+            "Посмотрим размер изначального датафрейма и сохраним его, чтобы далее убедиться, что ничего не потеряли."
+        )
+        new_cells.append(md_cell)
         code_cell = nb_v4.new_code_cell(
-            f"{df_name}['{column}'].explore.info()"
+                "id_column = \n"
+                f"print({df_name}.shape[0])\n"
+                f"tmp_ids = {df_name}[id_column]"
+            )
+        new_cells.append(code_cell)
+        code_cell = nb_v4.new_code_cell(
+                ""
+            )
+        new_cells.append(code_cell)
+        md_cell = nb_v4.new_markdown_cell(
+            "Убедимся, что ничего не потеряли."
         )
-        
-        # 3. Ячейка с наблюдениями
-        observations_cell = nb_v4.new_markdown_cell(
-            "**Наблюдения:**  \n\n"
-            "- Комментарии\n"
+        new_cells.append(md_cell)
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}.shape[0]"
+            )
+        new_cells.append(code_cell)
+        code_cell = nb_v4.new_code_cell(
+                f"set({df_name}[id_column]) == set(tmp_ids)"
+            )
+        new_cells.append(code_cell)
+        md_cell = nb_v4.new_markdown_cell(
+            "Все хорошо."
         )
+        new_cells.append(md_cell)
         
-        new_cells.extend([header_cell, code_cell, observations_cell])
-    
+        new_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Изучение дубликатов"
+        )
+        new_cells.append(new_header)
+        
+        
+        new_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Изучение пропусков"
+        )
+        new_cells.append(new_header)
+        
+        new_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Изучение выбросов"
+        )
+        new_cells.append(new_header)
+        
+        new_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Изучение логических аномалий"
+        )
+        new_cells.append(new_header)
+        
+        new_header = nb_v4.new_markdown_cell(
+            f"{'#' * (start_heading_level+1)} Изучение прочих аномалий"
+        )
+        new_cells.append(new_header)
     # Вставляем новые ячейки в начало notebook
     nb.cells = new_cells + nb.cells
     
