@@ -1012,7 +1012,7 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
     
     # Создаем новые ячейки для каждой колонки
     new_cells = []
-    
+    print('после каждой главы добавить del tmp_miss, tmp_dupl и так далее')
     for df_name, df in dfs.items():
         header_table = nb_v4.new_markdown_cell(
             f"{'#' * start_heading_level} Таблица {df_name}"
