@@ -3436,7 +3436,6 @@ def check_na_combinations_gen(df, n=2):
             missings = df[list(c)].isna().all(axis=1).sum()
             if missings:
                 missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
-                missings = f'{pretty_value(missings)} ({(missings / df_size):.1%})' if missings / df_size >= 0.01 else f'{pretty_value(missings)} < 1%'
                 dupl_cn_list.append([" | ".join(c), missings])
         dupl_df_cn = pd.DataFrame(dupl_cn_list)
         # разобьем таблицу на 3 части, чтобы удобнее читать
