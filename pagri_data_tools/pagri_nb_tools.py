@@ -1149,6 +1149,25 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         new_cells.append(observations_cell)
         
         md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разных разрезах."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='duplicate'\n"
+                "    , pct_diff_threshold=-100\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
             f"Посмотрим в разрезе category_name."
         )
         new_cells.append(md_cell)
@@ -1216,6 +1235,25 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         new_cells.append(observations_cell)
         
         md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разных разрезах."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='missing'\n"
+                "    , pct_diff_threshold=-100\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)        
+        
+        md_cell = nb_v4.new_markdown_cell(
             f"Посмотрим в разрезе category_name."
         )
         new_cells.append(md_cell)  
@@ -1275,6 +1313,25 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
                 ")"
             )
         new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разных разрезах."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='outlier'\n"
+                "    , pct_diff_threshold=-100\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
         
         observations_cell = nb_v4.new_markdown_cell(
                 "**Наблюдения:**  \n\n"
@@ -1356,6 +1413,25 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
                 ")"
             )
         new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разных разрезах."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='zero'\n"
+                "    , pct_diff_threshold=-100\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
         
         observations_cell = nb_v4.new_markdown_cell(
                 "**Наблюдения:**  \n\n"
