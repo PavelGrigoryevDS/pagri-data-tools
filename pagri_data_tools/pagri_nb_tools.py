@@ -998,6 +998,16 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         notebook_path (str): Путь к файлу .ipynb
         dfs (dict): Словарь где ключ это название датафрейма, а значение - сам датафрейм
         start_heading_level (int): Начальный уровень заголовка для разделов таблиц
+        
+    Example:
+        pgdt.add_exploration_chapter(
+        '/home/pagri/git_repos/data-toolkito/temp1.ipynb'
+        , dfs={
+            'df_orders': df_orders
+            , 'df_payments': df_payments
+            , 'df_items': df_items
+        }
+    )
     """
     try:
         # Читаем существующий notebook
@@ -1012,7 +1022,7 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
     
     # Создаем новые ячейки для каждой колонки
     new_cells = []
-    print('после каждой главы добавить del tmp_miss, tmp_dupl и так далее')
+
     for df_name, df in dfs.items():
         header_table = nb_v4.new_markdown_cell(
             f"{'#' * start_heading_level} Таблица {df_name}"
@@ -1043,7 +1053,6 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
                 f"{df_name}['{column}'].explore.info()"
             )
             
-            # 3. Ячейка с наблюдениями
             observations_cell = nb_v4.new_markdown_cell(
                 "**Наблюдения:**  \n\n"
                 "- Комментарии\n"
@@ -1092,31 +1101,285 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         )
         new_cells.append(md_cell)
         
+        # Duplicates
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение дубликатов"
         )
         new_cells.append(new_header)
         
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}.explore.anomalies_report(\n"
+                "    anomaly_type='duplicate'\n"
+                ")"
+            )
+        new_cells.append(code_cell)
         
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "Изучим дубликаты в каждом столбце отдельно."
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "**Дубликаты в column_name**"
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим распределение дубликатов во времени."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_over_time(\n"
+                "    anomaly_type='duplicate'\n"
+                ")"
+            )
+        new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разрезе category_name."
+        )
+        new_cells.append(md_cell)
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='duplicate'\n"
+                "    , pct_diff_threshold=-100\n"
+                "    , include_columns='category_name'\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        # Missings
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение пропусков"
         )
         new_cells.append(new_header)
         
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}.explore.anomalies_report(\n"
+                "    anomaly_type='missing'\n"
+                ")"
+            )
+        new_cells.append(code_cell)
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "Изучим пропуски в каждом столбце отдельно."
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "**Пропуски в column_name**"
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим распределение пропусков во времени."
+        )
+        new_cells.append(md_cell)  
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                "    anomaly_type='missing'\n"
+                ")"
+            )
+        new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разрезе category_name."
+        )
+        new_cells.append(md_cell)  
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='missing'\n"
+                "    , pct_diff_threshold=-100\n"
+                "    , include_columns='category_name'\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        # Outliers
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение выбросов"
         )
         new_cells.append(new_header)
         
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}.explore.anomalies_report(\n"
+                "    anomaly_type='outlier'\n"
+                ")"
+            )
+        new_cells.append(code_cell)
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "Изучим выбросы в каждом столбце отдельно."
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "**Выбросы в column_name**"
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим распределение выбросов во времени."
+        )
+        new_cells.append(md_cell)  
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                "    anomaly_type='outlier'\n"
+                ")"
+            )
+        new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разрезе category_name."
+        )
+        new_cells.append(md_cell)   
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='outlier'\n"
+                "    , pct_diff_threshold=-100\n"
+                "    , include_columns='category_name'\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        # Logical anomalies
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение логических аномалий"
         )
         new_cells.append(new_header)
         
+        # Other anomalies
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение прочих аномалий"
         )
         new_cells.append(new_header)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Изучим нулевые значения."
+        )
+        new_cells.append(md_cell)   
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}.explore.anomalies_report(\n"
+                "    anomaly_type='zero'\n"
+                ")"
+            )
+        new_cells.append(code_cell)
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "Изучим нули в каждом столбце отдельно."
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            "**Нули в column_name**"
+        )
+        new_cells.append(md_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим распределение нулей во времени."
+        )
+        new_cells.append(md_cell)   
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                "    anomaly_type='zero'\n"
+                ")"
+            )
+        new_cells.append(code_cell)        
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
+        md_cell = nb_v4.new_markdown_cell(
+            f"Посмотрим в разрезе category_name."
+        )
+        new_cells.append(md_cell)   
+        
+        code_cell = nb_v4.new_code_cell(
+                f"{df_name}['column_name'].explore.anomalies_by_categories(\n"
+                "    anomaly_type='zero'\n"
+                "    , pct_diff_threshold=-100\n"
+                "    , include_columns='category_name'\n"
+                ")"
+            )
+        new_cells.append(code_cell)   
+        
+        observations_cell = nb_v4.new_markdown_cell(
+                "**Наблюдения:**  \n\n"
+                "- Комментарии\n"
+            )
+        new_cells.append(observations_cell)
+        
     # Вставляем новые ячейки в начало notebook
     nb.cells = new_cells + nb.cells
     
@@ -1124,4 +1387,4 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
     with open(notebook_path, 'w', encoding='utf-8') as f:
         nb_write(nb, f)
     
-    print(f"Added exploration cells for {len(df.columns)} columns to {notebook_path}")    
+    print(f"Corrected notebook saved to {notebook_path}")   
