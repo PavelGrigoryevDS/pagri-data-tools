@@ -1203,7 +1203,7 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         new_cells.append(md_cell)  
         
         code_cell = nb_v4.new_code_cell(
-                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                f"{df_name}['column_name'].explore.anomalies_over_time(\n"
                 "    anomaly_type='missing'\n"
                 ")"
             )
@@ -1270,7 +1270,7 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         new_cells.append(md_cell)  
         
         code_cell = nb_v4.new_code_cell(
-                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                f"{df_name}['column_name'].explore.anomalies_over_time(\n"
                 "    anomaly_type='outlier'\n"
                 ")"
             )
@@ -1307,7 +1307,10 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
             f"{'#' * (start_heading_level+1)} Изучение логических аномалий"
         )
         new_cells.append(new_header)
-        
+        md_cell = nb_v4.new_markdown_cell(
+            ""
+        )
+        new_cells.append(md_cell)   
         # Other anomalies
         new_header = nb_v4.new_markdown_cell(
             f"{'#' * (start_heading_level+1)} Изучение прочих аномалий"
@@ -1348,7 +1351,7 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         new_cells.append(md_cell)   
         
         code_cell = nb_v4.new_code_cell(
-                f"{df_name}['column_name].explore.anomalies_over_time(\n"
+                f"{df_name}['column_name'].explore.anomalies_over_time(\n"
                 "    anomaly_type='zero'\n"
                 ")"
             )
