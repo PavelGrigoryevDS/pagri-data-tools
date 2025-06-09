@@ -221,8 +221,8 @@ def make_headers_link_and_toc(
     , indent_char: str = "&emsp;"
     , link_type_toc: str = "html"
     , is_make_headers_link: bool = True
-    , is_make_toc: bool = True
-    , add_link_to_content = True
+    , is_make_toc: bool = False
+    , add_link_to_content = False
     ):
     ''' 
     Функция добавляет ссылки в название headers и создает содеражние
