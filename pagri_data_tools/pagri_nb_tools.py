@@ -213,7 +213,17 @@ def generate_toc(notebook_path: str, mode: str = 'draft', indent_char: str = "&e
     print(f"Table of content added to {output_filename}")
 
 
-def make_headers_link_and_toc(notebook_path: str, mode: str = 'draft', start_level: int = 2, link_type_header: str = "name", indent_char: str = "&emsp;", link_type_toc: str = "html", is_make_headers_link: bool = True, is_make_toc: bool = False):
+def make_headers_link_and_toc(
+    notebook_path: str
+    , mode: str = 'draft'
+    , start_level: int = 2
+    , link_type_header: str = "name"
+    , indent_char: str = "&emsp;"
+    , link_type_toc: str = "html"
+    , is_make_headers_link: bool = True
+    , is_make_toc: bool = True
+    , add_link_to_content = True
+    ):
     ''' 
     Функция добавляет ссылки в название headers и создает содеражние
 
@@ -265,7 +275,7 @@ def make_headers_link_and_toc(notebook_path: str, mode: str = 'draft', start_lev
             "Invalid link_type. link_type must be either 'html' or 'markdown'.")
     if is_make_headers_link:
         add_links_and_numbers_to_headings(
-            notebook_path, mode=mode, link_type=link_type_header, start_level=start_level)
+            notebook_path, mode=mode, link_type=link_type_header, start_level=start_level, add_link_to_content=add_link_to_content)
     if is_make_toc:
         generate_toc(notebook_path, mode=mode, link_type=link_type_toc,
                      start_level=start_level, indent_char=indent_char)
