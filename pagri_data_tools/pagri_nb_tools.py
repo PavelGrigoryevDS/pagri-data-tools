@@ -488,7 +488,7 @@ def correct_text(text: str, speller=None) -> str:
     return corrected_text  # Объединяем символы обратно в строку
 
 
-def correct_notebook_text(notebook_path: str, save_mode: str = 'final', work_mode: str = 'logging') -> None:
+def correct_notebook_text(notebook_path: str, save_mode: str = 'final', work_mode: str = 'interactive') -> None:
     """
     Corrects orthographic errors in a Jupyter Notebook.
 
