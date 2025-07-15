@@ -5,6 +5,8 @@ from pyaspeller import YandexSpeller
 from IPython.display import display_html
 import IPython
 from tqdm.auto import tqdm
+from nbformat import NO_CONVERT
+from nbformat.v4 import new_markdown_cell, new_notebook
 # from nltk.tokenize import word_tokenize
 
 
@@ -1477,3 +1479,38 @@ def add_exploration_chapter(notebook_path: str, dfs: dict, start_heading_level: 
         nb_write(nb, f)
     
     print(f"Corrected notebook saved to {notebook_path}")   
+
+def extract_markdown_to_notebook(input_path: str, output_path: str):
+    """ 
+    Extracts all markdown cells from a Jupyter Notebook and saves them to a new .ipynb file
+    
+    Args:
+        input_path (str): Path to the source .ipynb file
+        output_path (str): Path to save the new file with markdown cells
+    """
+    try:
+        # Read the original notebook
+        with open(input_path, 'r', encoding='utf-8') as f:
+            notebook = nb_read(f, as_version=4)
+        
+        # Create a new notebook with only markdown cells
+        new_nb = new_notebook()
+        
+        for cell in notebook.cells:
+            if cell.cell_type == 'markdown':
+                # Create a new markdown cell and copy the content
+                new_cell = new_markdown_cell()
+                new_cell.source = cell.source
+                new_cell.metadata = cell.metadata
+                new_nb.cells.append(new_cell)
+        
+        # Save the new notebook
+        with open(output_path, 'w', encoding='utf-8') as f:
+            nb_write(new_nb, f)
+        
+        print(f"Successfully saved {len(new_nb.cells)} markdown cells to {output_path}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+# Example usage
+extract_markdown_to_notebook('input_notebook.ipynb', 'markdown_only.ipynb')
