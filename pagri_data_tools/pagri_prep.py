@@ -3867,3 +3867,214 @@ def calc_target_category_share(
         )
     return df_res
 
+    # def categorize_by_lemmatization(
+    #     self,
+    #     categorization_dict: Dict[str, List[str]],
+    #     lemmatizer: str = "nltk",
+    #     spacy_language: str = "en",
+    #     use_cache: bool = False,
+    #     batch_size: int = 1000,
+    #     default_category: str = "Unknown",
+    #     add_category_column: bool = True,
+    #     verbose: bool = False,
+    #     max_workers: int = 4
+    # ) -> pd.Series:
+    #     """
+    #     Enhanced text categorization with lemmatization supporting multiple languages and optimized for large datasets.
+    #
+    #     Lemmatizer Performance Guide:
+    #
+    #     - nltk: Lightweight English only (~8000 docs/sec, basic accuracy)
+    #     - lemminflect: Best for English inflection (~3000 docs/sec)
+    #     - spacy: Balanced EN/RU with POS tagging (~2000 docs/sec)
+    #     - pymystem3: Best for Russian (accurate but slower, ~1000 docs/sec)
+    #     - pymorphy3: Fast Russian alternative (~5000 docs/sec, slightly less accurate)
+    #
+    #     Parameters:
+    #     -----------
+    #     categorization_dict (Dict[str, List[str]]):
+    #
+    #         Dictionary where keys are category names and values are lists of lemmas.
+    #         Example: {'Technology': ['computer', 'software'], 'Sports': ['football', 'game']}
+    #
+    #     lemmatizer (str): Lemmatization library to use. Options:
+    #
+    #         - 'nltk': Lightweight, good for English (default)
+    #         - 'spacy': Supports multiple languages, slower but more features
+    #         - 'lemminflect': Best for English inflection handling
+    #         - 'pymystem3': Fast and accurate for Russian
+    #         - 'pymorphy3': Fast Russian lemmatizer (new version)
+    #
+    #     spacy_language (str): Language model for spaCy ('en' for English or 'ru' for Russian).
+    #         Default 'en'. Only used when lemmatizer='spacy'.
+    #
+    #     use_cache (bool): Cache lemmatization results to improve performance on repeated texts.
+    #         Warning: Can consume significant memory for large datasets. Default False.
+    #
+    #     batch_size (int): Process texts in batches for memory efficiency. Default 1000.
+    #
+    #     default_category (str): Category for texts that don't match any lemmas. Default "Unknown".
+    #
+    #     add_category_column (bool): Whether to return a categorical pandas Series (True)
+    #         or regular Series (False). Default True.
+    #
+    #     verbose (bool): Print progress information. Default False.
+    #
+    #     max_workers (int): Parallel threads (default 4)
+    #
+    #     Returns:
+    #     --------
+    #         pd.Series: Categorized series (categorical dtype if add_category_column=True)
+    #     """
+    #     series = self._series
+    #     if series.empty:
+    #         return pd.Series([], dtype='category' if add_category_column else object)
+    #
+    #     # Initialize processing
+    #     start_time = time.time()
+    #     lemmatizer_instance = self._init_lemmatizer(lemmatizer, spacy_language, verbose)
+    #     category_sets = {k: set(v) for k, v in categorization_dict.items()}
+    #     all_lemmas = set().union(*category_sets.values())
+    #     cache = lru_cache(maxsize=10000) if use_cache else None
+    #
+    #     # Parallel batch processing
+    #     results = []
+    #     with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    #         futures = {
+    #             executor.submit(
+    #                 self._process_batch,
+    #                 series.iloc[i:i+batch_size],
+    #                 lemmatizer_instance,
+    #                 category_sets,
+    #                 all_lemmas,
+    #                 default_category,
+    #                 cache,
+    #                 lemmatizer
+    #             ): i for i in range(0, len(series), batch_size)
+    #         }
+    #
+    #         for future in as_completed(futures):
+    #             results.extend(future.result())
+    #
+    #     # Performance logging
+    #     if verbose:
+    #         elapsed = time.time() - start_time
+    #         print(f"Processed {len(series)} docs in {elapsed:.2f}s ({len(series)/elapsed:.1f} docs/s)")
+    #
+    #     return pd.Series(results, index=series.index, dtype='category' if add_category_column else object)
+    #
+    # def _init_lemmatizer(self, lemmatizer: str, spacy_language: str, verbose: bool = False):
+    #     """Initialize lemmatizer with automatic resource loading."""
+    #     try:
+    #         if lemmatizer == "pymystem3":
+    #             from pymystem3 import Mystem
+    #             if verbose: print("Initializing Mystem (best RU accuracy, medium speed)")
+    #             return Mystem()
+    #
+    #         elif lemmatizer == "pymorphy3":
+    #             from pymorphy3 import MorphAnalyzer
+    #             if verbose: print("Initializing Pymorphy3 (fast RU, good accuracy)")
+    #             return MorphAnalyzer()
+    #
+    #         elif lemmatizer == "lemminflect":
+    #             from lemminflect import getLemma
+    #             if verbose: print("Initializing Lemminflect (best EN inflection)")
+    #             return getLemma
+    #
+    #         elif lemmatizer == "spacy":
+    #             import spacy
+    #             model = 'en_core_web_sm' if spacy_language == 'en' else 'ru_core_news_sm'
+    #             if verbose: print(f"Loading spaCy {model} (balanced EN/RU)")
+    #             try:
+    #                 return spacy.load(model)
+    #             except OSError:
+    #                 raise ImportError(
+    #                     f"The language model {model} is not installed. Please download it using:\n"
+    #                     f"python -m spacy download {model}"
+    #                 )
+    #
+    #         elif lemmatizer == "nltk":
+    #             from nltk.stem import WordNetLemmatizer
+    #             import nltk
+    #             nltk.download('punkt', quiet=True)
+    #             nltk.download('wordnet', quiet=True)
+    #             if verbose:
+    #                 print("Initializing NLTK lemmatizer...")
+    #             return WordNetLemmatizer()
+    #
+    #         raise ValueError(f"Invalid lemmatizer: {lemmatizer}")
+    #     except ImportError as e:
+    #         raise ImportError(f"Install required package: {str(e)}")
+    #
+    # def _process_batch(self, batch, lemmatizer, category_sets, all_lemmas, default_category, cache, lemmatizer_type):
+    #     """Process text batch with optimized lemma lookup."""
+    #     return [
+    #         self._categorize_text(
+    #             text, lemmatizer, category_sets, all_lemmas,
+    #             default_category, cache, lemmatizer_type
+    #         )
+    #         for text in batch
+    #     ]
+    #
+    # def _categorize_text(self, text, lemmatizer, category_sets, all_lemmas, default_category, cache, lemmatizer_type):
+    #     """Categorize single text with cache support."""
+    #     if not isinstance(text, str):
+    #         return default_category
+    #
+    #     # Cache check
+    #     if cache:
+    #         lemmas = cache(text.lower())
+    #     else:
+    #         lemmas = self._lemmatize_text(text.lower(), lemmatizer, lemmatizer_type)
+    #
+    #     # Fast category lookup
+    #     text_lemmas = set(lemmas) & all_lemmas
+    #     for cat, lemma_set in category_sets.items():
+    #         if text_lemmas & lemma_set:
+    #             return cat
+    #     return default_category
+    #
+    # def _lemmatize_text(self, text: str, lemmatizer, lemmatizer_type: str) -> List[str]:
+    #     """Language-optimized lemmatization pipeline."""
+    #     try:
+    #         # Skip empty/non-string
+    #         if not text.strip():
+    #             return []
+    #
+    #         # Special tokens
+    #         if text.startswith(('http://', 'https://')):
+    #             return ['url']
+    #         if text.replace('.','').isdigit():
+    #             return ['number']
+    #
+    #         # Tokenize based on language
+    #         tokens = self._tokenize_text(text, lemmatizer_type)
+    #
+    #         # Apply lemmatizer
+    #         if lemmatizer_type == "pymystem3":
+    #             return [lem for lem in lemmatizer.lemmatize(' '.join(tokens)) if lem.strip()]
+    #         elif lemmatizer_type == "pymorphy3":
+    #             return [lemmatizer.parse(tok)[0].normal_form for tok in tokens]
+    #         elif lemmatizer_type == "lemminflect":
+    #             return [lemmatizer(tok, upos='NOUN')[0] for tok in tokens]
+    #         elif lemmatizer_type == "spacy":
+    #             return [token.lemma_.lower() for token in lemmatizer(' '.join(tokens))]
+    #         elif lemmatizer_type == "nltk":
+    #             return [lemmatizer.lemmatize(tok) for tok in tokens]
+    #
+    #         return tokens
+    #
+    #     except Exception:
+    #         return []
+    #
+    # def _tokenize_text(self, text: str, lemmatizer_type: str) -> List[str]:
+    #     """Language-aware tokenization."""
+    #     if lemmatizer_type in ["pymystem3", "pymorphy3"]:
+    #         try:
+    #             from razdel import tokenize  # Superior Russian tokenizer
+    #             return [t.text for t in tokenize(text)]
+    #         except ImportError:
+    #             return text.split()
+    #     else:
+    #         from nltk.tokenize import word_tokenize
+    #     return word_tokenize(text)
